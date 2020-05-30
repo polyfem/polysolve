@@ -21,6 +21,10 @@ TEST_CASE("all", "[solver]")
     {
         if (s == "Eigen::DGMRES")
             continue;
+#ifdef WIN32
+        if(s == "Eigen::ConjugateGradient")
+            continue;
+#endif
         auto solver = LinearSolver::create(s, "");
         // solver->setParameters(params);
         Eigen::VectorXd b(A.rows());

@@ -1,5 +1,5 @@
 ################################################################################
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.2)
 project(PolyFEMSolvers)
 ################################################################################
 
@@ -101,7 +101,7 @@ endif()
 # Polyfem-solver library
 ################################################################################
 
-add_library(polyfem-solvers)
+add_library(polyfem-solvers src/FEMSolver.cpp)
 
 if(${POLYFEM_SOLVERS_LARGE_INDEX})
     target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_LARGE_INDEX)

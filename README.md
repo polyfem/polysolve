@@ -26,3 +26,30 @@ solver->analyzePattern(A, A.rows());
 solver->factorize(A);
 solver->solve(b, x);
 ```
+
+
+### Parameters for iterative solvers (AMGCL, Eigen Internal Solvers, HYPRE)
+
+'max_iter' controls the solver's iterations, default `1000`
+
+'conv_tol', 'tolerance' controls the convergence tolerance, default `1e-10`
+
+**Hypre Only**
+
+'pre_max_iter', number of pre iterations, default `1`
+
+
+### Paramters for Pardiso
+
+'mtype', sets the matrix type, default 11
+| mtype | Description                             |
+|-------|-----------------------------------------|
+|    1  | real and structurally symmetric         |
+|    2  | real and symmetric positive definite    |
+|   -2  | real and symmetric indefinite           |
+|    3  | complex and structurally symmetric      |
+|    4  | complex and Hermitian positive definite |
+|   -4  | complex and Hermitian indefinite        |
+|    6  | complex and symmetric                   |
+|   11  | real and nonsymmetric                   |
+|   13  | complex and nonsymmetric                |

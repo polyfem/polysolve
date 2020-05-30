@@ -26,9 +26,13 @@ namespace polyfem
         // else if(params.count("pre_max_iter")) {
         // 	pre_max_iter_ = params["pre_max_iter"];
         // }
-        else if (params.count("conv_tol"))
+        if (params.count("conv_tol"))
         {
             params_.solver.tol = params["conv_tol"];
+        }
+        else if (params.count("tolerance"))
+        {
+            params_.solver.tol = params["tolerance"];
         }
     }
 

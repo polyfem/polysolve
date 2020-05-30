@@ -33,13 +33,18 @@ namespace polyfem
         {
             max_iter_ = params["max_iter"];
         }
-        else if (params.count("pre_max_iter"))
+        if (params.count("pre_max_iter"))
         {
             pre_max_iter_ = params["pre_max_iter"];
         }
-        else if (params.count("conv_tol"))
+
+        if (params.count("conv_tol"))
         {
             conv_tol_ = params["conv_tol"];
+        }
+        else if (params.count("tolerance"))
+        {
+            conv_tol_ = params["tolerance"];
         }
     }
 

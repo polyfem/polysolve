@@ -74,6 +74,10 @@ void polyfem::LinearSolverEigenIterative<SparseSolver>::setParameters(const json
     {
         m_Solver.setTolerance(params["tolerance"]);
     }
+    else if (params.count("conv_tol"))
+    {
+        m_Solver.setTolerance(params["conv_tol"]);
+    }
 }
 
 // Get info on the last solve step

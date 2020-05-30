@@ -22,7 +22,7 @@ TEST_CASE("all", "[solver]")
         if (s == "Eigen::DGMRES")
             continue;
 #ifdef WIN32
-        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::GMRES")
+        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
             continue;
 #endif
         auto solver = LinearSolver::create(s, "");

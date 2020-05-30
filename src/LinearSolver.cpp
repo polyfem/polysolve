@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolver.hpp>
-#include <polyfem-solvers/LinearSolverEigen.hpp>
+#include <polysolve/LinearSolver.hpp>
+#include <polysolve/LinearSolverEigen.hpp>
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
 #ifdef POLYFEM_SOLVERS_WITH_CHOLMOD
@@ -19,15 +19,15 @@
 #include "LinearSolverPardiso.h"
 #endif
 #ifdef POLYFEM_SOLVERS_WITH_HYPRE
-#include <polyfem-solvers/LinearSolverHypre.hpp>
+#include <polysolve/LinearSolverHypre.hpp>
 #endif
 #ifdef POLYFEM_SOLVERS_WITH_AMGCL
-#include <polyfem-solvers/LinearSolverAMGCL.hpp>
+#include <polysolve/LinearSolverAMGCL.hpp>
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polyfem
+namespace polysolve
 {
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -113,7 +113,7 @@ namespace polyfem
     do                                                               \
     {                                                                \
         return std::make_unique<LinearSolverEigenDirect<EigenSolver< \
-            polyfem::StiffnessMatrix>>>();                           \
+            polysolve::StiffnessMatrix>>>();                           \
     } while (0)
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -340,4 +340,4 @@ namespace polyfem
 
     ////////////////////////////////////////////////////////////////////////////////
 
-} // namespace polyfem
+} // namespace polysolve

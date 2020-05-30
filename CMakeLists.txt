@@ -1,6 +1,6 @@
 ################################################################################
 cmake_minimum_required(VERSION 3.2)
-project(PolyFEMSolvers)
+project(PolySolve)
 ################################################################################
 
 # cmake_policy(SET CMP0063 NEW)
@@ -102,29 +102,29 @@ endif()
 
 
 ################################################################################
-# Polyfem-solver library
+# polysolve library
 ################################################################################
 
-add_library(polyfem-solvers src/FEMSolver.cpp)
+add_library(polysolve src/FEMSolver.cpp)
 
 if(${POLYFEM_SOLVERS_LARGE_INDEX})
-    target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_LARGE_INDEX)
+    target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_LARGE_INDEX)
 endif()
 
 # Public include directory for polyfem
-target_include_directories(polyfem-solvers PUBLIC ${PROJECT_BINARY_DIR}/include)
+target_include_directories(polysolve PUBLIC ${PROJECT_BINARY_DIR}/include)
 
 # Extra warnings
-target_link_libraries(polyfem-solvers PRIVATE warnings::all)
+target_link_libraries(polysolve PRIVATE warnings::all)
 
 # Use C++14
-target_compile_features(polyfem-solvers PUBLIC ${CXX14_FEATURES})
+target_compile_features(polysolve PUBLIC ${CXX14_FEATURES})
 
 # No limit yay
-target_compile_definitions(polyfem-solvers PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=0)
+target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=0)
 
 # 8MB
-# target_compile_definitions(polyfem-solvers PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=8388608)
+# target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=8388608)
 
 
 # Setup dependencies

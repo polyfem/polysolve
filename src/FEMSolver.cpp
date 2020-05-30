@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/FEMSolver.hpp>
+#include <polysolve/FEMSolver.hpp>
 
 #ifdef POLYFEM_SOLVERS_WITH_SPECTRA
 #include <MatOp/SparseSymMatProd.h>
@@ -11,7 +11,7 @@
 #include <unsupported/Eigen/SparseExtra>
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polyfem
+namespace polysolve
 {
     namespace
     {
@@ -52,9 +52,9 @@ namespace polyfem
 #endif
         }
     } // namespace
-} // namespace polyfem
+} // namespace polysolve
 
-Eigen::Vector4d polyfem::dirichlet_solve(
+Eigen::Vector4d polysolve::dirichlet_solve(
     LinearSolver &solver, StiffnessMatrix &A, Eigen::VectorXd &f,
     const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u,
     const int precond_num,
@@ -141,7 +141,7 @@ Eigen::Vector4d polyfem::dirichlet_solve(
 
     if (compute_spectrum)
     {
-        return polyfem::compute_specturm(A);
+        return polysolve::compute_specturm(A);
     }
     else
     {

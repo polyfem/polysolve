@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolverEigen.h>
+#include <polysolve/LinearSolverEigen.h>
 #include <iostream>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -11,7 +11,7 @@
 
 // Get info on the last solve step
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenDirect<SparseSolver>::getInfo(json &params) const
+void polysolve::LinearSolverEigenDirect<SparseSolver>::getInfo(json &params) const
 {
     switch (m_Solver.info())
     {
@@ -34,14 +34,14 @@ void polyfem::LinearSolverEigenDirect<SparseSolver>::getInfo(json &params) const
 
 // Analyze sparsity pattern
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenDirect<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+void polysolve::LinearSolverEigenDirect<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
 {
     m_Solver.analyzePattern(A);
 }
 
 // Factorize system matrix
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
+void polysolve::LinearSolverEigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
 {
     m_Solver.factorize(A);
     if (m_Solver.info() == Eigen::NumericalIssue)
@@ -52,7 +52,7 @@ void polyfem::LinearSolverEigenDirect<SparseSolver>::factorize(const StiffnessMa
 
 // Solve the linear system
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenDirect<SparseSolver>::solve(
+void polysolve::LinearSolverEigenDirect<SparseSolver>::solve(
     const Ref<const VectorXd> b, Ref<VectorXd> x)
 {
     x = m_Solver.solve(b);
@@ -64,7 +64,7 @@ void polyfem::LinearSolverEigenDirect<SparseSolver>::solve(
 
 // Set solver parameters
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenIterative<SparseSolver>::setParameters(const json &params)
+void polysolve::LinearSolverEigenIterative<SparseSolver>::setParameters(const json &params)
 {
     if (params.count("max_iter"))
     {
@@ -82,7 +82,7 @@ void polyfem::LinearSolverEigenIterative<SparseSolver>::setParameters(const json
 
 // Get info on the last solve step
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenIterative<SparseSolver>::getInfo(json &params) const
+void polysolve::LinearSolverEigenIterative<SparseSolver>::getInfo(json &params) const
 {
     params["solver_iter"] = m_Solver.iterations();
     params["solver_error"] = m_Solver.error();
@@ -90,21 +90,21 @@ void polyfem::LinearSolverEigenIterative<SparseSolver>::getInfo(json &params) co
 
 // Analyze sparsity pattern
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenIterative<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+void polysolve::LinearSolverEigenIterative<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
 {
     m_Solver.analyzePattern(A);
 }
 
 // Factorize system matrix
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
+void polysolve::LinearSolverEigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
 {
     m_Solver.factorize(A);
 }
 
 // Solve the linear system
 template <typename SparseSolver>
-void polyfem::LinearSolverEigenIterative<SparseSolver>::solve(
+void polysolve::LinearSolverEigenIterative<SparseSolver>::solve(
     const Ref<const VectorXd> b, Ref<VectorXd> x)
 {
     assert(x.size() == b.size());

@@ -3,7 +3,7 @@
 #ifdef POLYFEM_SOLVERS_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolver.hpp>
+#include <polysolve/LinearSolver.hpp>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>
@@ -20,7 +20,7 @@
 // https://github.com/LLNL/hypre/blob/v2.14.0/docs/HYPRE_usr_manual.pdf
 //
 
-namespace polyfem
+namespace polysolve
 {
 
     class LinearSolverHypre : public LinearSolver
@@ -72,6 +72,6 @@ namespace polyfem
         HYPRE_ParCSRMatrix parcsr_A;
     };
 
-} // namespace polyfem
+} // namespace polysolve
 
 #endif

@@ -3,7 +3,7 @@
 #ifdef POLYFEM_SOLVERS_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolver.hpp>
+#include <polysolve/LinearSolver.hpp>
 #include <vector>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
@@ -16,7 +16,7 @@
 // - OMP_NUM_THREADS: number of threads
 // - PARDISO_LIC_PATH: path to the folder containing the license file
 
-namespace polyfem
+namespace polysolve
 {
 
     class LinearSolverPardiso : public LinearSolver
@@ -117,6 +117,6 @@ namespace polyfem
         int numUniqueElements;
     };
 
-} // namespace polyfem
+} // namespace polysolve
 
 #endif

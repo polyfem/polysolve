@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolver.hpp>
+#include <polysolve/LinearSolver.hpp>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -11,7 +11,7 @@ using json = nlohmann::json;
 #include <memory>
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polyfem
+namespace polysolve
 {
 
     ///
@@ -40,4 +40,4 @@ namespace polyfem
                                     const int precond_num,
                                     const std::string &save_path = "", bool compute_spectrum = false);
 
-} // namespace polyfem
+} // namespace polysolve

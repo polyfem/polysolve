@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/FEMSolver.hpp>
+#include <polysolve/FEMSolver.hpp>
 
 #include <catch.hpp>
 #include <iostream>
 #include <unsupported/Eigen/SparseExtra>
 ////////////////////////////////////////////////////////////////////////////////
 
-using namespace polyfem;
+using namespace polysolve;
 
 TEST_CASE("all", "[solver]")
 {

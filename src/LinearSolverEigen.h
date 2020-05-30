@@ -1,10 +1,10 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolver.hpp>
+#include <polysolve/LinearSolver.hpp>
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polyfem
+namespace polysolve
 {
 
     // -----------------------------------------------------------------------------
@@ -66,8 +66,8 @@ namespace polyfem
 
     // -----------------------------------------------------------------------------
 
-} // namespace polyfem
+} // namespace polysolve
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <polyfem-solvers/LinearSolverEigen.hpp>
+#include <polysolve/LinearSolverEigen.hpp>

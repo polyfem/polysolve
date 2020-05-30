@@ -16,4 +16,4 @@ set(SOURCES
 prepend_current_path(SOURCES)
 polyfem_solvers_copy_headers(${SOURCES})
 polyfem_solvers_set_source_group(${SOURCES})
-target_sources(polyfem-solvers PRIVATE ${SOURCES})
+target_sources(polysolve PRIVATE ${SOURCES})

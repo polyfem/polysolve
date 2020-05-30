@@ -13,7 +13,7 @@ foreach(source IN ITEMS ${test_sources})
     source_group("tests" FILES "${source}")
 endforeach()
 
-target_link_libraries(unit_tests PUBLIC polyfem-solvers catch warnings::all)
+target_link_libraries(unit_tests PUBLIC polysolve catch warnings::all)
 
 set(DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(unit_tests PUBLIC -DPOLYFEM_SOLVERS_DATA_DIR=\"${DATA_DIR}\")

@@ -23,7 +23,7 @@ extern "C"
 #endif
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polyfem
+namespace polysolve
 {
     // #define PLOTS_PARDISO
 
@@ -430,6 +430,6 @@ namespace polyfem
 #endif
     }
 
-} // namespace polyfem
+} // namespace polysolve
 
 #endif

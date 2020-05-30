@@ -3,7 +3,7 @@
 #ifdef POLYFEM_SOLVERS_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polyfem-solvers/LinearSolver.hpp>
+#include <polysolve/LinearSolver.hpp>
 
 #include <amgcl/make_solver.hpp>
 #include <amgcl/amg.hpp>
@@ -33,7 +33,7 @@
 //
 //
 
-namespace polyfem {
+namespace polysolve {
 
     class LinearSolverAMGCL : public LinearSolver {
 
@@ -124,6 +124,6 @@ namespace polyfem {
         double residual_error_;
     };
 
-} // namespace polyfem
+} // namespace polysolve
 
 #endif

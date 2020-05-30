@@ -1,7 +1,7 @@
 version: 1.0.{build}
 os: Visual Studio 2017
 platform: x64
-clone_folder: C:\projects\polyfem-solvers
+clone_folder: C:\projects\polysolve
 shallow_clone: true
 branches:
   only:
@@ -15,13 +15,13 @@ install:
 build:
   parallel: true
 build_script:
-  - cd c:\projects\polyfem-solvers
+  - cd c:\projects\polysolve
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=%config% -G "Visual Studio 15 2017 Win64" ../
   - set MSBuildLogger="C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - set MSBuildOptions=/v:m /p:Configuration=%config% /logger:%MSBuildLogger%
-  - msbuild %MSBuildOptions% PolyFEMSolvers.sln
+  - msbuild %MSBuildOptions% PolySolve.sln
 
 test_script:
   - ctest -C %config% --verbose --output-on-failure -j 2

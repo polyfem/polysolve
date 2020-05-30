@@ -1,11 +1,11 @@
 #pragma once
 
-#include <polyfem-solvers/LinearSolver.hpp>
-#include <polyfem-solvers/NLProblem.hpp>
-#include <polyfem-solvers/MatrixUtils.hpp>
-#include <polyfem-solvers/State.hpp>
+#include <polysolve/LinearSolver.hpp>
+#include <polysolve/NLProblem.hpp>
+#include <polysolve/MatrixUtils.hpp>
+#include <polysolve/State.hpp>
 
-#include <polyfem-solvers/Logger.hpp>
+#include <polysolve/Logger.hpp>
 
 #include <cppoptlib/problem.h>
 #include <cppoptlib/solver/isolver.h>
@@ -50,12 +50,12 @@ namespace cppoptlib
             {
                 throw std::invalid_argument("[SparseNewtonDescentSolver] Unknown line search.");
             }
-            polyfem::logger().debug("\tline search {}", name);
+            polysolve::logger().debug("\tline search {}", name);
         }
 
         void minimize(ProblemType &objFunc, TVector &x0)
         {
-            polyfem::AssemblerUtils::instance().clear_cache();
+            polysolve::AssemblerUtils::instance().clear_cache();
 
             const size_t m = 10;
             const size_t DIM = x0.rows();
@@ -154,7 +154,7 @@ namespace cppoptlib
                 H0k = y.dot(s) / static_cast<double>(y.dot(y));
 
                 x_old = x0;
-                polyfem::logger().debug("\titer: {}, f = {}, ‖g‖_2 = {}", globIter, objFunc.value(x0), grad.norm());
+                polysolve::logger().debug("\titer: {}, f = {}, ‖g‖_2 = {}", globIter, objFunc.value(x0), grad.norm());
 
                 iter++;
                 globIter++;

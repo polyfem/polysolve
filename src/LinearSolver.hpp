@@ -22,7 +22,7 @@ using json = nlohmann::json;
 // - [ ] Document the json parameters for each
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polyfem
+namespace polysolve
 {
 #ifdef POLYFEM_SOLVERS_LARGE_INDEX
     typedef Eigen::SparseMatrix<double, Eigen::ColMajor, std::ptrdiff_t> StiffnessMatrix;
@@ -105,4 +105,4 @@ namespace polyfem
         virtual std::string name() const { return ""; }
     };
 
-} // namespace polyfem
+} // namespace polysolve

@@ -27,6 +27,8 @@ solver->factorize(A);
 solver->solve(b, x);
 ```
 
+You can use `LinearSolver::availableSolvers()` to obtain the list of available solvers.
+
 
 ### Parameters for iterative solvers (AMGCL, Eigen Internal Solvers, HYPRE)
 

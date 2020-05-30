@@ -16,6 +16,7 @@ addons:
     packages:
     - suite-sparse
     - ccache
+    - Eigen
 matrix:
   include:
   - os: linux

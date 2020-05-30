@@ -6,6 +6,10 @@ project(PolyFEMSolvers)
 # cmake_policy(SET CMP0063 NEW)
 # set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
+
 # Detects whether this is a top-level project
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(POLYFEM_SOLVERS_TOPLEVEL_PROJECT ON)
@@ -102,10 +106,6 @@ endif()
 ################################################################################
 
 add_library(polyfem-solvers src/FEMSolver.cpp)
-
-if(MSVC)
-  add_compile_options(-bigobj)
-endif()
 
 if(${POLYFEM_SOLVERS_LARGE_INDEX})
     target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_LARGE_INDEX)

@@ -4,7 +4,7 @@
 
 # PolyFEM Solvers Wrappers
 
-This library containts an Eigen Wrappers for many different external solvers including (but not limited to):
+This library contains a cross-platform Eigen Wrappers for many different external solvers including (but not limited to):
  - Hypre
  - AMGCL
  - Pardiso
@@ -30,13 +30,12 @@ solver->solve(b, x);
 
 ### Parameters for iterative solvers (AMGCL, Eigen Internal Solvers, HYPRE)
 
-'max_iter' controls the solver's iterations, default `1000`
-
-'conv_tol', 'tolerance' controls the convergence tolerance, default `1e-10`
+ - `max_iter` controls the solver's iterations, default `1000`
+ - `conv_tol`, `tolerance` controls the convergence tolerance, default `1e-10`
 
 **Hypre Only**
 
-'pre_max_iter', number of pre iterations, default `1`
+- `pre_max_iter`, number of pre iterations, default `1`
 
 
 ### Paramters for Pardiso

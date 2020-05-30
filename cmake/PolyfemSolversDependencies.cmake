@@ -97,7 +97,7 @@ if(POLYFEM_SOLVERS_WITH_MKL)
 
     SET(INTEL_COMPILER_DIR $ENV{MKLROOT}/..)
 
-    find_package(MKL REQUIRED)
+    find_package(MKL)
 
     if(MKL_FOUND)
         target_include_directories(polyfem-solvers PUBLIC ${MKL_INCLUDE_DIR})

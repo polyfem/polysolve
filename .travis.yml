@@ -12,10 +12,12 @@ addons:
     - xorg-dev
     - libglu1-mesa-dev
     - libsuitesparse-dev
+    - libboost-dev
   homebrew:
     packages:
     - suite-sparse
     - ccache
+    - boost
 matrix:
   include:
   - os: linux

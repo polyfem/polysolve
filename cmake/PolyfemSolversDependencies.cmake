@@ -160,10 +160,19 @@ endif()
 
 # amgcl solver
 if(POLYFEM_SOLVERS_WITH_AMGCL)
-    polyfem_solvers_download_amgcl()
-    add_subdirectory(${THIRD_PARTY_DIR}/amgcl amgcl)
-    target_link_libraries(polyfem-solvers PUBLIC amgcl::amgcl)
-    target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_WITH_AMGCL)
+    find_package(Boost COMPONENTS
+    program_options
+    serialization
+    unit_test_framework
+    )
+    if(Boost_FOUND)
+        polyfem_solvers_download_amgcl()
+        add_subdirectory(${THIRD_PARTY_DIR}/amgcl amgcl)
+        target_link_libraries(polyfem-solvers PUBLIC amgcl::amgcl)
+        target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_WITH_AMGCL)
+    else()
+        MESSAGE(WARNING "AMGCL requires boost")
+    endif()
 endif()
 
 

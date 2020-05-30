@@ -16,10 +16,10 @@ endforeach()
 target_link_libraries(unit_tests PUBLIC polysolve catch warnings::all)
 
 set(DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-target_compile_definitions(unit_tests PUBLIC -DPOLYFEM_SOLVERS_DATA_DIR=\"${DATA_DIR}\")
+target_compile_definitions(unit_tests PUBLIC -DPOLYSOLVE_DATA_DIR=\"${DATA_DIR}\")
 
 
-if(POLYFEM_SOLVERS_WITH_SANITIZERS)
+if(POLYSOLVE_WITH_SANITIZERS)
 	add_sanitizers(unit_tests)
 endif()
 

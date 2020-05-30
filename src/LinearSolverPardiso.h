@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef POLYFEM_SOLVERS_WITH_PARDISO
+#ifdef POLYSOLVE_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
@@ -27,7 +27,7 @@ namespace polysolve
         ~LinearSolverPardiso();
 
     private:
-        POLYFEM_SOLVERS_DELETE_MOVE_COPY(LinearSolverPardiso)
+        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverPardiso)
 
     protected:
         void setType(int _mtype);

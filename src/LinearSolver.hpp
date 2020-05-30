@@ -8,7 +8,7 @@ using json = nlohmann::json;
 #include <Eigen/Sparse>
 #include <memory>
 
-#define POLYFEM_SOLVERS_DELETE_MOVE_COPY(Base) \
+#define POLYSOLVE_DELETE_MOVE_COPY(Base) \
     Base(Base &&) = delete;                    \
     Base &operator=(Base &&) = delete;         \
     Base(const Base &) = delete;               \
@@ -24,7 +24,7 @@ using json = nlohmann::json;
 
 namespace polysolve
 {
-#ifdef POLYFEM_SOLVERS_LARGE_INDEX
+#ifdef POLYSOLVE_LARGE_INDEX
     typedef Eigen::SparseMatrix<double, Eigen::ColMajor, std::ptrdiff_t> StiffnessMatrix;
 #else
     typedef Eigen::SparseMatrix<double, Eigen::ColMajor> StiffnessMatrix;

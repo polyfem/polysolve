@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
@@ -31,7 +31,7 @@ namespace polysolve
         ~LinearSolverHypre();
 
     private:
-        POLYFEM_SOLVERS_DELETE_MOVE_COPY(LinearSolverHypre)
+        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverHypre)
 
     public:
         //////////////////////

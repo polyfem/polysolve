@@ -1,4 +1,4 @@
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolverHypre.hpp>

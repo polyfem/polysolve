@@ -1,13 +1,13 @@
-#ifdef POLYFEM_SOLVERS_WITH_PARDISO
+#ifdef POLYSOLVE_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
 #include "LinearSolverPardiso.h"
 #include <thread>
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
 #include <mkl_pardiso.h>
 #endif
 ////////////////////////////////////////////////////////////////////////////////
-#ifndef POLYFEM_SOLVERS_WITH_MKL
+#ifndef POLYSOLVE_WITH_MKL
 extern "C"
 {
     // PARDISO prototype.
@@ -74,7 +74,7 @@ namespace polysolve
 
         error = 0;
         solver = 0; // Use sparse direct solver
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         pardisoinit(pt, &mtype, iparm);
 #else
         pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
@@ -236,7 +236,7 @@ namespace polysolve
         //     all memory that is necessary for the factorization.
         // --------------------------------------------------------------------
         phase = 11;
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         pardiso(pt, &maxfct, &mnum, &mtype, &phase, &numRows, a.data(), ia.data(),
                 ja.data(), &idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 #else
@@ -273,7 +273,7 @@ namespace polysolve
         // --------------------------------------------------------------------
         phase = 22;
         // iparm[32] = 1; // Compute determinant
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         pardiso(pt, &maxfct, &mnum, &mtype, &phase, &numRows, a.data(), ia.data(),
                 ja.data(), &idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 #else
@@ -338,7 +338,7 @@ namespace polysolve
 
         iparm[7] = 1; // Max numbers of iterative refinement steps
 
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         pardiso(pt, &maxfct, &mnum, &mtype, &phase, &numRows, a.data(), ia.data(), ja.data(),
                 &idum, &nrhs, iparm, &msglvl, rhs_ptr, result.data(), &error);
 #else
@@ -370,7 +370,7 @@ namespace polysolve
             iparm[7] = 1;  // Max numbers of iterative refinement steps.
             iparm[11] = 1; // Solving with transpose matrix.
 
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
             pardiso(pt, &maxfct, &mnum, &mtype, &phase, &numRows, a.data(), ia.data(),
                     ja.data(), &idum, &nrhs, iparm, &msglvl, rhs_ptr, result.data(), &error);
 #else
@@ -399,7 +399,7 @@ namespace polysolve
     void LinearSolverPardiso::freeNumericalFactorizationMemory()
     {
         phase = 0; // Release internal memory
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         pardiso(pt, &maxfct, &mnum, &mtype, &phase, &numRows, &ddum, ia.data(),
                 ja.data(), &idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 #else
@@ -421,7 +421,7 @@ namespace polysolve
         // ..  Termination and release of memory.
         // --------------------------------------------------------------------
         phase = -1; // Release internal memory
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         pardiso(pt, &maxfct, &mnum, &mtype, &phase, &numRows, &ddum, ia.data(),
                 ja.data(), &idum, &nrhs, iparm, &msglvl, &ddum, &ddum, &error);
 #else

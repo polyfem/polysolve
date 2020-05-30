@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef POLYFEM_SOLVERS_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
@@ -42,7 +42,7 @@ namespace polysolve {
         ~LinearSolverAMGCL();
 
     private:
-        POLYFEM_SOLVERS_DELETE_MOVE_COPY(LinearSolverAMGCL)
+        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverAMGCL)
 
     public:
         //////////////////////

@@ -3,25 +3,25 @@
 #include <polysolve/LinearSolverEigen.hpp>
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
-#ifdef POLYFEM_SOLVERS_WITH_CHOLMOD
+#ifdef POLYSOLVE_WITH_CHOLMOD
 #include <Eigen/CholmodSupport>
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_UMFPACK
+#ifdef POLYSOLVE_WITH_UMFPACK
 #include <Eigen/UmfPackSupport>
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_SUPERLU
+#ifdef POLYSOLVE_WITH_SUPERLU
 #include <Eigen/SuperLUSupport>
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
 #include <Eigen/PardisoSupport>
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_PARDISO
+#ifdef POLYSOLVE_WITH_PARDISO
 #include "LinearSolverPardiso.h"
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
 #include <polysolve/LinearSolverHypre.hpp>
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
@@ -175,27 +175,27 @@ namespace polysolve
         else if (solver == "Eigen::SparseLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SparseLU);
-#ifdef POLYFEM_SOLVERS_WITH_CHOLMOD
+#ifdef POLYSOLVE_WITH_CHOLMOD
         }
         else if (solver == "Eigen::CholmodSupernodalLLT")
         {
             RETURN_DIRECT_SOLVER_PTR(CholmodSupernodalLLT);
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_UMFPACK
-#ifndef POLYFEM_SOLVERS_LARGE_INDEX
+#ifdef POLYSOLVE_WITH_UMFPACK
+#ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::UmfPackLU")
         {
             RETURN_DIRECT_SOLVER_PTR(UmfPackLU);
 #endif
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_SUPERLU
+#ifdef POLYSOLVE_WITH_SUPERLU
         }
         else if (solver == "Eigen::SuperLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SuperLU);
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
         }
         else if (solver == "Eigen::PardisoLDLT")
         {
@@ -205,19 +205,19 @@ namespace polysolve
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU);
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_PARDISO
+#ifdef POLYSOLVE_WITH_PARDISO
         }
         else if (solver == "Pardiso")
         {
             return std::make_unique<LinearSolverPardiso>();
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
         {
             return std::make_unique<LinearSolverHypre>();
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_AMGCL
         }
         else if (solver == "AMGCL")
         {
@@ -225,7 +225,7 @@ namespace polysolve
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
-#ifndef POLYFEM_SOLVERS_LARGE_INDEX
+#ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::LeastSquaresConjugateGradient")
         {
@@ -236,7 +236,7 @@ namespace polysolve
             return PrecondHelper<DGMRES>::create(precond);
 #endif
 #endif
-#ifndef POLYFEM_SOLVERS_LARGE_INDEX
+#ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::ConjugateGradient")
         {
@@ -266,30 +266,30 @@ namespace polysolve
         return {{
             "Eigen::SimplicialLDLT",
             "Eigen::SparseLU",
-#ifdef POLYFEM_SOLVERS_WITH_CHOLMOD
+#ifdef POLYSOLVE_WITH_CHOLMOD
             "Eigen::CholmodSupernodalLLT",
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_UMFPACK
+#ifdef POLYSOLVE_WITH_UMFPACK
             "Eigen::UmfPackLU",
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_SUPERLU
+#ifdef POLYSOLVE_WITH_SUPERLU
             "Eigen::SuperLU",
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_MKL
+#ifdef POLYSOLVE_WITH_MKL
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_PARDISO
+#ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",
 #endif
-#ifdef POLYFEM_SOLVERS_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
-#ifndef POLYFEM_SOLVERS_LARGE_INDEX
+#ifndef POLYSOLVE_LARGE_INDEX
             "Eigen::LeastSquaresConjugateGradient",
             "Eigen::DGMRES",
 #endif
@@ -304,10 +304,10 @@ namespace polysolve
     std::string LinearSolver::defaultSolver()
     {
         // return "Eigen::BiCGSTAB";
-#ifdef POLYFEM_SOLVERS_WITH_PARDISO
+#ifdef POLYSOLVE_WITH_PARDISO
         return "Pardiso";
 #else
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
         return "Hypre";
 #else
         return "Eigen::BiCGSTAB";
@@ -327,7 +327,7 @@ namespace polysolve
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             "Eigen::LeastSquareDiagonalPreconditioner",
 #endif
-#ifndef POLYFEM_SOLVERS_LARGE_INDEX
+#ifndef POLYSOLVE_LARGE_INDEX
             "Eigen::IncompleteLUT",
 #endif
         }};

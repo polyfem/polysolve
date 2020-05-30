@@ -10,7 +10,7 @@ using namespace polysolve;
 
 TEST_CASE("all", "[solver]")
 {
-    const std::string path = POLYFEM_SOLVERS_DATA_DIR;
+    const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -44,10 +44,10 @@ TEST_CASE("all", "[solver]")
     }
 }
 
-#ifdef POLYFEM_SOLVERS_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE
 TEST_CASE("hypre", "[solver]")
 {
-    const std::string path = POLYFEM_SOLVERS_DATA_DIR;
+    const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);

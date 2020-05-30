@@ -2,7 +2,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/tk7mfelpp469vqb5/branch/master?svg=true)](https://ci.appveyor.com/project/teseoch/polysolve/branch/master)
 
 
-# PolyFEM Solvers Wrappers
+# Polysolve
 
 This library contains a cross-platform Eigen Wrappers for many different external solvers including (but not limited to):
  - Hypre

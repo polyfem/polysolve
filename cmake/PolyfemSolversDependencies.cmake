@@ -5,8 +5,8 @@
 # this project.
 
 ### Configuration
-set(POLYFEM_SOLVERS_ROOT     "${CMAKE_CURRENT_LIST_DIR}/..")
-set(POLYFEM_SOLVERS_EXTERNAL ${THIRD_PARTY_DIR})
+set(POLYSOLVE_ROOT     "${CMAKE_CURRENT_LIST_DIR}/..")
+set(POLYSOLVE_EXTERNAL ${THIRD_PARTY_DIR})
 
 # Download and update 3rdparty libraries
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
@@ -18,7 +18,7 @@ include(PolyfemSolversDownloadExternal)
 ################################################################################
 
 # Sanitizers
-if(POLYFEM_SOLVERS_WITH_SANITIZERS)
+if(POLYSOLVE_WITH_SANITIZERS)
     polyfem_solvers_download_sanitizers()
 	find_package(Sanitizers)
 
@@ -37,7 +37,7 @@ if(NOT TARGET Eigen3::Eigen)
     polyfem_solvers_download_eigen()
     add_library(eigen INTERFACE)
     target_include_directories(eigen SYSTEM INTERFACE
-        $<BUILD_INTERFACE:${POLYFEM_SOLVERS_EXTERNAL}/eigen>
+        $<BUILD_INTERFACE:${POLYSOLVE_EXTERNAL}/eigen>
         $<INSTALL_INTERFACE:include>
     )
     set_property(TARGET eigen PROPERTY EXPORT_NAME Eigen3::Eigen)
@@ -48,18 +48,18 @@ endif()
 
 
 # Catch2
-if(${POLYFEM_SOLVERS_TOPLEVEL_PROJECT})
+if(${POLYSOLVE_TOPLEVEL_PROJECT})
     polyfem_solvers_download_catch2()
     add_library(catch INTERFACE)
     target_include_directories(catch SYSTEM INTERFACE ${THIRD_PARTY_DIR}/Catch2/single_include/catch2)
 endif()
 
 # Hypre
-if(POLYFEM_SOLVERS_WITH_HYPRE)
+if(POLYSOLVE_WITH_HYPRE)
     polyfem_solvers_download_hypre()
     include(hypre)
     target_link_libraries(polysolve PUBLIC HYPRE)
-    target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_HYPRE)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_HYPRE)
 endif()
 
 # Json
@@ -74,17 +74,17 @@ target_link_libraries(polysolve PUBLIC json)
 ################################################################################
 
 # Cholmod solver
-if(POLYFEM_SOLVERS_WITH_CHOLMOD)
+if(POLYSOLVE_WITH_CHOLMOD)
     find_package(Cholmod)
     if(CHOLMOD_FOUND)
         target_include_directories(polysolve PUBLIC ${CHOLMOD_INCLUDES})
         target_link_libraries(polysolve PUBLIC ${CHOLMOD_LIBRARIES})
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_CHOLMOD)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CHOLMOD)
     endif()
 endif()
 
 # MKL library
-if(POLYFEM_SOLVERS_WITH_MKL)
+if(POLYSOLVE_WITH_MKL)
     if ("$ENV{MKLROOT}" STREQUAL "")
         message(WARNING "MKLROOT is not set. Please source the Intel MKL mklvars.sh file.")
     endif()
@@ -102,16 +102,16 @@ if(POLYFEM_SOLVERS_WITH_MKL)
     if(MKL_FOUND)
         target_include_directories(polysolve PUBLIC ${MKL_INCLUDE_DIR})
         target_link_libraries(polysolve PUBLIC ${MKL_LIBRARIES})
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_MKL)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_MKL)
         target_compile_definitions(polysolve PUBLIC -DEIGEN_USE_MKL_ALL)
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_PARDISO)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_PARDISO)
     else()
         MESSAGE(WARNING "unable to find MKL")
     endif()
 endif()
 
 # Pardiso solver
-if(POLYFEM_SOLVERS_WITH_PARDISO AND NOT (POLYFEM_SOLVERS_WITH_MKL AND MKL_FOUND))
+if(POLYSOLVE_WITH_PARDISO AND NOT (POLYSOLVE_WITH_MKL AND MKL_FOUND))
     find_package(Pardiso)
     if(PARDISO_FOUND)
         find_package(LAPACK)
@@ -130,36 +130,36 @@ if(POLYFEM_SOLVERS_WITH_PARDISO AND NOT (POLYFEM_SOLVERS_WITH_MKL AND MKL_FOUND)
         # endif()
 
         target_link_libraries(polysolve PUBLIC ${PARDISO_LIBRARIES})
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_PARDISO)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_PARDISO)
     else()
         message(WARNING "Pardiso not found, solver will not be available.")
     endif()
 endif()
 
 # UmfPack solver
-if(POLYFEM_SOLVERS_WITH_UMFPACK)
+if(POLYSOLVE_WITH_UMFPACK)
     find_package(Umfpack)
     if(UMFPACK_FOUND)
         target_include_directories(polysolve PUBLIC ${UMFPACK_INCLUDES})
         target_link_libraries(polysolve PUBLIC ${UMFPACK_LIBRARIES})
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_UMFPACK)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_UMFPACK)
     endif()
 endif()
 
 # SuperLU solver
-if(POLYFEM_SOLVERS_WITH_SUPERLU AND NOT (POLYFEM_SOLVERS_WITH_MKL AND MKL_FOUND))
+if(POLYSOLVE_WITH_SUPERLU AND NOT (POLYSOLVE_WITH_MKL AND MKL_FOUND))
     find_package(SuperLU)
     if(SUPERLU_FOUND)
         target_include_directories(polysolve PUBLIC ${SUPERLU_INCLUDES})
         target_link_libraries(polysolve PUBLIC ${SUPERLU_LIBRARIES})
         target_compile_definitions(polysolve PUBLIC ${SUPERLU_DEFINES})
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_SUPERLU)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SUPERLU)
     endif()
 endif()
 
 
 # amgcl solver
-if(POLYFEM_SOLVERS_WITH_AMGCL)
+if(POLYSOLVE_WITH_AMGCL)
     find_package(Boost COMPONENTS
     program_options
     serialization
@@ -169,7 +169,7 @@ if(POLYFEM_SOLVERS_WITH_AMGCL)
         polyfem_solvers_download_amgcl()
         add_subdirectory(${THIRD_PARTY_DIR}/amgcl amgcl)
         target_link_libraries(polysolve PUBLIC amgcl::amgcl)
-        target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_AMGCL)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_AMGCL)
     else()
         MESSAGE(WARNING "Boost not found, AMGCL requires boost thus it has beend disabled")
     endif()
@@ -177,10 +177,10 @@ endif()
 
 
 # Spectra
-if(POLYFEM_SOLVERS_WITH_SPECTRA)
+if(POLYSOLVE_WITH_SPECTRA)
     polyfem_solvers_download_spectra()
     add_library(spectra INTERFACE)
     target_include_directories(spectra SYSTEM INTERFACE ${THIRD_PARTY_DIR}/spectra/include)
     target_link_libraries(polysolve PUBLIC spectra)
-    target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_WITH_SPECTRA)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SPECTRA)
 endif()

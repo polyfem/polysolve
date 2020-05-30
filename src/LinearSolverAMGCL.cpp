@@ -1,4 +1,4 @@
-#ifdef POLYFEM_SOLVERS_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolverAMGCL.hpp>

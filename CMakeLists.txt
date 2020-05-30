@@ -12,9 +12,9 @@ endif()
 
 # Detects whether this is a top-level project
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(POLYFEM_SOLVERS_TOPLEVEL_PROJECT ON)
+    set(POLYSOLVE_TOPLEVEL_PROJECT ON)
 else()
-    set(POLYFEM_SOLVERS_TOPLEVEL_PROJECT OFF)
+    set(POLYSOLVE_TOPLEVEL_PROJECT OFF)
 endif()
 
 
@@ -25,7 +25,7 @@ else()
 endif()
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-if(${POLYFEM_SOLVERS_TOPLEVEL_PROJECT})
+if(${POLYSOLVE_TOPLEVEL_PROJECT})
     list(APPEND CMAKE_MODULE_PATH ${THIRD_PARTY_DIR}/Catch2/contrib)
 endif()
 
@@ -35,7 +35,7 @@ include(UseColors)
 # Prepend function
 include(PrependCurrentPath)
 
-# Polyfem utils
+# Polysolve utils
 include(PolyfemSolversUtils)
 
 # Extra warnings
@@ -56,39 +56,39 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ################################################################################
 
-# Polyfem options
-option(POLYFEM_SOLVERS_WITH_SANITIZERS "Enable sanitizers in compilation targets"   OFF)
+# Polysolve options
+option(POLYSOLVE_WITH_SANITIZERS "Enable sanitizers in compilation targets"   OFF)
 
 
-# Polyfem options for enabling/disabling optional libraries
-option(POLYFEM_SOLVERS_WITH_CHOLMOD          "Enable Cholmod library"            ON)
-option(POLYFEM_SOLVERS_WITH_UMFPACK          "Enable UmfPack library"            ON)
-option(POLYFEM_SOLVERS_WITH_SUPERLU          "Enable SuperLU library"            ON)
-option(POLYFEM_SOLVERS_WITH_MKL              "Enable MKL library"                ON)
-option(POLYFEM_SOLVERS_WITH_PARDISO          "Enable Pardiso library"            OFF)
-option(POLYFEM_SOLVERS_WITH_HYPRE            "Enable hypre"                      ON)
-option(POLYFEM_SOLVERS_WITH_AMGCL            "Use AMGCL"                         ON)
-option(POLYFEM_SOLVERS_WITH_SPECTRA          "Enable computing spectrum"         ON)
+# Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_CHOLMOD          "Enable Cholmod library"            ON)
+option(POLYSOLVE_WITH_UMFPACK          "Enable UmfPack library"            ON)
+option(POLYSOLVE_WITH_SUPERLU          "Enable SuperLU library"            ON)
+option(POLYSOLVE_WITH_MKL              "Enable MKL library"                ON)
+option(POLYSOLVE_WITH_PARDISO          "Enable Pardiso library"            OFF)
+option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      ON)
+option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         ON)
+option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         ON)
 
 
 
 # Sanitizer options
-option(POLYFEM_SOLVERS_SANITIZE_ADDRESS   "Sanitize Address"       OFF)
-option(POLYFEM_SOLVERS_SANITIZE_MEMORY    "Sanitize Memory"        OFF)
-option(POLYFEM_SOLVERS_SANITIZE_THREAD    "Sanitize Thread"        OFF)
-option(POLYFEM_SOLVERS_SANITIZE_UNDEFINED "Sanitize Undefined"     OFF)
+option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"       OFF)
+option(POLYSOLVE_SANITIZE_MEMORY    "Sanitize Memory"        OFF)
+option(POLYSOLVE_SANITIZE_THREAD    "Sanitize Thread"        OFF)
+option(POLYSOLVE_SANITIZE_UNDEFINED "Sanitize Undefined"     OFF)
 
-option(POLYFEM_SOLVERS_LARGE_INDEX    "Build for large indices"       OFF)
+option(POLYSOLVE_LARGE_INDEX    "Build for large indices"       OFF)
 
 ################################################################################
 
 
 
 # Somehow Pardiso 6 conflicts with libmetis that these guys depends on... Grr
-if(POLYFEM_SOLVERS_WITH_PARDISO)
-    set(POLYFEM_SOLVERS_WITH_CHOLMOD      OFF CACHE BOOL "" FORCE)
-    set(POLYFEM_SOLVERS_WITH_UMFPACK      OFF CACHE BOOL "" FORCE)
-    set(POLYFEM_SOLVERS_WITH_SUPERLU      OFF CACHE BOOL "" FORCE)
+if(POLYSOLVE_WITH_PARDISO)
+    set(POLYSOLVE_WITH_CHOLMOD      OFF CACHE BOOL "" FORCE)
+    set(POLYSOLVE_WITH_UMFPACK      OFF CACHE BOOL "" FORCE)
+    set(POLYSOLVE_WITH_SUPERLU      OFF CACHE BOOL "" FORCE)
 endif()
 
 ################################################################################
@@ -96,7 +96,7 @@ endif()
 ################################################################################
 
 # Sanitizers
-if(POLYFEM_SOLVERS_WITH_SANITIZERS)
+if(POLYSOLVE_WITH_SANITIZERS)
     list(APPEND CMAKE_MODULE_PATH ${THIRD_PARTY_DIR}/sanitizers-cmake/cmake)
 endif()
 
@@ -107,11 +107,11 @@ endif()
 
 add_library(polysolve src/FEMSolver.cpp)
 
-if(${POLYFEM_SOLVERS_LARGE_INDEX})
-    target_compile_definitions(polysolve PUBLIC -DPOLYFEM_SOLVERS_LARGE_INDEX)
+if(${POLYSOLVE_LARGE_INDEX})
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_LARGE_INDEX)
 endif()
 
-# Public include directory for polyfem
+# Public include directory for Polysolve
 target_include_directories(polysolve PUBLIC ${PROJECT_BINARY_DIR}/include)
 
 # Extra warnings
@@ -134,7 +134,7 @@ include(PolyfemSolversDependencies)
 add_subdirectory(src)
 
 # Compile extras only if this is a top-level project
-if(POLYFEM_SOLVERS_TOPLEVEL_PROJECT)
+if(POLYSOLVE_TOPLEVEL_PROJECT)
     # Unit tests
     include(CTest)
     enable_testing()

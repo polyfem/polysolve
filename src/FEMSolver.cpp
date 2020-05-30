@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/FEMSolver.hpp>
 
-#ifdef POLYFEM_SOLVERS_WITH_SPECTRA
+#ifdef POLYSOLVE_WITH_SPECTRA
 #include <MatOp/SparseSymMatProd.h>
 #include <MatOp/SparseSymShiftSolve.h>
 #include <SymEigsSolver.h>
@@ -17,7 +17,7 @@ namespace polysolve
     {
         Eigen::Vector4d compute_specturm(const StiffnessMatrix &mat)
         {
-#ifdef POLYFEM_SOLVERS_WITH_SPECTRA
+#ifdef POLYSOLVE_WITH_SPECTRA
             typedef Spectra::SparseSymMatProd<double> MatOp;
             typedef Spectra::SparseSymShiftSolve<double> InvMatOp;
             Eigen::Vector4d res;

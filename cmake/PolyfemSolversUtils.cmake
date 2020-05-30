@@ -1,4 +1,4 @@
-# Copy PolyFEM header files into the build directory
+# Copy Polysolve header files into the build directory
 function(polyfem_solvers_copy_headers)
 	foreach(filepath IN ITEMS ${ARGN})
 		get_filename_component(filename "${filepath}" NAME)

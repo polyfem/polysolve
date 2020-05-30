@@ -35,6 +35,7 @@ TEST_CASE("all", "[solver]")
 
         // std::cout<<"Solver error: "<<x<<std::endl;
         const double err = (A * x - b).norm();
+        INFO("solver: " + s);
         REQUIRE(err < 1e-8);
     }
 }

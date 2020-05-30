@@ -31,6 +31,13 @@ function(polyfem_solvers_download_catch2)
     )
 endfunction()
 
+function(polyfem_solvers_download_eigen)
+	polyfem_solvers_download_project(eigen
+		GIT_REPOSITORY https://github.com/eigenteam/eigen-git-mirror.git
+		GIT_TAG        3.3.7
+	)
+endfunction()
+
 
 ## spectra MPL 2.0 optional
 function(polyfem_solvers_download_spectra)

@@ -34,7 +34,15 @@ endif()
 # Eigen
 # Uncomment to use the system's version of Eigen (e.g. to use Eigen 3.3)
 if(NOT TARGET Eigen3::Eigen)
-    find_package(Eigen3 REQUIRED)
+    polyfem_solvers_download_eigen()
+    add_library(eigen INTERFACE)
+    target_include_directories(eigen SYSTEM INTERFACE
+        $<BUILD_INTERFACE:${POLYFEM_SOLVERS_EXTERNAL}/eigen>
+        $<INSTALL_INTERFACE:include>
+    )
+    set_property(TARGET eigen PROPERTY EXPORT_NAME Eigen3::Eigen)
+    add_library(Eigen3::Eigen ALIAS eigen)
+
     target_link_libraries(polyfem-solvers PUBLIC Eigen3::Eigen)
 endif()
 

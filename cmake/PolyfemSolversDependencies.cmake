@@ -171,7 +171,7 @@ if(POLYFEM_SOLVERS_WITH_AMGCL)
         target_link_libraries(polyfem-solvers PUBLIC amgcl::amgcl)
         target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_WITH_AMGCL)
     else()
-        MESSAGE(WARNING "AMGCL requires boost")
+        MESSAGE(WARNING "Boost not found, AMGCL requires boost thus it has beend disabled")
     endif()
 endif()
 

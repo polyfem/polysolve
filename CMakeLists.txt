@@ -103,6 +103,10 @@ endif()
 
 add_library(polyfem-solvers src/FEMSolver.cpp)
 
+if(MSVC)
+  add_compile_options(-bigobj)
+endif()
+
 if(${POLYFEM_SOLVERS_LARGE_INDEX})
     target_compile_definitions(polyfem-solvers PUBLIC -DPOLYFEM_SOLVERS_LARGE_INDEX)
 endif()

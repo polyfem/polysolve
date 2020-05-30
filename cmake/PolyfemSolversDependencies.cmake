@@ -42,9 +42,9 @@ if(NOT TARGET Eigen3::Eigen)
     )
     set_property(TARGET eigen PROPERTY EXPORT_NAME Eigen3::Eigen)
     add_library(Eigen3::Eigen ALIAS eigen)
-
-    target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 endif()
+target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
+
 
 
 # Catch2

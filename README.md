@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/polyfem/solver-warpper.svg?branch=master)](https://travis-ci.com/polyfem/solver-warpper)
+[![Build Status](https://travis-ci.com/polyfem/polysolve.svg?branch=master)](https://travis-ci.com/polyfem/polysolve)
 [![Build status](https://ci.appveyor.com/api/projects/status/tk7mfelpp469vqb5/branch/master?svg=true)](https://ci.appveyor.com/project/teseoch/polysolve/branch/master)
 
 

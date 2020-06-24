@@ -2,9 +2,10 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/tk7mfelpp469vqb5/branch/master?svg=true)](https://ci.appveyor.com/project/teseoch/polysolve/branch/master)
 
 
-# Polysolve
+# PolySolve
 
-This library contains a cross-platform Eigen Wrappers for many different external solvers including (but not limited to):
+This library contains a cross-platform Eigen wrapper for many different external linear solvers including (but not limited to):
+
  - Hypre
  - AMGCL
  - Pardiso
@@ -19,7 +20,13 @@ auto solver = LinearSolver::create(solver_name, "");
 // configuration parameters like iteration or accuracy for iterative solvers
 // solver->setParameters(params);
 
+//System sparse matrix
+Eigen::SparseMatrix<double> A;
+
+//right-hand side
 Eigen::VectorXd b;
+
+//solution
 Eigen::VectorXd x(b.size());
 
 solver->analyzePattern(A, A.rows());
@@ -29,8 +36,9 @@ solver->solve(b, x);
 
 You can use `LinearSolver::availableSolvers()` to obtain the list of available solvers.
 
+## Parameters
 
-### Parameters for iterative solvers (AMGCL, Eigen Internal Solvers, HYPRE)
+###  Iterative solvers (AMGCL, Eigen Internal Solvers, HYPRE)
 
  - `max_iter` controls the solver's iterations, default `1000`
  - `conv_tol`, `tolerance` controls the convergence tolerance, default `1e-10`
@@ -40,9 +48,10 @@ You can use `LinearSolver::availableSolvers()` to obtain the list of available s
 - `pre_max_iter`, number of pre iterations, default `1`
 
 
-### Paramters for Pardiso
+### Pardiso
 
-'mtype', sets the matrix type, default 11
+`mtype`, sets the matrix type, default 11
+
 | mtype | Description                             |
 |-------|-----------------------------------------|
 |    1  | real and structurally symmetric         |

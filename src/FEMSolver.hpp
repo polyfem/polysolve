@@ -40,4 +40,11 @@ namespace polysolve
                                     const int precond_num,
                                     const std::string &save_path = "", bool compute_spectrum = false);
 
+    void prefactorize(LinearSolver &solver, StiffnessMatrix &A,
+                                 const std::vector<int> &dirichlet_nodes, const int precond_num,
+                                 const std::string &save_path = "");
+
+    void dirichlet_solve_prefactorized(LinearSolver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
+                                                  const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u);
+
 } // namespace polysolve

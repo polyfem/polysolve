@@ -30,6 +30,7 @@ TEST_CASE("all", "[solver]")
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());
+        x.setZero();
 
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
@@ -57,6 +58,7 @@ TEST_CASE("hypre", "[solver]")
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(b.size());
+    x.setZero();
 
     solver->analyzePattern(A, A.rows());
     solver->factorize(A);

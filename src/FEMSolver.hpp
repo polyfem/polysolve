@@ -29,7 +29,7 @@ namespace polysolve
     /// @param[in,out] A                { Matrix of the linear system without
     ///                                 boundary conditions. Output: modified
     ///                                 matrix. }
-    /// @param[in,out] b                { Right-hand side of the linear system.
+    /// @param[in]     b                { Right-hand side of the linear system.
     ///                                 Output: modified rhs for the equivalent
     ///                                 system. }
     /// @param[in]     dirichlet_nodes  { List of ids of Dirichlet nodes }

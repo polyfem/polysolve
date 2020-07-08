@@ -29,14 +29,14 @@ namespace polysolve
     /// @param[in,out] A                { Matrix of the linear system without
     ///                                 boundary conditions. Output: modified
     ///                                 matrix. }
-    /// @param[in]     b                { Right-hand side of the linear system.
+    /// @param[in,out] b                { Right-hand side of the linear system.
     ///                                 Output: modified rhs for the equivalent
     ///                                 system. }
     /// @param[in]     dirichlet_nodes  { List of ids of Dirichlet nodes }
     /// @param[in,out] x                { Unknown vector }
     ///
     Eigen::Vector4d dirichlet_solve(LinearSolver &solver, StiffnessMatrix &A,
-                                    const Eigen::VectorXd &b, const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &x,
+                                    constEigen::VectorXd &b, const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &x,
                                     const int precond_num,
                                     const std::string &save_path = "", bool compute_spectrum = false);
 

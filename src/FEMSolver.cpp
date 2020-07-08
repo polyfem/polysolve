@@ -55,7 +55,7 @@ namespace polysolve
 } // namespace polysolve
 
 Eigen::Vector4d polysolve::dirichlet_solve(
-    LinearSolver &solver, StiffnessMatrix &A, const Eigen::VectorXd &f,
+    LinearSolver &solver, StiffnessMatrix &A, Eigen::VectorXd &f,
     const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u,
     const int precond_num,
     const std::string &save_path,
@@ -132,7 +132,7 @@ Eigen::Vector4d polysolve::dirichlet_solve(
     solver.analyzePattern(A, precond_num);
     solver.factorize(A);
     solver.solve(g, u);
-    // f = g;
+    f = g;
 
     if (!save_path.empty())
     {

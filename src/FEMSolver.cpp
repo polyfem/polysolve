@@ -145,7 +145,7 @@ Eigen::Vector4d polysolve::dirichlet_solve(
     }
     else
     {
-        return Eigen::Vector4d();
+        return Eigen::Vector4d::Zero();
     }
 }
 

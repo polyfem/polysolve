@@ -81,12 +81,14 @@ namespace polysolve
         // result.setZero();
         // std::tie(iterations_, residual_error_) = solver_->operator()(rhs, result);
 
-        std::vector<double> x(rhs.size(), 0.0), _rhs(rhs.size());
+        assert(result.size() == rhs.size());
+
+        std::vector<double> x(rhs.size()), _rhs(rhs.size());
         std::memcpy(_rhs.data(), rhs.data(), sizeof(rhs[0]) * rhs.size());
+        std::memcpy(x.data(), result.data(), sizeof(x[0]) * result.size());
 
         std::tie(iterations_, residual_error_) = solver_->operator()(_rhs, x);
 
-        result.resize(x.size());
         std::memcpy(result.data(), x.data(), sizeof(x[0]) * x.size());
     }
 

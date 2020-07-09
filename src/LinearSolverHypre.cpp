@@ -187,11 +187,13 @@ namespace polysolve
         HYPRE_IJVectorSetObjectType(x, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x);
 
+        assert(result.size() == rhs.size());
+
         for (HYPRE_Int i = 0; i < rhs.size(); ++i)
         {
             const HYPRE_Int index[1] = {i};
             const HYPRE_Complex v[1] = {HYPRE_Complex(rhs(i))};
-            const HYPRE_Complex z[1] = {HYPRE_Complex(0)};
+            const HYPRE_Complex z[1] = {HYPRE_Complex(result(i))};
 
             HYPRE_IJVectorSetValues(b, 1, index, v);
             HYPRE_IJVectorSetValues(x, 1, index, z);

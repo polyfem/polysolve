@@ -30,6 +30,7 @@ TEST_CASE("all", "[solver]")
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());
+        x.setZero();
 
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
@@ -57,12 +58,100 @@ TEST_CASE("hypre", "[solver]")
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(b.size());
+    x.setZero();
 
     solver->analyzePattern(A, A.rows());
     solver->factorize(A);
     solver->solve(b, x);
 
     // solver->getInfo(solver_info);
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+
+TEST_CASE("hypre_initial_guess", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(A.rows());
+    x.setZero();
+    {
+        json solver_info;
+
+        auto solver = LinearSolver::create("Hypre", "");
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+        solver->getInfo(solver_info);
+
+        REQUIRE(solver_info["num_iterations"] > 1);
+    }
+
+    {
+        json solver_info;
+        auto solver = LinearSolver::create("Hypre", "");
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+
+        solver->getInfo(solver_info);
+
+        REQUIRE(solver_info["num_iterations"] == 1);
+    }
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+#endif
+
+#ifdef POLYSOLVE_WITH_AMGCL
+TEST_CASE("amgcl_initial_guess", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(A.rows());
+    x.setZero();
+    {
+        json solver_info;
+
+        auto solver = LinearSolver::create("AMGCL", "");
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+        solver->getInfo(solver_info);
+
+        REQUIRE(solver_info["num_iterations"] > 0);
+    }
+
+    {
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+
+        solver->getInfo(solver_info);
+
+        REQUIRE(solver_info["num_iterations"] == 0);
+    }
+
+
 
     // std::cout<<"Solver error: "<<x<<std::endl;
     const double err = (A * x - b).norm();

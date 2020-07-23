@@ -1,6 +1,9 @@
 #pragma once
 
 #ifdef POLYSOLVE_WITH_AMGCL
+// #define POLYSOLVE_AMGCL_V2
+// #define POLYSOLVE_AMGCL_SIMPLE
+#define POLYSOLVE_AMGCL_DUMMY_PRECOND
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
@@ -14,26 +17,30 @@
 #include <amgcl/solver/fgmres.hpp>
 
 #include <amgcl/coarsening/smoothed_aggregation.hpp>
+#include <amgcl/coarsening/aggregation.hpp>
 
 #include <amgcl/relaxation/spai0.hpp>
 #include <amgcl/relaxation/gauss_seidel.hpp>
 #include <amgcl/relaxation/ilu0.hpp>
+#include <amgcl/relaxation/iluk.hpp>
+#include <amgcl/relaxation/ilut.hpp>
 #include <amgcl/relaxation/spai0.hpp>
+#include <amgcl/relaxation/as_preconditioner.hpp>
 
 #include <amgcl/preconditioner/dummy.hpp>
 #include <amgcl/preconditioner/schur_pressure_correction.hpp>
+#include <amgcl/relaxation/as_preconditioner.hpp>
 
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>
 
+    ////////////////////////////////////////////////////////////////////////////////
+    //
+    //
 
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-
-namespace polysolve {
+    namespace polysolve {
 
     class LinearSolverAMGCL : public LinearSolver {
 
@@ -88,17 +95,22 @@ namespace polysolve {
         // 	amgcl::solver::bicgstab<Backend>>
         // 	Solver;
 
+#ifdef POLYSOLVE_AMGCL_SIMPLE
         // Use AMG as preconditioner:
-        // typedef amgcl::make_solver<
-        // 	// Use AMG as preconditioner:
-        // 	amgcl::amg<
-        // 		Backend,
-        // 		amgcl::coarsening::smoothed_aggregation,
-        // 		amgcl::relaxation::gauss_seidel>,
-        // 	// And CG as iterative solver:
-        // 	amgcl::solver::cg<Backend>>
-        // 	Solver;
+        typedef amgcl::make_solver<
+        	// Use AMG as preconditioner:
+        	amgcl::amg<
+        		Backend,
+        		amgcl::coarsening::smoothed_aggregation,
+        		amgcl::relaxation::gauss_seidel>,
+        	// And CG as iterative solver:
+        	amgcl::solver::cg<Backend>>
+        	Solver;
+#endif
 
+
+
+#ifdef POLYSOLVE_AMGCL_DUMMY_PRECOND
         typedef amgcl::make_solver<
             amgcl::preconditioner::schur_pressure_correction<
                 amgcl::make_solver<
@@ -112,6 +124,30 @@ namespace polysolve {
                     amgcl::solver::bicgstab<Backend>>>,
             amgcl::solver::fgmres<Backend>>
             Solver;
+#endif
+#ifdef POLYSOLVE_AMGCL_V1
+        typedef amgcl::make_solver<
+            amgcl::relaxation::as_preconditioner<Backend,
+                                                 amgcl::relaxation::iluk>,
+            amgcl::solver::cg<Backend>>
+            Solver;
+#endif
+
+#ifdef POLYSOLVE_AMGCL_V2
+        typedef amgcl::make_solver<
+            amgcl::preconditioner::schur_pressure_correction<amgcl::make_solver< // Solver for (8b)
+                                                                 amgcl::amg<
+                                                                     Backend,
+                                                                     amgcl::coarsening::aggregation,
+                                                                     amgcl::relaxation::ilut>,
+                                                                 amgcl::solver::cg<Backend>>,
+                                                             amgcl::make_solver< // Solver for (8a)
+                                                                 amgcl::relaxation::as_preconditioner<Backend,
+                                                                                                      amgcl::relaxation::spai0>,
+                                                                 amgcl::solver::cg<Backend>>>,
+            amgcl::solver::fgmres<Backend>>
+            Solver;
+#endif
 
         Solver *solver_ = nullptr;
         Solver::params params_;

@@ -14,6 +14,20 @@ namespace polysolve
     {
         params_.solver.maxiter = 1000;
         params_.solver.tol = 1e-10;
+
+#ifdef POLYSOLVE_AMGCL_DUMMY_PRECOND
+        params_.precond.usolver.solver.tol = params_.solver.tol * 10;
+        params_.precond.psolver.solver.tol = params_.solver.tol * 10;
+        params_.precond.psolver.solver.maxiter = 1;
+        params_.precond.usolver.solver.maxiter = 1;
+#endif
+#ifdef POLYSOLVE_AMGCL_V2
+        params_.precond.approx_schur = false;
+        params_.precond.usolver.solver.maxiter = 2;
+        params_.precond.psolver.solver.maxiter = 8;
+        params_.precond.usolver.solver.tol = 1e-1;
+        params_.precond.psolver.solver.tol = 1e-1;
+#endif
     }
 
     // Set solver parameters
@@ -34,6 +48,13 @@ namespace polysolve
         {
             params_.solver.tol = params["tolerance"];
         }
+
+#ifdef POLYSOLVE_AMGCL_DUMMY_PRECOND
+        params_.precond.usolver.solver.tol = params_.solver.tol * 10;
+        params_.precond.psolver.solver.tol = params_.solver.tol * 10;
+        params_.precond.psolver.solver.maxiter = 1;
+        params_.precond.usolver.solver.maxiter = 1;
+#endif
     }
 
     void LinearSolverAMGCL::getInfo(json &params) const
@@ -62,9 +83,11 @@ namespace polysolve
         a_.resize(Ain.nonZeros());
         memcpy(a_.data(), Ain.valuePtr(), Ain.nonZeros() * sizeof(Ain.valuePtr()[0]));
 
+#if defined(POLYSOLVE_AMGCL_DUMMY_PRECOND) || defined(POLYSOLVE_AMGCL_V2)
         params_.precond.pmask.resize(numRows, 0);
         for (size_t i = precond_num; i < numRows; ++i)
             params_.precond.pmask[i] = 1;
+#endif
 
         solver_ = new Solver(std::tie(numRows, ia_, ja_, a_), params_);
 

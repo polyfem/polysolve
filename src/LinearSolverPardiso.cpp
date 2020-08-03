@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolverPardiso.h"
+#include "LinearSolverPardiso.hpp"
 #include <thread>
 #ifdef POLYSOLVE_WITH_MKL
 #include <mkl_pardiso.h>

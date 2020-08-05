@@ -16,7 +16,7 @@
 #include <Eigen/PardisoSupport>
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
-#include "LinearSolverPardiso.h"
+#include <polysolve/LinearSolverPardiso.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
 #include <polysolve/LinearSolverHypre.hpp>

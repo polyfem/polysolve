@@ -69,6 +69,7 @@ option(POLYSOLVE_WITH_PARDISO          "Enable Pardiso library"            OFF)
 option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      ON)
 option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         ON)
 option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         ON)
+option(POLYSOLVE_WITH_MATIO            "Use matio for matrix export"       ON)
 
 
 
@@ -109,6 +110,12 @@ add_library(polysolve src/FEMSolver.cpp)
 
 if(${POLYSOLVE_LARGE_INDEX})
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_LARGE_INDEX)
+endif()
+
+if(POLYSOLVE_WITH_MATIO)
+  find_package(MATIO)
+  target_link_libraries(polysolve PUBLIC matio)
+  target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_MATIO)
 endif()
 
 # Public include directory for Polysolve

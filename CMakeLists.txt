@@ -69,7 +69,7 @@ option(POLYSOLVE_WITH_PARDISO          "Enable Pardiso library"            OFF)
 option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      ON)
 option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         ON)
 option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         ON)
-option(POLYSOLVE_WITH_MATIO            "Use matio for matrix export"       ON)
+option(POLYSOLVE_WITH_MATIO            "Use matio for matrix export"       OFF)
 
 
 

@@ -194,11 +194,11 @@ Eigen::Vector4d polysolve::dirichlet_solve(
 
     // std::cout << A << std::endl;
 
-    static int save_idx = 0;
-    std::string mat_save_path = std::to_string(save_idx) + ".mat";
-    Eigen::saveMarket(A, "A"+mat_save_path);
-    Eigen::saveMarketVector(g, "b"+mat_save_path);
-    save_idx++;
+    // static int save_idx = 0;
+    // std::string mat_save_path = std::to_string(save_idx) + ".mat";
+    // Eigen::saveMarket(A, "A"+mat_save_path);
+    // Eigen::saveMarketVector(g, "b"+mat_save_path);
+    // save_idx++;
 
     if (u.size() != n)
     {

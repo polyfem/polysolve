@@ -56,11 +56,13 @@ namespace polysolve
         conv_tol_ = 1e-8;
         max_iter_ = 50;
 
-        // asymmetric_solver_name_ = "Eigen::GMRES";
-        // symmetric_solver_name_ = "Eigen::GMRES";
-
-        asymmetric_solver_name_ = LinearSolver::defaultSolver();
         symmetric_solver_name_ = LinearSolver::defaultSolver();
+
+#ifdef POLYSOLVE_WITH_PARDISO
+        asymmetric_solver_name_ = LinearSolver::defaultSolver();
+#else
+        asymmetric_solver_name_ = "Eigen::GMRES";
+#endif
 
         asymmetric_solver_params_ = {"tolerance", 1e-5};
         symmetric_solver_params_ = {"tolerance", 1e-5};

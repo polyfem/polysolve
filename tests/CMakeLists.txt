@@ -8,6 +8,7 @@ set(test_sources
 
 
 add_executable(unit_tests ${test_sources})
+polyfem_solvers_download_polyfem_data()
 
 foreach(source IN ITEMS ${test_sources})
     source_group("tests" FILES "${source}")
@@ -15,7 +16,7 @@ endforeach()
 
 target_link_libraries(unit_tests PUBLIC polysolve catch warnings::all)
 
-set(DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(DATA_DIR "${POLYSOLVE_EXTERNAL}/data")
 target_compile_definitions(unit_tests PUBLIC -DPOLYSOLVE_DATA_DIR=\"${DATA_DIR}\")
 
 

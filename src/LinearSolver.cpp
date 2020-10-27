@@ -1,6 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
 #include <polysolve/LinearSolverEigen.hpp>
+#include <polysolve/SaddlePointSolver.hpp>
+
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_CHOLMOD
@@ -25,6 +27,7 @@
 #include <polysolve/LinearSolverAMGCL.hpp>
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -113,7 +116,7 @@ namespace polysolve
     do                                                               \
     {                                                                \
         return std::make_unique<LinearSolverEigenDirect<EigenSolver< \
-            polysolve::StiffnessMatrix>>>();                           \
+            polysolve::StiffnessMatrix>>>();                         \
     } while (0)
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -254,6 +257,10 @@ namespace polysolve
         {
             return PrecondHelperSym<MINRES>::create(precond);
 #endif
+        }
+        else if (solver == "SaddlePointSolver")
+        {
+            return std::make_unique<SaddlePointSolver>();
         }
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }

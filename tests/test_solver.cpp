@@ -159,7 +159,7 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 TEST_CASE("saddle_point_test", "[solver]")
 {
 #ifdef WIN32
-#ifndef NDEBUG
+#ifdef NDEBUG
     const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     bool ok = loadMarket(A, path + "/A0.mat");

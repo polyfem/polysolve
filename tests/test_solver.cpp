@@ -121,7 +121,6 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-
     // solver->setParameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
@@ -151,10 +150,27 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
         REQUIRE(solver_info["num_iterations"] == 0);
     }
 
-
-
     // std::cout<<"Solver error: "<<x<<std::endl;
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
 #endif
+
+TEST_CASE("saddle_point_test", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    bool ok = loadMarket(A, path + "/A0.mat");
+    REQUIRE(ok);
+
+    Eigen::VectorXd b;
+    ok = loadMarketVector(b, path + "/b0.mat");
+    REQUIRE(ok);
+
+    auto solver = LinearSolver::create("SaddlePointSolver", "");
+    solver->analyzePattern(A, 9934);
+    Eigen::VectorXd x(A.rows());
+    solver->solve(b, x);
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}

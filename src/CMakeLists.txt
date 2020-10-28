@@ -8,6 +8,8 @@ set(SOURCES
     LinearSolverEigen.hpp
     LinearSolverHypre.cpp
     LinearSolverHypre.hpp
+    SaddlePointSolver.cpp
+    SaddlePointSolver.hpp
 )
 
 if(POLYSOLVE_HAS_AMGCL)

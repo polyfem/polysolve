@@ -83,3 +83,12 @@ function(polyfem_solvers_download_json)
         GIT_TAG        0901d33bf6e7dfe6f70fd9d142c8f5c6695c6c5b
     )
 endfunction()
+
+
+## data
+function(polyfem_solvers_download_polyfem_data)
+    polyfem_solvers_download_project(data
+        GIT_REPOSITORY https://github.com/polyfem/polyfem-data
+        GIT_TAG        1e9a93d5c7ab5f6f386edd6b7ff1a78871553af6
+    )
+endfunction()

@@ -57,11 +57,11 @@ namespace polysolve
         max_iter_ = 50;
 
 #ifdef POLYSOLVE_WITH_PARDISO
-        asymmetric_solver_name_ = LinearSolver::defaultSolver();
+        asymmetric_solver_name_ = "HypreGMRES";
         symmetric_solver_name_ = LinearSolver::defaultSolver();
 #else
         asymmetric_solver_name_ = "HypreGMRES";
-        symmetric_solver_name_ = "Pardiso";
+        symmetric_solver_name_ = "Eigen::GMRES";
 #endif
 
         asymmetric_solver_params_ = {"tolerance", 1e-5};

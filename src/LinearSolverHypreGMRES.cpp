@@ -136,9 +136,9 @@ namespace polysolve
 
         /* Set some parameters (See Reference Manual for more parameters) */
         HYPRE_ParCSRGMRESSetMaxIter(solver, max_iter_); /* max iterations */
-        HYPRE_ParCSRGMRESSetTol(solver, conv_tol_);     /* conv. tolerance */
+        HYPRE_ParCSRGMRESSetAbsoluteTol(solver, conv_tol_);     /* conv. tolerance */
         HYPRE_ParCSRGMRESSetStopCrit(solver, 1);
-        // HYPRE_ParCSRGMRESSetPrintLevel(solver, 2); /* print solve info */
+        HYPRE_ParCSRGMRESSetPrintLevel(solver, 2); /* print solve info */
         HYPRE_ParCSRGMRESSetLogging(solver, 1); /* needed to get run info later */
 
         /*HYPRE_EuclidCreate(MPI_COMM_WORLD, &eu);

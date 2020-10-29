@@ -60,7 +60,7 @@ namespace polysolve
         int dimension_ = 1; // 1 = scalar (Laplace), 2 or 3 = vector (Elasticity)
         int max_iter_ = 5000;
         int pre_max_iter_ = 1;
-        double conv_tol_ = 1e-4;
+        double conv_tol_ = 1e-6;
 
         HYPRE_Int num_iterations;
         HYPRE_Complex final_res_norm;

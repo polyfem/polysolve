@@ -22,6 +22,7 @@
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
 #include <polysolve/LinearSolverHypre.hpp>
+#include <polysolve/LinearSolverHypreGMRES.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
@@ -219,6 +220,10 @@ namespace polysolve
         else if (solver == "Hypre")
         {
             return std::make_unique<LinearSolverHypre>();
+        }
+        else if (solver == "HypreGMRES")
+        {
+            return std::make_unique<LinearSolverHypreGMRES>();
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
         }
@@ -291,6 +296,7 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",
+            "HypreGMRES"
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",

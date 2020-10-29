@@ -60,8 +60,8 @@ namespace polysolve
         asymmetric_solver_name_ = LinearSolver::defaultSolver();
         symmetric_solver_name_ = LinearSolver::defaultSolver();
 #else
-        asymmetric_solver_name_ = "Eigen::GMRES";
-        symmetric_solver_name_ = "Eigen::GMRES";
+        asymmetric_solver_name_ = "HypreGMRES";
+        symmetric_solver_name_ = "Pardiso";
 #endif
 
         asymmetric_solver_params_ = {"tolerance", 1e-5};
@@ -173,7 +173,7 @@ namespace polysolve
         auto asymmetric_solver = LinearSolver::create(asymmetric_solver_name_, "");
         auto symmetric_solver = LinearSolver::create(symmetric_solver_name_, "");
 
-        symmetric_solver->analyzePattern(Ss, Ss.rows());
+        symmetric_solver->analyzePattern(Ss, Ss.rows() - 1);
         symmetric_solver->factorize(Ss);
 
         int i;

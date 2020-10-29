@@ -2,6 +2,7 @@
 
 #include <unsupported/Eigen/SparseExtra>
 
+#include <ctime>
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -61,7 +62,7 @@ namespace polysolve
         symmetric_solver_name_ = LinearSolver::defaultSolver();
 #else
         asymmetric_solver_name_ = "HypreGMRES";
-        symmetric_solver_name_ = "Eigen::GMRES";
+        symmetric_solver_name_ = "HypreGMRES";
 #endif
 
         asymmetric_solver_params_ = {"tolerance", 1e-5};
@@ -187,10 +188,13 @@ namespace polysolve
 
             //1
             // iters{i}.yu = gmres(As, iters{i}.Rms, iter_gmrs, eps_gm, outer_iter_gmrs);
+            clock_t start_time = clock();
             asymmetric_solver->analyzePattern(As, As.rows());
             asymmetric_solver->factorize(As);
             assert(currentRms.size() == yu[i].size());
             asymmetric_solver->solve(currentRms, yu[i]);
+            clock_t end_time = clock();
+            std::cout << "Step 1 time cost = " << (end_time-start_time) << "ms" << std::endl;
 
             //2
             //Rcst = iters{i}.Rcs - Bs' * iters{i}.yu;
@@ -199,7 +203,10 @@ namespace polysolve
             //3
             //iters{i}.yp = bicgstab(Ss, Rcst, eps_cg, 10000);
             assert(Rcst.size() == yp[i].size());
+            start_time = clock();
             symmetric_solver->solve(Rcst, yp[i]);
+            end_time = clock();
+            std::cout << "Step 2 time cost = " << (end_time-start_time) << "ms" << std::endl;
 
             //4
             //Rmst = iters{i}.Rms - Bs*iters{i}.yp;
@@ -209,7 +216,10 @@ namespace polysolve
             // iters{i}.yu = gmres(As, Rmst, iter_gmrs, eps_gm, outer_iter_gmrs);
             assert(Rmst.size() == yu[i].size());
             yu[i].setZero();
+            start_time = clock();
             asymmetric_solver->solve(Rmst, yu[i]);
+            end_time = clock();
+            std::cout << "Step 3 time cost = " << (end_time-start_time) << "ms" << std::endl;
 
             //update
             Rmu.emplace_back(As * yu[i]);
@@ -265,6 +275,7 @@ namespace polysolve
             //TODO stopping condition!
             compute_solution(i + 1, alphau, alphap, yu, yp, Wm, Wc, result);
             final_res_norm_ = (Ain_ * result - rhs).norm();
+            std::cout << "\nResidual = " << final_res_norm_ << "\n";
 
             if (final_res_norm_ < conv_tol_)
             {

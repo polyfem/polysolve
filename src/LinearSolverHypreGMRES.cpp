@@ -132,25 +132,25 @@ namespace polysolve
 
         /* Create solver */
         HYPRE_Solver solver, eu;
-        HYPRE_ParCSRGMRESCreate(MPI_COMM_WORLD, &solver);
+        HYPRE_ParCSRLGMRESCreate(MPI_COMM_WORLD, &solver);
 
         /* Set some parameters (See Reference Manual for more parameters) */
-        HYPRE_ParCSRGMRESSetMaxIter(solver, max_iter_); /* max iterations */
-        HYPRE_ParCSRGMRESSetAbsoluteTol(solver, conv_tol_);     /* conv. tolerance */
-        HYPRE_ParCSRGMRESSetStopCrit(solver, 1);
-        HYPRE_ParCSRGMRESSetPrintLevel(solver, 2); /* print solve info */
-        HYPRE_ParCSRGMRESSetLogging(solver, 1); /* needed to get run info later */
+        HYPRE_ParCSRLGMRESSetMaxIter(solver, max_iter_); /* max iterations */
+        HYPRE_ParCSRLGMRESSetTol(solver, conv_tol_);     /* conv. tolerance */
+        // HYPRE_ParCSRLGMRESSetStopCrit(solver, 1);
+        // HYPRE_ParCSRLGMRESSetPrintLevel(solver, 2); /* print solve info */
+        HYPRE_ParCSRLGMRESSetLogging(solver, 1); /* needed to get run info later */
 
-        /*HYPRE_EuclidCreate(MPI_COMM_WORLD, &eu);
-        HYPRE_ParCSRGMRESSetPrecond(solver, (HYPRE_PtrToSolverFcn)HYPRE_EuclidSolve, (HYPRE_PtrToSolverFcn)HYPRE_EuclidSetup, eu);*/
+        // HYPRE_EuclidCreate(MPI_COMM_WORLD, &eu);
+        // HYPRE_ParCSRLGMRESSetPrecond(solver, (HYPRE_PtrToSolverFcn)HYPRE_EuclidSolve, (HYPRE_PtrToSolverFcn)HYPRE_EuclidSetup, eu);
 
         /* Now setup and solve! */
-        HYPRE_ParCSRGMRESSetup(solver, parcsr_A, par_b, par_x);
-        HYPRE_ParCSRGMRESSolve(solver, parcsr_A, par_b, par_x);
+        HYPRE_ParCSRLGMRESSetup(solver, parcsr_A, par_b, par_x);
+        HYPRE_ParCSRLGMRESSolve(solver, parcsr_A, par_b, par_x);
 
         /* Run info - needed logging turned on */
-        HYPRE_ParCSRGMRESGetNumIterations(solver, &num_iterations);
-        HYPRE_ParCSRGMRESGetFinalRelativeResidualNorm(solver, &final_res_norm);
+        HYPRE_ParCSRLGMRESGetNumIterations(solver, &num_iterations);
+        HYPRE_ParCSRLGMRESGetFinalRelativeResidualNorm(solver, &final_res_norm);
 
         printf("\n");
         printf("Iterations = %lld\n", num_iterations);
@@ -158,7 +158,7 @@ namespace polysolve
         printf("\n");
 
         /* Destroy solver and preconditioner */
-        HYPRE_ParCSRGMRESDestroy(solver);
+        HYPRE_ParCSRLGMRESDestroy(solver);
 
         assert(result.size() == rhs.size());
         for (HYPRE_Int i = 0; i < rhs.size(); ++i)

@@ -61,14 +61,14 @@ option(POLYSOLVE_WITH_SANITIZERS "Enable sanitizers in compilation targets"   OF
 
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_CHOLMOD          "Enable Cholmod library"            ON)
-option(POLYSOLVE_WITH_UMFPACK          "Enable UmfPack library"            ON)
-option(POLYSOLVE_WITH_SUPERLU          "Enable SuperLU library"            ON)
+option(POLYSOLVE_WITH_CHOLMOD          "Enable Cholmod library"            OFF)
+option(POLYSOLVE_WITH_UMFPACK          "Enable UmfPack library"            OFF)
+option(POLYSOLVE_WITH_SUPERLU          "Enable SuperLU library"            OFF)
 option(POLYSOLVE_WITH_MKL              "Enable MKL library"                ON)
 option(POLYSOLVE_WITH_PARDISO          "Enable Pardiso library"            OFF)
-option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      ON)
-option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         ON)
-option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         ON)
+option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      OFF)
+option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         OFF)
+option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         OFF)
 option(POLYSOLVE_WITH_MATIO            "Use matio for matrix export"       OFF)
 
 

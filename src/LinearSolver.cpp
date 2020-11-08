@@ -16,6 +16,7 @@
 #endif
 #ifdef POLYSOLVE_WITH_MKL
 #include <Eigen/PardisoSupport>
+#include <polysolve/LinearSolverMKLFGMRES.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
 #include <polysolve/LinearSolverPardiso.hpp>
@@ -208,6 +209,10 @@ namespace polysolve
         else if (solver == "Eigen::PardisoLU")
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU);
+        }
+        else if (solver == "MKLFGMRES")
+        {
+            return std::make_unique<LinearSolverMKLFGMRES>();
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
         }

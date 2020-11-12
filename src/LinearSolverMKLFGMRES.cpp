@@ -30,6 +30,14 @@ namespace polysolve
     // Set solver parameters
     void LinearSolverMKLFGMRES::setParameters(const json &params)
     {
+        if (params.count("conv_tol"))
+        {
+            conv_tol_ = params["conv_tol"];
+        }
+        else if (params.count("tolerance"))
+        {
+            conv_tol_ = params["tolerance"];
+        }
     }
 
     void LinearSolverMKLFGMRES::getInfo(json &params) const
@@ -145,7 +153,7 @@ namespace polysolve
 
         ipar[7] = 0;
 	    ipar[10] = 0;       // no preconditioner
-	    dpar[0] = 1.0E-6;   // relative tolerance
+	    dpar[0] = conv_tol_;   // relative tolerance
 
         dfgmres_check(&numRows, result.data(), rhs_.data(), &RCI_request, ipar, dpar, tmp.data());
         if(RCI_request != 0)
@@ -170,7 +178,7 @@ namespace polysolve
             }
             // If RCI_request=2, then do the user-defined stopping test
 	        // The residual stopping test for the computed solution is performed here
-            else if (RCI_request == 2)
+            else if (RCI_request == 2 || RCI_request == 4)
             {
                 ipar[12] = 1;
                 /* Get the current FGMRES solution in the vector b[N] */
@@ -181,8 +189,22 @@ namespace polysolve
                 MKL_INT i = 1;
                 daxpy(&numRows, &dvar, rhs_.data(), &i, residual.data(), &i);
                 dvar = dnrm2(&numRows, residual.data(), &i);
-                if (dvar < 1e-6) break;
+                if (dvar < dpar[0]) break;
             }
+            // If RCI_request=3, apply the preconditioner to tmp[ipar[21] - 1:ipar[21] + n - 2]
+            // put the result in tmp[ipar[22] - 1:ipar[22] + n - 2]
+            else if (RCI_request == 3)
+            {
+                throw std::runtime_error("[MKL] error in dfgmres, no preconditioner!");
+            }
+            // If RCI_request=4, check if the solution is zero
+            // else if (RCI_request == 4)
+            // {
+            //     /* Get the current FGMRES solution in the vector b[N] */
+            //     dfgmres_get(&numRows, result.data(), b.data(), &RCI_request, ipar, dpar, tmp.data(), &itercount);
+            //     MKL_INT i = 1;
+            //     if (dnrm2(&numRows, b.data(), &i) < 1e-15) break;
+            // }
             else
             {
                 throw std::runtime_error("[MKL] error in dfgmres!");
@@ -192,7 +214,7 @@ namespace polysolve
         ipar[12] = 0;
 	    dfgmres_get(&numRows, result.data(), rhs_.data(), &RCI_request, ipar, dpar, tmp.data(), &itercount);
 
-        printf("\nNumber of iterations: %d\n", itercount);
+        // printf("\n[MKL] Number of iterations: %d\n", itercount);
     }
 
     ////////////////////////////////////////////////////////////////////////////////

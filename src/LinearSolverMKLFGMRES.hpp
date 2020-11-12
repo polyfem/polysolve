@@ -56,18 +56,12 @@ namespace polysolve
 
     protected:
         int numRows;
-        int nrhs = 1; // Number of right hand sides.
-
-        // Internal solver memory pointer pt,
-        // 32-bit: int pt[64]; 64-bit: long int pt[64]
-        // or void *pt[64] should be OK on both architectures
-        void *pt[64];
 
         // Pardiso control parameters.
         int ipar[128];
         double dpar[128];
 
-        int numUniqueElements;
+        double conv_tol_ = 1e-8;
     };
 
 } // namespace polysolve

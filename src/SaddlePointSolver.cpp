@@ -57,11 +57,11 @@ namespace polysolve
         conv_tol_ = 1e-8;
         max_iter_ = 50;
 
-        asymmetric_solver_name_ = "Eigen::GMRES";
+        asymmetric_solver_name_ = "MKLFGMRES";
         symmetric_solver_name_ = "Eigen::GMRES";
 
-        asymmetric_solver_params_ = {"tolerance", 1e-5};
-        symmetric_solver_params_ = {"tolerance", 1e-5};
+        asymmetric_solver_params_ = {"tolerance", 1e-6};
+        symmetric_solver_params_ = {"tolerance", 1e-6};
     }
 
     // Set solver parameters
@@ -168,9 +168,8 @@ namespace polysolve
 
         auto asymmetric_solver = LinearSolver::create(asymmetric_solver_name_, "");
         auto symmetric_solver = LinearSolver::create(symmetric_solver_name_, "");
-        json solver_setttings = {{"tolerance", 1e-4}};
-        asymmetric_solver->setParameters(solver_setttings);
-        symmetric_solver->setParameters(solver_setttings);
+        asymmetric_solver->setParameters(asymmetric_solver_params_);
+        symmetric_solver->setParameters(symmetric_solver_params_);
 
         symmetric_solver->analyzePattern(Ss, Ss.rows() - 1);
         symmetric_solver->factorize(Ss);

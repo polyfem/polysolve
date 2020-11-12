@@ -25,11 +25,6 @@ export CXX=icpc
 export CMAKE_INCLUDE_PATH=$(env | grep _INC= | cut -d= -f2 | xargs | sed -e 's/ /:/g')
 export CMAKE_LIBRARY_PATH=$(env | grep _LIB= | cut -d= -f2 | xargs | sed -e 's/ /:/g')
 
-cmake \
-    -DCMAKE_BUILD_TYPE=release \
-    -DBUILD_SHARED_LIBS::BOOL=ON \
-    -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
-    -DCMAKE_SKIP_RPATH:BOOL=ON \
-    ..
+cmake ..
 
 make

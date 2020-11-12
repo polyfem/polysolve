@@ -295,6 +295,7 @@ namespace polysolve
 #ifdef POLYSOLVE_WITH_MKL
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
+            "MKLFGMRES",
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",

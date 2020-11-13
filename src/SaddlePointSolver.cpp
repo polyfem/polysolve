@@ -57,11 +57,11 @@ namespace polysolve
         conv_tol_ = 1e-8;
         max_iter_ = 50;
 
-        asymmetric_solver_name_ = "MKLFGMRES";
+        asymmetric_solver_name_ = "Eigen::GMRES";
         symmetric_solver_name_ = "Eigen::GMRES";
 
-        asymmetric_solver_params_ = {"tolerance", 1e-6};
-        symmetric_solver_params_ = {"tolerance", 1e-6};
+        asymmetric_solver_params_ = {"tolerance", 1e-4};
+        symmetric_solver_params_ = {"tolerance", 1e-4};
     }
 
     // Set solver parameters

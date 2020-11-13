@@ -135,7 +135,7 @@ namespace polysolve
         MKL_INT RCI_request;
         MKL_INT itercount = 0, ierr = 0;
         MKL_INT matsize = a.size(), incx = 1, ref_nit = 2;
-        char cvar = 'N';
+        char cvar = 'N', cvar1, cvar2;
 
         Eigen::VectorXd b(numRows);
         Eigen::VectorXd residual(numRows);
@@ -153,7 +153,16 @@ namespace polysolve
 
         ipar[7] = 0;
 	    ipar[10] = 0;       // no preconditioner
-	    dpar[0] = conv_tol_;   // relative tolerance
+        dpar[0] = 1e-2;     // relative tolerance
+	    dpar[1] = conv_tol_;// absolute tolerance
+
+        // Eigen::VectorXd ilu = a, trvec = Eigen::VectorXd::Zero(numRows);
+        // ipar[30] = 1;
+        // dcsrilu0(&numRows, a.data(), ia.data(), ja.data(), ilu.data(), ipar, dpar, &ierr);
+        // if(ierr != 0)
+        // {
+        //     throw std::runtime_error("[MKL] error in dcsrilu0!");
+        // }
 
         dfgmres_check(&numRows, result.data(), rhs_.data(), &RCI_request, ipar, dpar, tmp.data());
         if(RCI_request != 0)
@@ -189,12 +198,20 @@ namespace polysolve
                 MKL_INT i = 1;
                 daxpy(&numRows, &dvar, rhs_.data(), &i, residual.data(), &i);
                 dvar = dnrm2(&numRows, residual.data(), &i);
-                if (dvar < dpar[0]) break;
+                if (dvar < dpar[1]) break;
             }
             // If RCI_request=3, apply the preconditioner to tmp[ipar[21] - 1:ipar[21] + n - 2]
             // put the result in tmp[ipar[22] - 1:ipar[22] + n - 2]
             else if (RCI_request == 3)
             {
+                // cvar1='L';
+                // cvar='N';
+                // cvar2='U';
+                // mkl_dcsrtrsv(&cvar1,&cvar,&cvar2,&numRows,ilu.data(),ia.data(),ja.data(),&tmp(ipar[21]-1),trvec.data());
+                // cvar1='U';
+                // cvar='N';
+                // cvar2='N';
+                // mkl_dcsrtrsv(&cvar1,&cvar,&cvar2,&numRows,ilu.data(),ia.data(),ja.data(),trvec.data(),&tmp(ipar[22]-1));
                 throw std::runtime_error("[MKL] error in dfgmres, no preconditioner!");
             }
             // If RCI_request=4, check if the solution is zero

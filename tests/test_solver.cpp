@@ -158,6 +158,8 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 
 TEST_CASE("saddle_point_test", "[solver]")
 {
+#ifdef WIN32
+#ifdef NDEBUG
     const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     bool ok = loadMarket(A, path + "/A0.mat");
@@ -173,4 +175,6 @@ TEST_CASE("saddle_point_test", "[solver]")
     solver->solve(b, x);
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
+#endif
+#endif
 }

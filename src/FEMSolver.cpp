@@ -189,6 +189,11 @@ Eigen::Vector4d polysolve::dirichlet_solve(
         {
             if (!zero_col[i])
                 valid.push_back(i);
+            else if (skip_last_cols)
+            {
+                A.coeffRef(A.rows() - 1, i) = 0;
+                A.coeffRef(i, A.cols() - 1) = 0;
+            }
         }
 
         StiffnessMatrix As;

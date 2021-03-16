@@ -38,6 +38,8 @@ namespace polysolve
     Eigen::Vector4d dirichlet_solve(LinearSolver &solver, StiffnessMatrix &A,
                                     Eigen::VectorXd &b, const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &x,
                                     const int precond_num,
-                                    const std::string &save_path = "", bool compute_spectrum = false);
+                                    const std::string &save_path = "", bool compute_spectrum = false,
+                                    const bool remove_zero_cols = false,
+                                    const bool skip_last_cols = false);
 
 } // namespace polysolve

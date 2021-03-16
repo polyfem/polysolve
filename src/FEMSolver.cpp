@@ -51,6 +51,46 @@ namespace polysolve
             return Eigen::Vector4d();
 #endif
         }
+
+        void slice(const StiffnessMatrix &A, const std::vector<int> &S, StiffnessMatrix &out)
+        {
+            const int am = A.rows();
+            const int sm = S.size();
+
+            // assert(S.minCoeff() >= 0);
+            // assert(S.maxCoeff() < sm);
+
+            // Build reindexing maps for columns and rows
+            std::vector<std::vector<int>> SI(am);
+            for (int i = 0; i < sm; i++)
+            {
+                SI[S[i]].push_back(i);
+            }
+
+            // Take a guess at the number of nonzeros (this assumes uniform distribution
+            // not banded or heavily diagonal)
+            std::vector<Eigen::Triplet<double>> entries;
+            entries.reserve((A.nonZeros() / (am * am)) * (sm * sm));
+
+            // Iterate over outside
+            for (int k = 0; k < A.outerSize(); ++k)
+            {
+                // Iterate over inside
+                for (StiffnessMatrix::InnerIterator it(A, k); it; ++it)
+                {
+                    for (auto rit = SI[it.row()].begin(); rit != SI[it.row()].end(); rit++)
+                    {
+                        for (auto cit = SI[it.col()].begin(); cit != SI[it.col()].end(); cit++)
+                        {
+                            entries.emplace_back(*rit, *cit, it.value());
+                        }
+                    }
+                }
+            }
+            out.resize(sm, sm);
+            out.setFromTriplets(entries.begin(), entries.end());
+            out.makeCompressed();
+        }
     } // namespace
 } // namespace polysolve
 
@@ -59,7 +99,9 @@ Eigen::Vector4d polysolve::dirichlet_solve(
     const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u,
     const int precond_num,
     const std::string &save_path,
-    bool compute_spectrum)
+    bool compute_spectrum,
+    const bool remove_zero_cols,
+    const bool skip_last_cols)
 {
     // Let Γ be the set of Dirichlet dofs.
     // To implement nonzero Dirichlet boundary conditions, we seek to replace
@@ -120,19 +162,89 @@ Eigen::Vector4d polysolve::dirichlet_solve(
 
     // std::cout << A << std::endl;
 
-    // Eigen::saveMarket(A, "A.mat");
-    // Eigen::saveMarketVector(g, "b.mat");
-
-    if (u.size() != n)
+    //remove zero cols
+    if (remove_zero_cols)
     {
-        u.resize(n);
-        u.setZero();
-    }
+        std::vector<bool> zero_col(A.cols(), true);
+        zero_col.back() = !skip_last_cols;
+        for (int k = 0; k < A.outerSize(); ++k)
+        {
+            for (StiffnessMatrix::InnerIterator it(A, k); it; ++it)
+            {
+                if (skip_last_cols)
+                {
+                    if (it.row() != A.rows() - 1 && it.col() != A.cols() - 1 && fabs(it.value()) > 1e-12)
+                        zero_col[it.col()] = false;
+                }
+                else
+                {
+                    if (fabs(it.value()) > 1e-12)
+                        zero_col[it.col()] = false;
+                }
+            }
+        }
 
-    solver.analyzePattern(A, precond_num);
-    solver.factorize(A);
-    solver.solve(g, u);
-    f = g;
+        std::vector<int> valid;
+        for (int i = 0; i < A.rows(); ++i)
+        {
+            if (!zero_col[i])
+                valid.push_back(i);
+        }
+
+        StiffnessMatrix As;
+        slice(A, valid, As);
+
+        Eigen::VectorXd gs(As.rows());
+        int index = 0;
+        for (int i = 0; i < zero_col.size(); ++i)
+        {
+            if (!zero_col[i])
+            {
+                gs[index++] = g[i];
+            }
+        }
+
+        if (u.size() != gs.size())
+        {
+            u.resize(gs.size());
+            u.setZero();
+        }
+
+        Eigen::VectorXd us = u;
+        solver.analyzePattern(As, precond_num);
+        solver.factorize(As);
+        solver.solve(gs, us);
+        f = g;
+
+        u.resize(A.rows());
+        index = 0;
+        for (int i = 0; i < zero_col.size(); ++i)
+        {
+            if (zero_col[i])
+            {
+                u[i] = 0;
+                f[i] = 0;
+            }
+            else
+                u[i] = us[index++];
+        }
+    }
+    else
+    {
+        // Eigen::saveMarket(A, "A.mat");
+        // Eigen::saveMarketVector(g, "b.mat");
+
+        if (u.size() != n)
+        {
+            u.resize(n);
+            u.setZero();
+        }
+
+        solver.analyzePattern(A, precond_num);
+        solver.factorize(A);
+        solver.solve(g, u);
+        f = g;
+    }
 
     if (!save_path.empty())
     {

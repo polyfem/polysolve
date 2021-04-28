@@ -33,7 +33,7 @@ endfunction()
 
 function(polyfem_solvers_download_eigen)
 	polyfem_solvers_download_project(eigen
-		GIT_REPOSITORY https://github.com/eigenteam/eigen-git-mirror.git
+		GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
 		GIT_TAG        3.3.7
 	)
 endfunction()
@@ -79,8 +79,8 @@ endfunction()
 ## Json MIT
 function(polyfem_solvers_download_json)
     polyfem_solvers_download_project(json
-        GIT_REPOSITORY https://github.com/jdumas/json
-        GIT_TAG        0901d33bf6e7dfe6f70fd9d142c8f5c6695c6c5b
+        URL     https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
+        URL_MD5 d2f66c608af689e21d69a33c220e974e
     )
 endfunction()
 

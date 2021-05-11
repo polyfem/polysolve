@@ -13,6 +13,7 @@ namespace polysolve
 
     LinearSolverHypre::LinearSolverHypre()
     {
+        precond_num_ = 0;
 #ifdef MPI_VERSION
         /* Initialize MPI */
         int argc = 1;
@@ -56,8 +57,10 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverHypre::analyzePattern(const StiffnessMatrix &Ain, const int precond_num)
+    void LinearSolverHypre::factorize(const StiffnessMatrix &Ain)
     {
+        assert(precond_num_ > 0);
+
         if (has_matrix_)
         {
             HYPRE_IJMatrixDestroy(A);

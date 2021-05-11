@@ -45,10 +45,10 @@ namespace polysolve
         virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &) override {}
+        virtual void factorize(const StiffnessMatrix &A) override;
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -67,6 +67,7 @@ namespace polysolve
 
     private:
         bool has_matrix_ = false;
+        int precond_num_;
 
         HYPRE_IJMatrix A;
         HYPRE_ParCSRMatrix parcsr_A;

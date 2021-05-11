@@ -12,6 +12,7 @@ namespace polysolve
 
     LinearSolverAMGCL::LinearSolverAMGCL()
     {
+        precond_num_ = 0;
         params_.solver.maxiter = 1000;
         params_.solver.tol = 1e-10;
 
@@ -65,9 +66,10 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverAMGCL::analyzePattern(const StiffnessMatrix &Ain, const int precond_num)
+    void LinearSolverAMGCL::factorize(const StiffnessMatrix &Ain)
     {
         delete solver_;
+        assert(precond_num_ > 0);
 
         // mat = Ain;
         // solver_ = new Solver(mat, params_);
@@ -85,7 +87,7 @@ namespace polysolve
 
 #if defined(POLYSOLVE_AMGCL_DUMMY_PRECOND) || defined(POLYSOLVE_AMGCL_V2)
         params_.precond.pmask.resize(numRows, 0);
-        for (size_t i = precond_num; i < numRows; ++i)
+        for (size_t i = precond_num_; i < numRows; ++i)
             params_.precond.pmask[i] = 1;
 #endif
 

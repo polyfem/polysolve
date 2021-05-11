@@ -224,7 +224,7 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 TEST_CASE("saddle_point_test", "[solver]")
 {
 #ifdef WIN32
-#ifdef NDEBUG
+#ifndef NDEBUG
     return;
 #endif
 #endif

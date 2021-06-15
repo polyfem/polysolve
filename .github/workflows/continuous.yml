@@ -56,7 +56,7 @@ jobs:
 
       - name: Cache Build
         id: cache-build
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-${{ matrix.config }}-cache
@@ -108,7 +108,7 @@ jobs:
 
       - name: Cache build
         id: cache-build
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: ${{ env.appdata }}\Mozilla\sccache
           key: ${{ runner.os }}-${{ matrix.config }}-cache

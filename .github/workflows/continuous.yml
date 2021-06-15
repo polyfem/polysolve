@@ -48,17 +48,20 @@ jobs:
           libsuitesparse-dev \
           xorg-dev \
           libboost-dev \
-          ccache
+          ccache \
+          echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
 
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install suite-sparse ccache boost
+        run: |
+          brew install suite-sparse ccache boost
+          echo 'CACHE_PATH=~/Library/Caches/ccache' >> "$GITHUB_ENV"
 
       - name: Cache Build
         id: cache-build
         uses: actions/cache@v2
         with:
-          path: ~/.ccache
+          path: ${{ env.CACHE_PATH }}
           key: ${{ runner.os }}-${{ matrix.config }}-cache
 
       - name: Prepare ccache

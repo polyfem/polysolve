@@ -54,6 +54,7 @@ namespace polysolve
 
     SaddlePointSolver::SaddlePointSolver()
     {
+        precond_num_ = 0;
         conv_tol_ = 1e-8;
         max_iter_ = 50;
 
@@ -110,21 +111,20 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void SaddlePointSolver::analyzePattern(const StiffnessMatrix &Ain, const int precond_num)
+    void SaddlePointSolver::factorize(const StiffnessMatrix &Ain)
     {
+        assert(precond_num_ > 0);
         Ain_ = Ain;
         // A = M.A(1:ablock-1, 1:ablock-1);
         // B = M.A(1:ablock-1, ablock:end);
         // Bt = M.A(ablock:end, 1:ablock-1);
         // C = M.A(ablock:end, ablock:end);
 
-        precond_num_ = precond_num;
+        const int other_size = Ain.rows() - precond_num_;
 
-        const int other_size = Ain.rows() - precond_num;
-
-        const StiffnessMatrix A = Ain.block(0, 0, precond_num, precond_num);
-        const StiffnessMatrix B = Ain.block(0, precond_num, precond_num, other_size);
-        const StiffnessMatrix C = Ain.block(precond_num, precond_num, other_size, other_size);
+        const StiffnessMatrix A = Ain.block(0, 0, precond_num_, precond_num_);
+        const StiffnessMatrix B = Ain.block(0, precond_num_, precond_num_, other_size);
+        const StiffnessMatrix C = Ain.block(precond_num_, precond_num_, other_size, other_size);
 
         // Wm = spdiags(sqrt(1./diag(A)), 0, length(A), length(A));
         // Wc = spdiags(sqrt(1./diag(C)), 0, length(C), length(C));

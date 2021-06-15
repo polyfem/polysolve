@@ -1,5 +1,5 @@
 build*
 bin*
-3rdparty
+3rdparty*
 .vscode
 *.code-workspace

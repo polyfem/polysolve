@@ -31,18 +31,19 @@
 #include <amgcl/preconditioner/schur_pressure_correction.hpp>
 #include <amgcl/relaxation/as_preconditioner.hpp>
 
-
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>
 
-    ////////////////////////////////////////////////////////////////////////////////
-    //
-    //
+////////////////////////////////////////////////////////////////////////////////
+//
+//
 
-    namespace polysolve {
+namespace polysolve
+{
 
-    class LinearSolverAMGCL : public LinearSolver {
+    class LinearSolverAMGCL : public LinearSolver
+    {
 
     public:
         LinearSolverAMGCL();
@@ -63,10 +64,10 @@
         virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &) override { }
+        virtual void factorize(const StiffnessMatrix &A) override;
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -98,17 +99,15 @@
 #ifdef POLYSOLVE_AMGCL_SIMPLE
         // Use AMG as preconditioner:
         typedef amgcl::make_solver<
-        	// Use AMG as preconditioner:
-        	amgcl::amg<
-        		Backend,
-        		amgcl::coarsening::smoothed_aggregation,
-        		amgcl::relaxation::gauss_seidel>,
-        	// And CG as iterative solver:
-        	amgcl::solver::cg<Backend>>
-        	Solver;
+            // Use AMG as preconditioner:
+            amgcl::amg<
+                Backend,
+                amgcl::coarsening::smoothed_aggregation,
+                amgcl::relaxation::gauss_seidel>,
+            // And CG as iterative solver:
+            amgcl::solver::cg<Backend>>
+            Solver;
 #endif
-
-
 
 #ifdef POLYSOLVE_AMGCL_DUMMY_PRECOND
         typedef amgcl::make_solver<
@@ -158,6 +157,7 @@
 
         size_t iterations_;
         double residual_error_;
+        int precond_num_;
     };
 
 } // namespace polysolve

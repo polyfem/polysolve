@@ -48,7 +48,7 @@ jobs:
           libsuitesparse-dev \
           xorg-dev \
           libboost-dev \
-          ccache \
+          ccache
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
 
       - name: Dependencies (macOS)

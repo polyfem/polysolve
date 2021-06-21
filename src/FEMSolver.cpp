@@ -10,9 +10,6 @@
 
 #include <unsupported/Eigen/SparseExtra>
 
-#ifdef POLYSOLVE_WITH_MATIO
-#include "matio.h"
-#endif
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -96,76 +93,6 @@ namespace polysolve
             out.makeCompressed();
         }
     } // namespace
-
-#ifdef POLYSOLVE_WITH_MATIO
-    bool write_matlab(const StiffnessMatrix& mat, Eigen::VectorXd& b, Eigen::VectorXd& x, const std::string &filePath)
-    {
-        Eigen::VectorXd a(mat.nonZeros());
-        Eigen::VectorXi ia(mat.outerSize() + 1), ja(mat.nonZeros());
-        int nnz = 0;
-        for (int k = 0; k<mat.outerSize(); ++k)
-        {
-            ia[k] = nnz + 1;
-            for (typename StiffnessMatrix::InnerIterator it(mat,k); it; ++it)
-            {
-                a[nnz] = it.value();
-                ja[nnz] = it.row();
-                nnz++;
-            }
-        }
-        ia[mat.outerSize()] = nnz + 1;
-
-        mat_sparse_t pa = {0,};
-        pa.data = a.data();
-        pa.nzmax = a.size();
-        pa.ndata = a.size();
-        pa.ir = ja.data();
-        pa.nir = ja.size();
-        pa.njc = mat.outerSize() +1;
-        pa.jc = ia.data();
-        size_t dims[2];
-
-        dims[0] = mat.outerSize(); dims[1] = mat.outerSize();
-        matvar_t *matvar = Mat_VarCreate("A", MAT_C_SPARSE, MAT_T_DOUBLE, 2, dims, &pa, 0);
-        if(!matvar)
-        {
-            printf("error creating variable triplets");
-            return 0;
-        }
-
-        dims[0] = b.rows(); dims[1] = b.cols();
-        matvar_t *bvar = Mat_VarCreate("b", MAT_C_DOUBLE, MAT_T_DOUBLE, 2, dims, b.data(), 0);
-        if(!bvar)
-        {
-            printf("error creating vector b");
-            return 0;
-        }
-
-        dims[0] = x.rows(); dims[1] = x.cols();
-        matvar_t *xvar = Mat_VarCreate("x", MAT_C_DOUBLE, MAT_T_DOUBLE, 2, dims, x.data(), 0);
-        if(!xvar)
-        {
-            printf("error creating vector x");
-            return 0;
-        }
-
-        mat_t *matfp = NULL;
-        matfp = Mat_CreateVer(filePath.c_str(), NULL, MAT_FT_MAT5);
-        if (!matfp)
-        {
-            printf("unable to create mat file");
-            return 0;
-        }
-
-        Mat_VarWrite(matfp, matvar, MAT_COMPRESSION_ZLIB);
-        Mat_VarWrite(matfp, bvar, MAT_COMPRESSION_ZLIB);
-        Mat_VarWrite(matfp, xvar, MAT_COMPRESSION_ZLIB);
-        Mat_VarFree(matvar);
-        
-        Mat_Close(matfp);
-        return 1;
-    }
-#endif
 } // namespace polysolve
 
 Eigen::Vector4d polysolve::dirichlet_solve(

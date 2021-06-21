@@ -8,10 +8,6 @@ set(SOURCES
     LinearSolverEigen.hpp
     LinearSolverHypre.cpp
     LinearSolverHypre.hpp
-    LinearSolverHypreGMRES.cpp
-    LinearSolverHypreGMRES.hpp
-    LinearSolverMKLFGMRES.cpp
-    LinearSolverMKLFGMRES.hpp
     SaddlePointSolver.cpp
     SaddlePointSolver.hpp
 )

@@ -61,15 +61,14 @@ option(POLYSOLVE_WITH_SANITIZERS "Enable sanitizers in compilation targets"   OF
 
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_CHOLMOD          "Enable Cholmod library"            OFF)
-option(POLYSOLVE_WITH_UMFPACK          "Enable UmfPack library"            OFF)
-option(POLYSOLVE_WITH_SUPERLU          "Enable SuperLU library"            OFF)
+option(POLYSOLVE_WITH_CHOLMOD          "Enable Cholmod library"            ON)
+option(POLYSOLVE_WITH_UMFPACK          "Enable UmfPack library"            ON)
+option(POLYSOLVE_WITH_SUPERLU          "Enable SuperLU library"            ON)
 option(POLYSOLVE_WITH_MKL              "Enable MKL library"                ON)
 option(POLYSOLVE_WITH_PARDISO          "Enable Pardiso library"            OFF)
-option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      OFF)
-option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         OFF)
-option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         OFF)
-option(POLYSOLVE_WITH_MATIO            "Use matio for matrix export"       OFF)
+option(POLYSOLVE_WITH_HYPRE            "Enable hypre"                      ON)
+option(POLYSOLVE_WITH_AMGCL            "Use AMGCL"                         ON)
+option(POLYSOLVE_WITH_SPECTRA          "Enable computing spectrum"         ON)
 
 
 
@@ -110,12 +109,6 @@ add_library(polysolve src/FEMSolver.cpp)
 
 if(${POLYSOLVE_LARGE_INDEX})
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_LARGE_INDEX)
-endif()
-
-if(POLYSOLVE_WITH_MATIO)
-  find_package(MATIO)
-  target_link_libraries(polysolve PUBLIC matio)
-  target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_MATIO)
 endif()
 
 # Public include directory for Polysolve

@@ -2,7 +2,6 @@
 
 #include <unsupported/Eigen/SparseExtra>
 
-#include <ctime>
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -171,7 +170,7 @@ namespace polysolve
         asymmetric_solver->setParameters(asymmetric_solver_params_);
         symmetric_solver->setParameters(symmetric_solver_params_);
 
-        symmetric_solver->analyzePattern(Ss, Ss.rows() - 1);
+        symmetric_solver->analyzePattern(Ss, Ss.rows());
         symmetric_solver->factorize(Ss);
 
         int i;
@@ -263,7 +262,6 @@ namespace polysolve
             //TODO stopping condition!
             compute_solution(i + 1, alphau, alphap, yu, yp, Wm, Wc, result);
             final_res_norm_ = (Ain_ * result - rhs).norm();
-            // std::cout << "\nResidual = " << final_res_norm_ << "\n";
 
             if (final_res_norm_ < conv_tol_)
             {

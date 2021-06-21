@@ -16,14 +16,12 @@
 #endif
 #ifdef POLYSOLVE_WITH_MKL
 #include <Eigen/PardisoSupport>
-#include <polysolve/LinearSolverMKLFGMRES.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
 #include <polysolve/LinearSolverPardiso.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
 #include <polysolve/LinearSolverHypre.hpp>
-#include <polysolve/LinearSolverHypreGMRES.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
@@ -209,10 +207,6 @@ namespace polysolve
         else if (solver == "Eigen::PardisoLU")
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU);
-        }
-        else if (solver == "MKLFGMRES")
-        {
-            return std::make_unique<LinearSolverMKLFGMRES>();
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
         }
@@ -225,10 +219,6 @@ namespace polysolve
         else if (solver == "Hypre")
         {
             return std::make_unique<LinearSolverHypre>();
-        }
-        else if (solver == "HypreGMRES")
-        {
-            return std::make_unique<LinearSolverHypreGMRES>();
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
         }
@@ -295,14 +285,12 @@ namespace polysolve
 #ifdef POLYSOLVE_WITH_MKL
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
-            "MKLFGMRES",
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",
-            "HypreGMRES"
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",

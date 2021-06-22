@@ -24,6 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04, macos-latest]
+        sp: [on, off]
         config: [Debug, Release]
         include:
           - os: macos-latest
@@ -45,24 +46,31 @@ jobs:
           libboost-system-dev \
           libboost-thread-dev \
           libglu1-mesa-dev \
-          libsuitesparse-dev \
           xorg-dev \
           libboost-dev \
           ccache
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
 
+      - name: SuiteSparse (Linux)
+        if: runner.os == 'Linux' && runner.sp == 'on'
+        run: sudo apt-get install libsuitesparse-dev
+
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install suite-sparse ccache boost
+          brew install ccache boost
           echo 'CACHE_PATH=~/Library/Caches/ccache' >> "$GITHUB_ENV"
+
+      - name: SuiteSparse (macOS)
+        if: runner.os == 'macOS' && runner.sp == 'on'
+        run: brew install suite-sparse
 
       - name: Cache Build
         id: cache-build
         uses: actions/cache@v2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-${{ matrix.config }}-cache
+          key: ${{ runner.os }}-${{ matrix.config }}--${{ matrix.sp }}-cache
 
       - name: Prepare ccache
         run: |

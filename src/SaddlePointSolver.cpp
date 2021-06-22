@@ -57,16 +57,11 @@ namespace polysolve
         conv_tol_ = 1e-8;
         max_iter_ = 50;
 
-#ifdef POLYSOLVE_WITH_PARDISO
-        asymmetric_solver_name_ = LinearSolver::defaultSolver();
-        symmetric_solver_name_ = LinearSolver::defaultSolver();
-#else
         asymmetric_solver_name_ = "Eigen::GMRES";
         symmetric_solver_name_ = "Eigen::GMRES";
-#endif
 
-        asymmetric_solver_params_ = {"tolerance", 1e-5};
-        symmetric_solver_params_ = {"tolerance", 1e-5};
+        asymmetric_solver_params_ = {"tolerance", 1e-4};
+        symmetric_solver_params_ = {"tolerance", 1e-4};
     }
 
     // Set solver parameters
@@ -172,6 +167,8 @@ namespace polysolve
 
         auto asymmetric_solver = LinearSolver::create(asymmetric_solver_name_, "");
         auto symmetric_solver = LinearSolver::create(symmetric_solver_name_, "");
+        asymmetric_solver->setParameters(asymmetric_solver_params_);
+        symmetric_solver->setParameters(symmetric_solver_params_);
 
         symmetric_solver->analyzePattern(Ss, Ss.rows());
         symmetric_solver->factorize(Ss);

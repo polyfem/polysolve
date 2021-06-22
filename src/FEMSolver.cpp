@@ -9,6 +9,7 @@
 #endif
 
 #include <unsupported/Eigen/SparseExtra>
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -264,4 +265,79 @@ Eigen::Vector4d polysolve::dirichlet_solve(
     {
         return Eigen::Vector4d::Zero();
     }
+}
+
+void polysolve::prefactorize(
+    LinearSolver &solver, StiffnessMatrix &A,
+    const std::vector<int> &dirichlet_nodes, const int precond_num,
+    const std::string &save_path)
+{
+    int n = A.outerSize();
+    Eigen::VectorXd N(n);
+    N.setZero();
+    for (int i : dirichlet_nodes)
+    {
+        N(i) = 1;
+    }
+
+    std::vector<Eigen::Triplet<double>> coeffs;
+    coeffs.reserve(A.nonZeros());
+    assert(A.rows() == A.cols());
+    for (int k = 0; k < A.outerSize(); ++k)
+    {
+        for (StiffnessMatrix::InnerIterator it(A, k); it; ++it)
+        {
+            // it.value();
+            // it.row();   // row index
+            // it.col();   // col index (here it is equal to k)
+            // it.index(); // inner index, here it is equal to it.row()
+            if (N(it.row()) != 1 && N(it.col()) != 1)
+            {
+                coeffs.emplace_back(it.row(), it.col(), it.value());
+            }
+        }
+    }
+    // TODO: For numerical stability, we should set diagonal values of the same
+    // magnitude than the other entries in the matrix
+    for (int k = 0; k < n; ++k)
+    {
+        coeffs.emplace_back(k, k, N(k));
+    }
+    // Eigen::saveMarket(A, "A_before.mat");
+    A.setFromTriplets(coeffs.begin(), coeffs.end());
+    A.makeCompressed();
+
+    solver.analyzePattern(A, precond_num);
+    solver.factorize(A);
+    
+    if (!save_path.empty())
+    {
+        Eigen::saveMarket(A, save_path);
+    }
+}
+
+void polysolve::dirichlet_solve_prefactorized(
+    LinearSolver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
+    const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u)
+{
+    // pre-factorized version of dirichlet_solve
+
+    int n = A.outerSize();
+    Eigen::VectorXd N(n);
+    N.setZero();
+    for (int i : dirichlet_nodes)
+    {
+        N(i) = 1;
+    }
+
+    Eigen::VectorXd g = f - ((1.0 - N.array()).matrix()).asDiagonal() * (A * (N.asDiagonal() * f));
+
+    if (u.size() != n)
+    {
+        u.resize(n);
+        u.setZero();
+    }
+
+    solver.solve(g, u);
+    f = g;
 }

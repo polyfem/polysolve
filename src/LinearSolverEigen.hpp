@@ -1,112 +1,73 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolverEigen.h>
-#include <iostream>
+#include <polysolve/LinearSolver.hpp>
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace polysolve
+{
+
+    // -----------------------------------------------------------------------------
+
+    template <typename SparseSolver>
+    class LinearSolverEigenDirect : public LinearSolver
+    {
+    protected:
+        // Solver class
+        SparseSolver m_Solver;
+
+    public:
+        // Name of the solver type (for debugging purposes)
+        virtual std::string name() const override { return typeid(m_Solver).name(); }
+
+    public:
+        // Get info on the last solve step
+        virtual void getInfo(json &params) const override;
+
+        // Analyze sparsity pattern
+        virtual void analyzePattern(const StiffnessMatrix &K, const int precond_num) override;
+
+        // Factorize system matrix
+        virtual void factorize(const StiffnessMatrix &K) override;
+
+        // Solve the linear system
+        virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
+    };
+
+    // -----------------------------------------------------------------------------
+
+    template <typename SparseSolver>
+    class LinearSolverEigenIterative : public LinearSolver
+    {
+    protected:
+        // Solver class
+        SparseSolver m_Solver;
+
+    public:
+        // Name of the solver type (for debugging purposes)
+        virtual std::string name() const override { return typeid(m_Solver).name(); }
+
+    public:
+        // Set solver parameters
+        virtual void setParameters(const json &params) override;
+
+        // Get info on the last solve step
+        virtual void getInfo(json &params) const override;
+
+        // Analyze sparsity pattern
+        virtual void analyzePattern(const StiffnessMatrix &K, const int precond_num) override;
+
+        // Factorize system matrix
+        virtual void factorize(const StiffnessMatrix &K) override;
+
+        // Solve the linear system
+        virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
+    };
+
+    // -----------------------------------------------------------------------------
+
+} // namespace polysolve
+
 ////////////////////////////////////////////////////////////////////////////////
-// Direct solvers
-////////////////////////////////////////////////////////////////////////////////
 
-// Get info on the last solve step
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::getInfo(json &params) const
-{
-    switch (m_Solver.info())
-    {
-    case Eigen::Success:
-        params["solver_info"] = "Success";
-        break;
-    case Eigen::NumericalIssue:
-        params["solver_info"] = "NumericalIssue";
-        break;
-    case Eigen::NoConvergence:
-        params["solver_info"] = "NoConvergence";
-        break;
-    case Eigen::InvalidInput:
-        params["solver_info"] = "InvalidInput";
-        break;
-    default:
-        assert(false);
-    }
-}
-
-// Analyze sparsity pattern
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
-{
-    m_Solver.analyzePattern(A);
-}
-
-// Factorize system matrix
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
-{
-    m_Solver.factorize(A);
-    if (m_Solver.info() == Eigen::NumericalIssue)
-    {
-        throw "[LinearSolver] NumericalIssue encountered.";
-    }
-}
-
-// Solve the linear system
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::solve(
-    const Ref<const VectorXd> b, Ref<VectorXd> x)
-{
-    x = m_Solver.solve(b);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Iterative solvers
-////////////////////////////////////////////////////////////////////////////////
-
-// Set solver parameters
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::setParameters(const json &params)
-{
-    if (params.count("max_iter"))
-    {
-        m_Solver.setMaxIterations(params["max_iter"]);
-    }
-    if (params.count("tolerance"))
-    {
-        m_Solver.setTolerance(params["tolerance"]);
-    }
-    else if (params.count("conv_tol"))
-    {
-        m_Solver.setTolerance(params["conv_tol"]);
-    }
-}
-
-// Get info on the last solve step
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::getInfo(json &params) const
-{
-    params["solver_iter"] = m_Solver.iterations();
-    params["solver_error"] = m_Solver.error();
-}
-
-// Analyze sparsity pattern
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
-{
-    m_Solver.analyzePattern(A);
-}
-
-// Factorize system matrix
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
-{
-    m_Solver.factorize(A);
-}
-
-// Solve the linear system
-template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::solve(
-    const Ref<const VectorXd> b, Ref<VectorXd> x)
-{
-    assert(x.size() == b.size());
-    x = m_Solver.solveWithGuess(b, x);
-}
+#include <polysolve/LinearSolverEigen.tpp>

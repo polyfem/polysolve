@@ -4,8 +4,8 @@ set(SOURCES
     LbfgsSolver.hpp
     LinearSolver.cpp
     LinearSolver.hpp
-    LinearSolverEigen.h
     LinearSolverEigen.hpp
+    LinearSolverEigen.tpp
     LinearSolverHypre.cpp
     LinearSolverHypre.hpp
     SaddlePointSolver.cpp

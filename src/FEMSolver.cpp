@@ -16,7 +16,7 @@ namespace polysolve
 {
     namespace
     {
-        Eigen::Vector4d compute_specturm(const StiffnessMatrix &mat)
+        Eigen::Vector4d compute_spectrum(const StiffnessMatrix &mat)
         {
 #ifdef POLYSOLVE_WITH_SPECTRA
             typedef Spectra::SparseSymMatProd<double> MatOp;
@@ -259,7 +259,7 @@ Eigen::Vector4d polysolve::dirichlet_solve(
 
     if (compute_spectrum)
     {
-        return polysolve::compute_specturm(A);
+        return polysolve::compute_spectrum(A);
     }
     else
     {

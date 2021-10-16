@@ -1,47 +1,50 @@
 #pragma once
 
 #ifdef POLYSOLVE_WITH_AMGCL
-// #define POLYSOLVE_AMGCL_V2
-// #define POLYSOLVE_AMGCL_SIMPLE
-#define POLYSOLVE_AMGCL_DUMMY_PRECOND
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
 
+#include <Eigen/Core>
+#include <amgcl/backend/builtin.hpp>
 #include <amgcl/make_solver.hpp>
 #include <amgcl/amg.hpp>
-#include <amgcl/adapter/crs_tuple.hpp>
-
-#include <amgcl/solver/cg.hpp>
-#include <amgcl/solver/bicgstab.hpp>
-#include <amgcl/solver/fgmres.hpp>
-
 #include <amgcl/coarsening/smoothed_aggregation.hpp>
+#include <amgcl/coarsening/plain_aggregates.hpp>
 #include <amgcl/coarsening/aggregation.hpp>
-
+#include <amgcl/coarsening/ruge_stuben.hpp>
 #include <amgcl/relaxation/spai0.hpp>
 #include <amgcl/relaxation/gauss_seidel.hpp>
-#include <amgcl/relaxation/ilu0.hpp>
-#include <amgcl/relaxation/iluk.hpp>
-#include <amgcl/relaxation/ilut.hpp>
-#include <amgcl/relaxation/spai0.hpp>
-#include <amgcl/relaxation/as_preconditioner.hpp>
-
-#include <amgcl/preconditioner/dummy.hpp>
-#include <amgcl/preconditioner/schur_pressure_correction.hpp>
-#include <amgcl/relaxation/as_preconditioner.hpp>
-
-#include <Eigen/Core>
-#include <Eigen/Sparse>
-#include <vector>
+#include <amgcl/solver/cg.hpp>
+#include <amgcl/solver/bicgstab.hpp>
+#include <amgcl/solver/gmres.hpp>
+#include <amgcl/solver/runtime.hpp>
+#include <amgcl/profiler.hpp>
+#include <amgcl/io/mm.hpp>
+#include <amgcl/relaxation/chebyshev.hpp>
+#include <amgcl/coarsening/runtime.hpp>
+#include <amgcl/relaxation/runtime.hpp>
+#include <amgcl/preconditioner/runtime.hpp>
+#include <amgcl/value_type/static_matrix.hpp>
+// #include <amgcl/backend/vexcl.hpp>
+#include <amgcl/adapter/crs_tuple.hpp>
+#include <amgcl/adapter/reorder.hpp>
+#include <amgcl/adapter/eigen.hpp>
+#include <amgcl/profiler.hpp>
+#include <memory>
+#include <type_traits>
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+// WARNING:
+// The matrix is assumed to be in row-major format, since AMGCL assumes that the
+// outer index is for row. If the matrix is symmetric, you are fine, because CSR
+// and CSC are the same. If the matrix is not symmetric and you pass in a
+// column-major matrix, the solver will actually solve A^T x = b.
 //
 
 namespace polysolve
 {
-
     class LinearSolverAMGCL : public LinearSolver
     {
 
@@ -60,7 +63,7 @@ namespace polysolve
         // Set solver parameters
         virtual void setParameters(const json &params) override;
 
-        // Retrieve memory information from Pardiso
+        // Retrieve information
         virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
@@ -76,90 +79,19 @@ namespace polysolve
         virtual std::string name() const override { return "AMGCL"; }
 
     private:
-        // typedef amgcl::backend::eigen<double> Backend;
-        typedef amgcl::backend::builtin<double> Backend;
+        using Backend = amgcl::backend::builtin<double>;
+        using Solver = amgcl::make_solver<
+            amgcl::runtime::preconditioner<Backend>,
+            amgcl::runtime::solver::wrapper<Backend>>;
+        std::unique_ptr<Solver> solver_;
+        json params_;
+        typename Backend::params backend_params_;
+        int precond_num_;
 
-        // typedef amgcl::make_solver<
-        // 	amgcl::amg<
-        // 		Backend,
-        // 		amgcl::coarsening::aggregation,
-        // 		amgcl::relaxation::gauss_seidel>,
-        // 	amgcl::solver::cg<Backend>> Solver;
-
-        // typedef amgcl::make_solver<
-        // 	// Use AMG as preconditioner:
-        // 	amgcl::amg<
-        // 		Backend,
-        // 		amgcl::coarsening::smoothed_aggregation,
-        // 		amgcl::relaxation::spai0>,
-        // 	// And BiCGStab as iterative solver:
-        // 	amgcl::solver::bicgstab<Backend>>
-        // 	Solver;
-
-#ifdef POLYSOLVE_AMGCL_SIMPLE
-        // Use AMG as preconditioner:
-        typedef amgcl::make_solver<
-            // Use AMG as preconditioner:
-            amgcl::amg<
-                Backend,
-                amgcl::coarsening::smoothed_aggregation,
-                amgcl::relaxation::gauss_seidel>,
-            // And CG as iterative solver:
-            amgcl::solver::cg<Backend>>
-            Solver;
-#endif
-
-#ifdef POLYSOLVE_AMGCL_DUMMY_PRECOND
-        typedef amgcl::make_solver<
-            amgcl::preconditioner::schur_pressure_correction<
-                amgcl::make_solver<
-                    amgcl::amg<
-                        Backend,
-                        amgcl::coarsening::smoothed_aggregation,
-                        amgcl::relaxation::ilu0>,
-                    amgcl::solver::bicgstab<Backend>>,
-                amgcl::make_solver<
-                    amgcl::preconditioner::dummy<Backend>,
-                    amgcl::solver::bicgstab<Backend>>>,
-            amgcl::solver::fgmres<Backend>>
-            Solver;
-#endif
-#ifdef POLYSOLVE_AMGCL_V1
-        typedef amgcl::make_solver<
-            amgcl::relaxation::as_preconditioner<Backend,
-                                                 amgcl::relaxation::iluk>,
-            amgcl::solver::cg<Backend>>
-            Solver;
-#endif
-
-#ifdef POLYSOLVE_AMGCL_V2
-        typedef amgcl::make_solver<
-            amgcl::preconditioner::schur_pressure_correction<amgcl::make_solver< // Solver for (8b)
-                                                                 amgcl::amg<
-                                                                     Backend,
-                                                                     amgcl::coarsening::aggregation,
-                                                                     amgcl::relaxation::ilut>,
-                                                                 amgcl::solver::cg<Backend>>,
-                                                             amgcl::make_solver< // Solver for (8a)
-                                                                 amgcl::relaxation::as_preconditioner<Backend,
-                                                                                                      amgcl::relaxation::spai0>,
-                                                                 amgcl::solver::cg<Backend>>>,
-            amgcl::solver::fgmres<Backend>>
-            Solver;
-#endif
-
-        Solver *solver_ = nullptr;
-        Solver::params params_;
-        // StiffnessMatrix mat;
-
-        std::vector<int> ia_, ja_;
-        std::vector<double> a_;
-
+        // Output info
         size_t iterations_;
         double residual_error_;
-        int precond_num_;
     };
-
 } // namespace polysolve
 
 #endif

@@ -135,6 +135,19 @@ set(MY_FLAGS
 		# Gives meaningful stack traces
 		-fno-omit-frame-pointer
 		-fno-optimize-sibling-calls
+
+		#####################
+		# Disabled warnings #
+		#####################
+		-Wno-missing-noreturn
+		-Wno-shadow
+		-Wno-switch-enum
+		-Wno-unused-command-line-argument
+		-Wno-unused-function
+		-Wno-unused-private-field
+		-Wno-unused-lambda-capture
+		-Wno-reorder-ctor
+		-Wno-missing-field-initializers
 )
 
 # Flags above don't make sense for MSVC

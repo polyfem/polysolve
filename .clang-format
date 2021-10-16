@@ -1,0 +1,44 @@
+---
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+Language: Cpp
+BasedOnStyle: LLVM
+# ColumnLimit: 80
+ColumnLimit: 0
+UseTab: Never
+IndentWidth: 4
+TabWidth: 4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel:  true
+  AfterClass:      true
+  AfterControlStatement: Always
+  AfterEnum:       true
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+  AfterExternBlock: true
+  BeforeCatch:     true
+  BeforeElse:      true
+  BeforeLambdaBody: false
+  BeforeWhile:     false
+  IndentBraces:    false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: false
+SortIncludes: false
+BreakStringLiterals: false
+AlignTrailingComments: true
+FixNamespaceComments: true
+ContinuationIndentWidth: 4
+NamespaceIndentation: All
+AccessModifierOffset: -4
+BreakBeforeBinaryOperators: NonAssignment
+# ReflowComments: true
+# BinPackParameters: false
+# AllowAllParametersOfDeclarationOnNextLine: true
+# AlignAfterOpenBracket: AlwaysBreak
+...

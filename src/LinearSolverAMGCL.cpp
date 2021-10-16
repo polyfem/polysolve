@@ -55,6 +55,18 @@ namespace polysolve
                     "aggr": {
                         "eps_strong": 0
                     }
+                },
+                "usolver":{
+                    "solver": {
+                        "tol": 1e-9,
+                        "maxiter": 100
+                    }
+                },
+                "psolver":{
+                    "solver": {
+                        "tol": 1e-9,
+                        "maxiter": 100
+                    }
                 }
             },
             "solver": {
@@ -64,6 +76,8 @@ namespace polysolve
             }
         })"_json;
 
+        // NOTE: usolver and psolver parameters are only used if the
+        // preconditioner class is "schur_pressure_correction"
         precond_num_ = 0;
     }
 
@@ -84,7 +98,7 @@ namespace polysolve
             params_["solver"]["tol"] = params["tolerance"];
         }
 
-        // Patch store params with input ones
+        // Patch the stored params with input ones
         params_.merge_patch(params);
     }
 
@@ -114,7 +128,7 @@ namespace polysolve
             params_["precond"]["pmask"] = pmask;
         }
 
-        // AMGCL wants the parameters a Boost parameter tree (i.e., another JSON data structure)
+        // AMGCL takes the parameters as a Boost property_tree (i.e., another JSON data structure)
         std::stringstream ss_params;
         ss_params << params_;
         boost::property_tree::ptree pt_params;

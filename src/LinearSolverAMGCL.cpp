@@ -55,18 +55,6 @@ namespace polysolve
                     "aggr": {
                         "eps_strong": 0
                     }
-                },
-                "usolver":{
-                    "solver": {
-                        "tol": 1e-9,
-                        "maxiter": 100
-                    }
-                },
-                "psolver":{
-                    "solver": {
-                        "tol": 1e-9,
-                        "maxiter": 100
-                    }
                 }
             },
             "solver": {
@@ -100,6 +88,21 @@ namespace polysolve
 
         // Patch the stored params with input ones
         params_.merge_patch(params);
+
+        if (params_["precond"]["class"] == "schur_pressure_correction")
+        {
+            // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
+            if (!params_["precond"].contains("usolver"))
+            {
+                params_["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                params_["precond"]["usolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].get<double>();
+            }
+            if (!params_["precond"].contains("usolver"))
+            {
+                params_["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                params_["precond"]["psolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].get<double>();
+            }
+        }
     }
 
     void LinearSolverAMGCL::getInfo(json &params) const

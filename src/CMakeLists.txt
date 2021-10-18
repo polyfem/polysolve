@@ -4,32 +4,19 @@ set(SOURCES
     LbfgsSolver.hpp
     LinearSolver.cpp
     LinearSolver.hpp
+    LinearSolverAMGCL.cpp
+    LinearSolverAMGCL.hpp
     LinearSolverEigen.hpp
     LinearSolverEigen.tpp
     LinearSolverHypre.cpp
     LinearSolverHypre.hpp
+    LinearSolverPardiso.cpp
+    LinearSolverPardiso.hpp
     SaddlePointSolver.cpp
     SaddlePointSolver.hpp
 )
 
-if(POLYSOLVE_HAS_AMGCL)
-    set(SOURCES
-    ${SOURCES}
-    LinearSolverAMGCL.cpp
-    LinearSolverAMGCL.hpp
-    )
-endif()
-
-
-if(POLYSOLVE_HAS_PARDISO)
-    set(SOURCES
-    ${SOURCES}
-    LinearSolverPardiso.cpp
-    LinearSolverPardiso.hpp
-    )
-endif()
-
-prepend_current_path(SOURCES)
-polyfem_solvers_copy_headers(${SOURCES})
-polyfem_solvers_set_source_group(${SOURCES})
+polysolve_prepend_current_path(SOURCES)
+polysolve_copy_headers(${SOURCES})
+polysolve_set_source_group(${SOURCES})
 target_sources(polysolve PRIVATE ${SOURCES})

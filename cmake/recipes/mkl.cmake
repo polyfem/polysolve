@@ -30,6 +30,9 @@ message(STATUS "MKL threading layer: ${MKL_THREADING}")
 # Linking options
 set(MKL_LINKING "static" CACHE STRING "Linking strategy to use with MKL (static, dynamic or sdl)")
 set(MKL_LINKING_CHOICES static dynamic sdl)
+if(WIN32 AND CMAKE_BUILD_TYPE MATCHES DEBUG)
+    set(MKL_LINKING "dynamic" CACHE STRING "Linking strategy to use with MKL (static, dynamic or sdl)" FORCE)
+endif()
 set_property(CACHE MKL_LINKING PROPERTY STRINGS ${MKL_LINKINK_CHOICES})
 message(STATUS "MKL linking strategy: ${MKL_LINKING}")
 

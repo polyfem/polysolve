@@ -32,12 +32,12 @@ set(HYPRE_SHARED       OFF CACHE INTERNAL "" FORCE)
 
 set(HYPRE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE INTERNAL "" FORCE)
 
-add_subdirectory(${hypre_SOURCE_DIR}/src ${hypre_BIN_DIR} EXCLUDE_FROM_ALL)
+add_subdirectory(${hypre_SOURCE_DIR}/src ${hypre_BINARY_DIR})
 add_library(HYPRE::HYPRE ALIAS HYPRE)
 
 set_property(TARGET HYPRE PROPERTY FOLDER "dependencies")
 
-target_include_directories(HYPRE PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/hypre)
+target_include_directories(HYPRE PUBLIC ${hypre_BINARY_DIR})
 target_include_directories(HYPRE PUBLIC ${hypre_SOURCE_DIR}/src)
 target_include_directories(HYPRE PUBLIC ${hypre_SOURCE_DIR}/src/blas)
 target_include_directories(HYPRE PUBLIC ${hypre_SOURCE_DIR}/src/lapack)

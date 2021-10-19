@@ -72,7 +72,7 @@ endfunction()
 function(polyfem_solvers_download_amgcl)
     polyfem_solvers_download_project(amgcl
         GIT_REPOSITORY https://github.com/ddemidov/amgcl.git
-        GIT_TAG        b1c1ec55da829ebcbf9d854b641606ff415ee6bb
+        GIT_TAG        1.4.2
     )
 endfunction()
 

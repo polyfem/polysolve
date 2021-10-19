@@ -87,7 +87,10 @@ namespace polysolve
         }
 
         // Patch the stored params with input ones
-        params_.merge_patch(params);
+        if (params.contains("precond"))
+            params_["precond"].merge_patch(params["precond"]);
+        if (params.contains("solver"))
+            params_["solver"].merge_patch(params["solver"]);
 
         if (params_["precond"]["class"] == "schur_pressure_correction")
         {

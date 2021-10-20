@@ -53,6 +53,7 @@ option(POLYSOLVE_WITH_TESTS         "Build unit-tests" ${POLYSOLVE_TOPLEVEL_PROJ
 
 include(CMakeDependentOption)
 cmake_dependent_option(SUITE_SPARSE_WITH_MKL "Build SuiteSparse using MKL" ON "POLYSOLVE_WITH_MKL" OFF)
+cmake_dependent_option(EIGEN_WITH_MKL "Use Eigen with MKL" ON "POLYSOLVE_WITH_MKL" OFF)
 
 # Set default minimum C++ standard
 if(POLYSOLVE_TOPLEVEL_PROJECT)
@@ -110,10 +111,6 @@ target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=0)
 
 # 8MB
 # target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=8388608)
-
-################################################################################
-# Dependencies
-################################################################################
 
 ################################################################################
 # Dependencies

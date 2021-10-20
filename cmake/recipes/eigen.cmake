@@ -14,8 +14,7 @@ if(TARGET Eigen3::Eigen)
     return()
 endif()
 
-include(CMakeDependentOption)
-cmake_dependent_option(EIGEN_WITH_MKL "Use Eigen with MKL" ON "POLYSOLVE_WITH_MKL" OFF)
+option(EIGEN_WITH_MKL "Use Eigen with MKL" OFF)
 
 if(EIGEN_ROOT)
     message(STATUS "Third-party: creating target 'Eigen3::Eigen' for external path: ${EIGEN_ROOT}")

@@ -11,7 +11,7 @@ namespace polysolve
         void diag(const Eigen::VectorXd &V, StiffnessMatrix &X)
         {
             // clear and resize output
-            Eigen::DynamicSparseMatrix<double, Eigen::RowMajor> dyn_X(V.size(), V.size());
+            Eigen::SparseMatrix<double, Eigen::RowMajor> dyn_X(V.size(), V.size());
             dyn_X.reserve(V.size());
             // loop over non-zeros
             for (int i = 0; i < V.size(); i++)

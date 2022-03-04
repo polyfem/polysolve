@@ -19,9 +19,10 @@ message(STATUS "Third-party: creating targets 'Boost::boost'...")
 include(FetchContent)
 FetchContent_Declare(
     boost-cmake
-    GIT_REPOSITORY https://github.com/Orphis/boost-cmake.git
-    GIT_TAG 40cb41d86eab0d7fdc18af4b04b733f8cc852d2a
+    URL https://github.com/polyfem/boost-cmake/archive/refs/tags/v1.67.1.tar.gz
+    URL_HASH SHA256=fdbc4ee397d6a7b4c01740c136d68daf49327edeb33ebf479b07236eb693b6e2
 )
+FetchContent_MakeAvailable(boost-cmake)
 
 set(PREVIOUS_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")

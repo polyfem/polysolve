@@ -98,7 +98,7 @@ namespace polysolve
         }
         else
         {
-            printf("[Pardiso] License check was successful ... \n");
+            // printf("[Pardiso] License check was successful ... \n");
         }
 
         // Numbers of processors, value of OMP_NUM_THREADS

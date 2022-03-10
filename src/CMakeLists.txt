@@ -14,6 +14,8 @@ set(SOURCES
     LinearSolverPardiso.hpp
     SaddlePointSolver.cpp
     SaddlePointSolver.hpp
+    CHOLMODSolver.cpp
+    CHOLMODSolver.hpp
 )
 
 polysolve_prepend_current_path(SOURCES)

@@ -1,5 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/FEMSolver.hpp>
+#include <polysolve/CHOLMODSolver.hpp>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -243,5 +244,30 @@ TEST_CASE("saddle_point_test", "[solver]")
     Eigen::VectorXd x(A.rows());
     solver->solve(b, x);
     const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+
+TEST_CASE("CHOLMOD", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double, Eigen::ColMajor, long int> A;
+    bool ok = loadMarket(A, path + "/nd6k.mtx");
+    REQUIRE(ok);
+
+    Eigen::VectorXd b(A.rows());
+    b.setOnes();
+    Eigen::VectorXd x(A.rows());
+    x.setZero();
+
+    CHOLMODSolver solver;
+    std::cout<<"here1\n";
+    solver.analyzePattern(A);
+    std::cout<<"here2\n";
+    solver.factorize(A);
+    std::cout<<"here3\n";
+    solver.solve(b, x);
+    std::cout<<"here4\n";
+    
+    const double err = (b - (A * x)).norm();
     REQUIRE(err < 1e-8);
 }

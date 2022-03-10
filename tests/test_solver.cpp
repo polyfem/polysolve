@@ -260,13 +260,9 @@ TEST_CASE("CHOLMOD", "[solver]")
     x.setZero();
 
     CHOLMODSolver solver;
-    std::cout<<"here1\n";
     solver.analyzePattern(A);
-    std::cout<<"here2\n";
     solver.factorize(A);
-    std::cout<<"here3\n";
     solver.solve(b, x);
-    std::cout<<"here4\n";
     
     const double err = (b - (A * x)).norm();
     REQUIRE(err < 1e-8);

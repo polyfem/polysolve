@@ -88,7 +88,7 @@ namespace polysolve
     {
         b = eigen2cholmod(rhs);
         x = cholmod_l_solve (CHOLMOD_A, L, &b, cm);
-
+        result.conservativeResize(rhs.size());
         memcpy(result.data(), x->x, result.size() * sizeof(result[0]));
     }
 
@@ -96,7 +96,7 @@ namespace polysolve
 
     CHOLMODSolver::~CHOLMODSolver()
     {
-        cholmod_l_gpu_stats(cm);
+        // cholmod_l_gpu_stats(cm);
         cholmod_l_free_factor (&L, cm);
         cholmod_l_free_dense (&x, cm);
     }

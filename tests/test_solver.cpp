@@ -251,7 +251,7 @@ TEST_CASE("CHOLMOD", "[solver]")
 {
     const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double, Eigen::ColMajor, long int> A;
-    bool ok = loadMarket(A, path + "/nd6k.mtx");
+    bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
     Eigen::VectorXd b(A.rows());

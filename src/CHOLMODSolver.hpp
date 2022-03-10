@@ -10,19 +10,6 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-// #define POLYSOLVE_DELETE_MOVE_COPY(Base) \
-//     Base(Base &&) = delete;                    \
-//     Base &operator=(Base &&) = delete;         \
-//     Base(const Base &) = delete;               \
-//     Base &operator=(const Base &) = delete;
-
-////////////////////////////////////////////////////////////////////////////////
-// TODO:
-// - [ ] Support both RowMajor + ColumnMajor sparse matrices
-// - [ ] Wrapper around MUMPS
-// - [ ] Wrapper around other iterative solvers (AMGCL, ViennaCL, etc.)
-// - [ ] Document the json parameters for each
-////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
 {
@@ -32,36 +19,7 @@ namespace polysolve
  */
     class CHOLMODSolver
     {
-
-    // public:
-        // Shortcut alias
-        // typedef Eigen::VectorXd VectorXd;
-        // template <typename T>
-        // using Ref = Eigen::Ref<T>;
-
-    // public:
-        //////////////////
-        // Constructors //
-        //////////////////
-
-        // Virtual destructor
-       
-
-        // Static constructor
-        //
-        // @param[in]  solver   Solver type
-        // @param[in]  precond  Preconditioner for iterative solvers
-        //
-        // static std::unique_ptr<LinearSolver> create(const std::string &solver, const std::string &precond);
-
-        // List available solvers
-        // static std::vector<std::string> availableSolvers();
-        // static std::string defaultSolver();
-
-        // List available preconditioners
-        // static std::vector<std::string> availablePrecond();
-        // static std::string defaultPrecond();
-
+        
     protected:
 
         cholmod_common *cm;

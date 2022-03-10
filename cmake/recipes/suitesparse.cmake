@@ -24,7 +24,7 @@ include(FetchContent)
 FetchContent_Declare(
     suitesparse
     GIT_REPOSITORY https://github.com/sergiud/SuiteSparse.git
-    GIT_TAG 3b92085cb5c7fe7917d12bcd5dd346502366d10f
+    GIT_TAG 5.10.1-cmake.1
 )
 
 FetchContent_GetProperties(suitesparse)

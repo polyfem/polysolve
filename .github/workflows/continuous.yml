@@ -106,12 +106,12 @@ jobs:
         run: |
           echo "appdata=$env:LOCALAPPDATA" >> ${env:GITHUB_ENV}
 
-      - name: Cache build
-        id: cache-build
-        uses: actions/cache@v2
-        with:
-          # path: ${{ env.appdata }}\Mozilla\sccache
-          key: ${{ runner.os }}-${{ matrix.config }}-cache
+      # - name: Cache build
+      #   id: cache-build
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: ${{ env.appdata }}\Mozilla\sccache
+      #     key: ${{ runner.os }}-${{ matrix.config }}-cache
 
       # - name: Prepare sccache
       #   run: |

@@ -143,7 +143,7 @@ target_link_libraries(polysolve PUBLIC nlohmann::json)
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)
     include(suitesparse)
-    target_link_libraries(polysolve PUBLIC SuiteSparse::SuiteSparse)
+    target_link_libraries(polysolve PUBLIC SuiteSparse::CHOLMOD)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CHOLMOD)
 endif()
 

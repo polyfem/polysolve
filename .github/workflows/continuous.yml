@@ -90,7 +90,7 @@ jobs:
     env:
       CC: cl.exe
       CXX: cl.exe
-      # SCCACHE_IDLE_TIMEOUT: "12000"
+      SCCACHE_IDLE_TIMEOUT: "12000"
     strategy:
       fail-fast: false
       matrix:
@@ -106,19 +106,20 @@ jobs:
         run: |
           echo "appdata=$env:LOCALAPPDATA" >> ${env:GITHUB_ENV}
 
-      # - name: Cache build
-      #   id: cache-build
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: ${{ env.appdata }}\Mozilla\sccache
-      #     key: ${{ runner.os }}-${{ matrix.config }}-cache
+      - name: Cache build
+        id: cache-build
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.appdata }}\Mozilla\sccache
+          key: ${{ runner.os }}-${{ matrix.config }}-cache
 
-      # - name: Prepare sccache
-      #   run: |
-      #     Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-      #     scoop install sccache --global -RunAsAdmin
-      #     # Scoop modifies the PATH so we make it available for the next steps of the job
-      #     echo "${env:PATH}" >> ${env:GITHUB_PATH}
+      - name: Prepare sccache
+        run: |
+          iwr -useb 'https://raw.githubusercontent.com/scoopinstaller/install/master/install.ps1' -outfile 'install.ps1'
+          .\install.ps1 -RunAsAdmin
+          scoop install sccache --global -RunAsAdmin
+          # Scoop modifies the PATH so we make it available for the next steps of the job
+          echo "${env:PATH}" >> ${env:GITHUB_PATH}
 
       - name: Configure and build
         shell: cmd
@@ -127,11 +128,11 @@ jobs:
           cmake --version
           cmake -G Ninja ^
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} ^
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
             -B build ^
             -S .
           cd build
           ninja -j1
-        # -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ^
 
       - name: Tests
         run: |

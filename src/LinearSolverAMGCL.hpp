@@ -30,6 +30,7 @@
 #include <amgcl/adapter/crs_tuple.hpp>
 #include <amgcl/adapter/reorder.hpp>
 #include <amgcl/adapter/eigen.hpp>
+#include <amgcl/adapter/block_matrix.hpp>
 #include <amgcl/profiler.hpp>
 #include <memory>
 #include <type_traits>
@@ -92,6 +93,106 @@ namespace polysolve
         size_t iterations_;
         double residual_error_;
     };
+
+    class LinearSolverAMGCL_Block2 : public LinearSolver
+    {
+
+    public:
+        LinearSolverAMGCL_Block2();
+        ~LinearSolverAMGCL_Block2();
+
+    private:
+        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverAMGCL_Block2)
+
+    public:
+        //////////////////////
+        // Public interface //
+        //////////////////////
+
+        // Set solver parameters
+        virtual void setParameters(const json &params) override;
+
+        // Retrieve information
+        virtual void getInfo(json &params) const override;
+
+        // Analyze sparsity pattern
+        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
+
+        // Factorize system matrix
+        virtual void factorize(const StiffnessMatrix &A) override;
+
+        // Solve the linear system Ax = b
+        virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
+
+        // Name of the solver type (for debugging purposes)
+        virtual std::string name() const override { return "AMGCL_Block2"; }
+
+    private:
+        typedef amgcl::static_matrix<double, 2, 2> dmat_type; // matrix value type in double precision
+        using Backend = amgcl::backend::builtin<dmat_type>;
+        using Solver = amgcl::make_solver<
+            amgcl::runtime::preconditioner<Backend>,
+            amgcl::runtime::solver::wrapper<Backend>>;
+        std::unique_ptr<Solver> solver_;
+        json params_;
+        typename Backend::params backend_params_;
+        int precond_num_;
+
+        // Output info
+        size_t iterations_;
+        double residual_error_;
+    };
+
+    class LinearSolverAMGCL_Block3 : public LinearSolver
+    {
+
+    public:
+        LinearSolverAMGCL_Block3();
+        ~LinearSolverAMGCL_Block3();
+
+    private:
+        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverAMGCL_Block3)
+
+    public:
+        //////////////////////
+        // Public interface //
+        //////////////////////
+
+        // Set solver parameters
+        virtual void setParameters(const json &params) override;
+
+        // Retrieve information
+        virtual void getInfo(json &params) const override;
+
+        // Analyze sparsity pattern
+        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
+
+        // Factorize system matrix
+        virtual void factorize(const StiffnessMatrix &A) override;
+
+        // Solve the linear system Ax = b
+        virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
+
+        // Name of the solver type (for debugging purposes)
+        virtual std::string name() const override { return "AMGCL_Block3"; }
+
+    private:
+        typedef amgcl::static_matrix<double, 3, 3> dmat_type; // matrix value type in double precision
+        typedef amgcl::static_matrix<float, 3, 3> smat_type; 
+        using Backend = amgcl::backend::builtin<dmat_type>;
+        using Solver = amgcl::make_solver<
+            amgcl::runtime::preconditioner<Backend>,
+            amgcl::runtime::solver::wrapper<Backend>>;
+        std::unique_ptr<Solver> solver_;
+        json params_;
+        typename Backend::params backend_params_;
+        int precond_num_;
+
+        // Output info
+        size_t iterations_;
+        double residual_error_;
+    };
+
 } // namespace polysolve
 
 #endif

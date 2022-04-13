@@ -1,247 +1,643 @@
-////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 #include <polysolve/FEMSolver.hpp>
-
 #include <catch2/catch.hpp>
 #include <iostream>
 #include <unsupported/Eigen/SparseExtra>
-////////////////////////////////////////////////////////////////////////////////
+#include <fstream>
+#include <vector>
+#include <ctime>
+#include <polysolve/LinearSolverAMGCL.hpp>
+////////////////////////////////////////////////////////////////////////////
+
+
 
 using namespace polysolve;
 
-TEST_CASE("all", "[solver]")
-{
-    const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
-
-    auto solvers = LinearSolver::availableSolvers();
-
-    for (const auto &s : solvers)
-    {
-        if (s == "Eigen::DGMRES")
-            continue;
-#ifdef WIN32
-        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
-            continue;
-#endif
-        auto solver = LinearSolver::create(s, "");
-        solver->setParameters(R"({"conv_tol": 1e-10})"_json);
-        Eigen::VectorXd b(A.rows());
-        b.setRandom();
-        Eigen::VectorXd x(b.size());
-        x.setZero();
-
-        solver->analyzePattern(A, A.rows());
-        solver->factorize(A);
-        solver->solve(b, x);
-
-        // solver->getInfo(solver_info);
-
-        // std::cout<<"Solver error: "<<x<<std::endl;
-        const double err = (A * x - b).norm();
-        INFO("solver: " + s);
-        REQUIRE(err < 1e-8);
-    }
-}
-
-TEST_CASE("pre_factor", "[solver]")
-{
-    const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
-
-    auto solvers = LinearSolver::availableSolvers();
-
-    for (const auto &s : solvers)
-    {
-        if (s == "Eigen::DGMRES")
-            continue;
-#ifdef WIN32
-        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
-            continue;
-#endif
-        auto solver = LinearSolver::create(s, "");
-        solver->analyzePattern(A, A.rows());
-
-        std::default_random_engine eng{42};
-        std::uniform_real_distribution<double> urd(0.1, 5);
-
-        for (int i = 0; i < 10; ++i)
-        {
-            std::vector<Eigen::Triplet<double>> tripletList;
-
-            for (int k = 0; k < A.outerSize(); ++k)
-            {
-                for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it)
-                {
-                    if (it.row() == it.col())
-                    {
-                        tripletList.emplace_back(it.row(), it.col(), urd(eng) * 100);
-                    }
-                    else if (it.row() < it.col())
-                    {
-                        const double val = -urd(eng);
-                        tripletList.emplace_back(it.row(), it.col(), val);
-                        tripletList.emplace_back(it.col(), it.row(), val);
-                    }
-                }
-            }
-
-            Eigen::SparseMatrix<double> Atmp(A.rows(), A.cols());
-            Atmp.setFromTriplets(tripletList.begin(), tripletList.end());
-
-            Eigen::VectorXd b(Atmp.rows());
-            b.setRandom();
-            Eigen::VectorXd x(b.size());
-            x.setZero();
-
-            solver->factorize(Atmp);
-            solver->solve(b, x);
-
-            // solver->getInfo(solver_info);
-
-            // std::cout<<"Solver error: "<<x<<std::endl;
-            const double err = (Atmp * x - b).norm();
-            INFO("solver: " + s);
-            REQUIRE(err < 1e-8);
-        }
-    }
-}
-
-#ifdef POLYSOLVE_WITH_HYPRE
-TEST_CASE("hypre", "[solver]")
-{
-    const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
-
-    auto solver = LinearSolver::create("Hypre", "");
-    // solver->setParameters(params);
-    Eigen::VectorXd b(A.rows());
-    b.setRandom();
-    Eigen::VectorXd x(b.size());
-    x.setZero();
-
-    solver->analyzePattern(A, A.rows());
-    solver->factorize(A);
-    solver->solve(b, x);
-
-    // solver->getInfo(solver_info);
-
-    // std::cout<<"Solver error: "<<x<<std::endl;
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-8);
-}
-
-TEST_CASE("hypre_initial_guess", "[solver]")
-{
-    const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
-
-    // solver->setParameters(params);
-    Eigen::VectorXd b(A.rows());
-    b.setRandom();
-    Eigen::VectorXd x(A.rows());
-    x.setZero();
-    {
-        json solver_info;
-
-        auto solver = LinearSolver::create("Hypre", "");
-        solver->analyzePattern(A, A.rows());
-        solver->factorize(A);
-        solver->solve(b, x);
-        solver->getInfo(solver_info);
-
-        REQUIRE(solver_info["num_iterations"] > 1);
-    }
-
-    {
-        json solver_info;
-        auto solver = LinearSolver::create("Hypre", "");
-        solver->analyzePattern(A, A.rows());
-        solver->factorize(A);
-        solver->solve(b, x);
-
-        solver->getInfo(solver_info);
-
-        REQUIRE(solver_info["num_iterations"] == 1);
-    }
-
-    // std::cout<<"Solver error: "<<x<<std::endl;
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-8);
-}
-#endif
+//TEST_CASE("all", "[solver]")
+//{
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    Eigen::SparseMatrix<double> A;
+//    const bool ok = loadMarket(A, path + "/A_2.mat");
+//    REQUIRE(ok);
+//
+//    auto solvers = LinearSolver::availableSolvers();
+//
+//    for (const auto &s : solvers)
+//    {
+//        if (s == "Eigen::DGMRES")
+//            continue;
+//#ifdef WIN32
+//        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
+//            continue;
+//#endif
+//        auto solver = LinearSolver::create(s, "");
+//        solver->setParameters(R"({"conv_tol": 1e-10})"_json);
+//        Eigen::VectorXd b(A.rows());
+//        b.setRandom();
+//        Eigen::VectorXd x(b.size());
+//        x.setZero();
+//
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x);
+//
+//        // solver->getInfo(solver_info);
+//
+//        // std::cout<<"Solver error: "<<x<<std::endl;
+//        const double err = (A * x - b).norm();
+//        INFO("solver: " + s);
+//        REQUIRE(err < 1e-8);
+//    }
+//}
+//
+//TEST_CASE("pre_factor", "[solver]")
+//{
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    Eigen::SparseMatrix<double> A;
+//    const bool ok = loadMarket(A, path + "/A_2.mat");
+//    REQUIRE(ok);
+//
+//    auto solvers = LinearSolver::availableSolvers();
+//
+//    for (const auto &s : solvers)
+//    {
+//        if (s == "Eigen::DGMRES")
+//            continue;
+//#ifdef WIN32
+//        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
+//            continue;
+//#endif
+//        auto solver = LinearSolver::create(s, "");
+//        solver->analyzePattern(A, A.rows());
+//
+//        std::default_random_engine eng{42};
+//        std::uniform_real_distribution<double> urd(0.1, 5);
+//
+//        for (int i = 0; i < 10; ++i)
+//        {
+//            std::vector<Eigen::Triplet<double>> tripletList;
+//
+//            for (int k = 0; k < A.outerSize(); ++k)
+//            {
+//                for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it)
+//                {
+//                    if (it.row() == it.col())
+//                    {
+//                        tripletList.emplace_back(it.row(), it.col(), urd(eng) * 100);
+//                    }
+//                    else if (it.row() < it.col())
+//                    {
+//                        const double val = -urd(eng);
+//                        tripletList.emplace_back(it.row(), it.col(), val);
+//                        tripletList.emplace_back(it.col(), it.row(), val);
+//                    }
+//                }
+//            }
+//
+//            Eigen::SparseMatrix<double> Atmp(A.rows(), A.cols());
+//            Atmp.setFromTriplets(tripletList.begin(), tripletList.end());
+//
+//            Eigen::VectorXd b(Atmp.rows());
+//            b.setRandom();
+//            Eigen::VectorXd x(b.size());
+//            x.setZero();
+//
+//            solver->factorize(Atmp);
+//            solver->solve(b, x);
+//
+//            // solver->getInfo(solver_info);
+//
+//            // std::cout<<"Solver error: "<<x<<std::endl;
+//            const double err = (Atmp * x - b).norm();
+//            INFO("solver: " + s);
+//            REQUIRE(err < 1e-8);
+//        }
+//    }
+//}
+//
+//#ifdef POLYSOLVE_WITH_HYPRE
+//TEST_CASE("hypre", "[solver]")
+//{
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    Eigen::SparseMatrix<double> A;
+//    const bool ok = loadMarket(A, path + "/A_2.mat");
+//    REQUIRE(ok);
+//
+//    auto solver = LinearSolver::create("Hypre", "");
+//    // solver->setParameters(params);
+//    Eigen::VectorXd b(A.rows());
+//    b.setRandom();
+//    Eigen::VectorXd x(b.size());
+//    x.setZero();
+//
+//    solver->analyzePattern(A, A.rows());
+//    solver->factorize(A);
+//    solver->solve(b, x);
+//
+//    // solver->getInfo(solver_info);
+//
+//    // std::cout<<"Solver error: "<<x<<std::endl;
+//    const double err = (A * x - b).norm();
+//    REQUIRE(err < 1e-8);
+//}
+//
+//TEST_CASE("hypre_initial_guess", "[solver]")
+//{
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    Eigen::SparseMatrix<double> A;
+//    const bool ok = loadMarket(A, path + "/A_2.mat");
+//    REQUIRE(ok);
+//
+//    // solver->setParameters(params);
+//    Eigen::VectorXd b(A.rows());
+//    b.setRandom();
+//    Eigen::VectorXd x(A.rows());
+//    x.setZero();
+//    {
+//        json solver_info;
+//
+//        auto solver = LinearSolver::create("Hypre", "");
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x);
+//        solver->getInfo(solver_info);
+//
+//        REQUIRE(solver_info["num_iterations"] > 1);
+//    }
+//
+//    {
+//        json solver_info;
+//        auto solver = LinearSolver::create("Hypre", "");
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x);
+//
+//        solver->getInfo(solver_info);
+//
+//        REQUIRE(solver_info["num_iterations"] == 1);
+//    }
+//
+//    // std::cout<<"Solver error: "<<x<<std::endl;
+//    const double err = (A * x - b).norm();
+//    REQUIRE(err < 1e-8);
+//}
+//#endif
+//
+//#ifdef POLYSOLVE_WITH_AMGCL
+//TEST_CASE("amgcl_initial_guess", "[solver]")
+//{
+//     const std::string path = POLYSOLVE_DATA_DIR;
+//    Eigen::SparseMatrix<double> A;
+//    const bool ok = loadMarket(A, path + "/A_2.mat");
+//    REQUIRE(ok);
+//
+//    // solver->setParameters(params);
+//    Eigen::VectorXd b(A.rows());
+//    b.setRandom();
+//    Eigen::VectorXd x(A.rows());
+//    x.setZero();
+//    {
+//        json solver_info;
+//
+//        auto solver = LinearSolver::create("AMGCL", "");
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x);
+//        solver->getInfo(solver_info);
+//
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//    }
+//
+//    {
+//        json solver_info;
+//        auto solver = LinearSolver::create("AMGCL", "");
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x);
+//
+//        solver->getInfo(solver_info);
+//
+//        REQUIRE(solver_info["num_iterations"] == 0);
+//    }
+//
+//    // std::cout<<"Solver error: "<<x<<std::endl;
+//    const double err = (A * x - b).norm();
+//    REQUIRE(err < 1e-8);
+//}
+//#endif
+//
+//
+//
+// TEST_CASE("saddle_point_test", "[solver]")
+// {
+// #ifdef WIN32
+// #ifndef NDEBUG
+//     return;
+// #endif
+// #endif
+//     const std::string path = POLYSOLVE_DATA_DIR;
+//     Eigen::SparseMatrix<double> A;
+//     bool ok = loadMarket(A, path + "/A0.mat");
+//     REQUIRE(ok);
+//
+//     Eigen::VectorXd b;
+//     ok = loadMarketVector(b, path + "/b0.mat");
+//     REQUIRE(ok);
+//
+//     auto solver = LinearSolver::create("SaddlePointSolver", "");
+//     solver->analyzePattern(A, 9934);
+//     solver->factorize(A);
+//     Eigen::VectorXd x(A.rows());
+//     solver->solve(b, x);
+//     const double err = (A * x - b).norm();
+//     REQUIRE(err < 1e-8);
+// }
+//
+//#ifdef POLYSOLVE_WITH_AMGCL
+//TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
+//{
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    Eigen::SparseMatrix<double> A;
+//    const bool ok = loadMarket(A, path + "/A_2.mat");
+//    REQUIRE(ok);
+//
+//    // solver->setParameters(params);
+//    Eigen::VectorXd b(A.rows());
+//    b.setRandom();
+//    Eigen::VectorXd x(A.rows());
+//    Eigen::VectorXd x_b(A.rows());
+//    x.setZero();
+//    x_b.setZero();
+//    {
+//        json solver_info;
+//
+//        auto solver = LinearSolver::create("AMGCL", "");
+//        solver->setParameters(R"({"conv_tol": 1e-7})"_json);
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x);
+//        solver->getInfo(solver_info);
+//
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//        const double err = (A * x - b).norm();
+//        REQUIRE(err < 1e-5);
+//    }
+//
+//    {
+//        json solver_info;        
+//        auto solver = LinearSolver::create("AMGCL_B3", "");        
+//        solver->setParameters(R"({"conv_tol": 1e-7})"_json);
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        solver->solve(b, x_b);
+//        solver->getInfo(solver_info);
+//
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//        const double err = (A * x_b - b).norm();
+//        REQUIRE(err < 1e-5);
+//    }
+//    
+//    // const double err = (x-x_b).norm();
+//    // REQUIRE(err < 1e-8);
+//}
+//#endif
+//
+// #ifdef POLYSOLVE_WITH_AMGCL
+// TEST_CASE("amgcl_blocksolver_b2", "[solver]")
+// {
+//     const std::string path = POLYSOLVE_DATA_DIR;
+//     std::string MatrixName = "gr_30_30.mtx";
+//     std::ifstream fin(path + "/" + MatrixName);
+//     long int M, N, L;
+//     while (fin.peek() == '%')
+//     {
+//         fin.ignore(2048, '\n');
+//     }
+//     fin >> M >> N >> L;
+//     Eigen::SparseMatrix<double> A(M, N);
+//     A.reserve(L * 2 - M);
+//     std::vector<Eigen::Triplet<double>> triple;
+//     for (size_t i = 0; i < L; i++)
+//     {
+//         int m, n;
+//         double data;
+//         fin >> m >> n >> data;
+//         triple.push_back(Eigen::Triplet<double>(m - 1, n - 1, data));
+//         if (m != n)
+//         {
+//             triple.push_back(Eigen::Triplet<double>(n - 1, m - 1, data));
+//         }
+//     }
+//     fin.close();
+//
+//     A.setFromTriplets(triple.begin(), triple.end());
+//
+//     std::cout << "Matrix Load OK" << std::endl;
+//    
+//     Eigen::VectorXd b(A.rows());
+//     b.setRandom();
+//     Eigen::VectorXd x(A.rows());
+//     Eigen::VectorXd x_b(A.rows());
+//     Eigen::VectorXd tempx(A.rows());
+//     x.setOnes();
+//     x_b.setOnes();
+//     {
+//         amgcl::profiler<> prof("bcsstk14_Block");
+//         json solver_info;        
+//         auto solver = LinearSolver::create("AMGCL_B2", "");
+//         prof.tic("setup");
+//         solver->setParameters(R"({"conv_tol": 1e-5,"max_iter": 1000})"_json);
+//         solver->analyzePattern(A, A.rows());
+//         solver->factorize(A);
+//         prof.toc("setup");
+//         prof.tic("solve");
+//         solver->solve(b, x_b);
+//         prof.toc("solve");
+//         solver->getInfo(solver_info);
+//
+//         REQUIRE(solver_info["num_iterations"] >0);
+//        std::cout<<solver_info["num_iterations"]<<std::endl;
+//         std::cout << solver_info["final_res_norm"] << std::endl
+//                   << prof << std::endl;
+//
+//     }
+//     {
+//         amgcl::profiler<> prof("bcsstk14_Scalar");
+//         json solver_info;        
+//         auto solver = LinearSolver::create("AMGCL", "");
+//         prof.tic("setup");
+//         solver->setParameters(R"({"conv_tol": 1e-5,"max_iter": 1000})"_json);
+//         solver->analyzePattern(A, A.rows());
+//         solver->factorize(A);
+//         prof.toc("setup");
+//         prof.tic("solve");
+//         solver->solve(b, x);
+//         prof.toc("solve");
+//         solver->getInfo(solver_info);
+//
+//         REQUIRE(solver_info["num_iterations"] >0);
+//
+//        std::cout << solver_info["num_iterations"] << std::endl;
+//         std::cout << solver_info["final_res_norm"] << std::endl
+//                   << prof << std::endl;
+//     }
+//     REQUIRE((A * x - b).norm() / b.norm() < 1e-5);
+//     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-5);
+//    
+// }
+// #endif
 
 #ifdef POLYSOLVE_WITH_AMGCL
-TEST_CASE("amgcl_initial_guess", "[solver]")
+TEST_CASE("amgcl_blocksolver_Serena_CG", "[solver]")
 {
+    std::cout << "Polysolve AMGCL Solver" <<std::endl; 
     const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
+    std::string MatrixName = "Serena.mtx";
+    std::ifstream fin(path + "/"+MatrixName);
+    long int M,N,L;
+    while (fin.peek()=='%')
+    {
+        fin.ignore(2048,'\n');
+    }
+    fin>>M>>N>>L;
+    Eigen::SparseMatrix<double> A(M,N);
+    Eigen::SparseMatrix<double> A_BL;
+    A.reserve(L*2-M);
+    std::vector<Eigen::Triplet<double>>triple;
+    for (size_t i = 0; i < L; i++)
+    {
+        int m,n;
+        double data;
+        fin>>m>>n>>data;
+        triple.push_back(Eigen::Triplet<double>(m-1,n-1,data));
+        if (m != n)
+        {
+            triple.push_back(Eigen::Triplet<double>(n - 1, m - 1, data));
+        }
+
+    }
+    fin.close();
+
+    A.setFromTriplets(triple.begin(),triple.end());
+
+
+
+    std::cout<<"Matrix Load OK"<<std::endl;
+
 
     // solver->setParameters(params);
     Eigen::VectorXd b(A.rows());
-    b.setRandom();
+    b.setOnes();
+    Eigen::VectorXd x_b(A.rows());
+    x_b.setZero();
     Eigen::VectorXd x(A.rows());
     x.setZero();
     {
+        amgcl::profiler<> prof("Serena_Block");
         json solver_info;
-
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = LinearSolver::create("AMGCL_B3", "");
+        prof.tic("setup");
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 500})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
-        solver->solve(b, x);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x_b);
+        prof.toc("solve");
         solver->getInfo(solver_info);
-
         REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl
+                  << prof << std::endl;
     }
-
-    {
-        json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
-        solver->analyzePattern(A, A.rows());
-        solver->factorize(A);
-        solver->solve(b, x);
-
-        solver->getInfo(solver_info);
-
-        REQUIRE(solver_info["num_iterations"] == 0);
-    }
-
-    // std::cout<<"Solver error: "<<x<<std::endl;
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-8);
+     {
+         amgcl::profiler<> prof("Serena_Scalar");
+         json solver_info; 
+         auto solver = LinearSolver::create("AMGCL", "");  
+         prof.tic("setup");
+         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 500})"_json);
+         solver->analyzePattern(A, A.rows());
+         solver->factorize(A);
+         prof.toc("setup");
+         prof.tic("solve");
+         solver->solve(b, x);
+         prof.toc("solve");
+         solver->getInfo(solver_info);
+         REQUIRE(solver_info["num_iterations"] > 0);
+         std::cout<<solver_info["num_iterations"]<<std::endl;
+         std::cout << solver_info["final_res_norm"] << std::endl
+                   << prof << std::endl;
+     }
+     REQUIRE((A * x - b).norm() / b.norm() < 1e-8);
+     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-8);
 }
 #endif
 
-TEST_CASE("saddle_point_test", "[solver]")
-{
-#ifdef WIN32
-#ifndef NDEBUG
-    return;
-#endif
-#endif
-    const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    bool ok = loadMarket(A, path + "/A0.mat");
-    REQUIRE(ok);
+//#ifdef POLYSOLVE_WITH_AMGCL
+//TEST_CASE("amgcl_blocksolver_Serena_Bicgstab", "[solver]")
+//{
+//    std::cout << "Polysolve AMGCL Solver" << std::endl;
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    std::string MatrixName = "Serena.mtx";
+//    std::ifstream fin(path + "/" + MatrixName);
+//    long int M, N, L;
+//    while (fin.peek() == '%')
+//    {
+//        fin.ignore(2048, '\n');
+//    }
+//    fin >> M >> N >> L;
+//    Eigen::SparseMatrix<double> A(M, N);
+//    Eigen::SparseMatrix<double> A_BL;
+//    A.reserve(L * 2 - M);
+//    std::vector<Eigen::Triplet<double>> triple;
+//    for (size_t i = 0; i < L; i++)
+//    {
+//        int m, n;
+//        double data;
+//        fin >> m >> n >> data;
+//        triple.push_back(Eigen::Triplet<double>(m - 1, n - 1, data));
+//        if (m != n)
+//        {
+//            triple.push_back(Eigen::Triplet<double>(n - 1, m - 1, data));
+//        }
+//    }
+//    fin.close();
+//
+//    A.setFromTriplets(triple.begin(), triple.end());
+//
+//    std::cout << "Matrix Load OK" << std::endl;
+//
+//    Eigen::VectorXd b(A.rows());
+//    b.setOnes();
+//    Eigen::VectorXd x_b(A.rows());
+//    x_b.setZero();
+//    Eigen::VectorXd x(A.rows());
+//    x.setZero();
+//    {
+//        amgcl::profiler<> prof("Serena_Block");
+//        json solver_info;
+//        auto solver = LinearSolver::create("AMGCL_B3", "");
+//        prof.tic("setup");
+//        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"solver_type": "bicgstab"})"_json);
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        prof.toc("setup");
+//        prof.tic("solve");
+//        solver->solve(b, x_b);
+//        prof.toc("solve");
+//        solver->getInfo(solver_info);
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//        std::cout << solver_info["num_iterations"] << std::endl;
+//        std::cout << solver_info["final_res_norm"] << std::endl
+//                  << prof << std::endl;
+//    }
+//    {
+//        amgcl::profiler<> prof("Serena_Scalar");
+//        json solver_info;
+//        auto solver = LinearSolver::create("AMGCL", "");
+//        prof.tic("setup");
+//        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"solver_type":"bicgstab"})"_json);
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        prof.toc("setup");
+//        prof.tic("solve");
+//        solver->solve(b, x);
+//        prof.toc("solve");
+//        solver->getInfo(solver_info);
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//        std::cout << solver_info["num_iterations"] << std::endl;
+//        std::cout << solver_info["final_res_norm"] << std::endl
+//                  << prof << std::endl;
+//    }
+//    REQUIRE((A * x - b).norm() / b.norm() < 1e-8);
+//    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-8);
+//}
+//#endif
+//
+//
+//
+//#ifdef POLYSOLVE_WITH_AMGCL
+//TEST_CASE("amgcl_blocksolver_cfd1.mtx", "[solver]")
+//{
+//    std::cout << "Polysolve AMGCL Solver" << std::endl;
+//    const std::string path = POLYSOLVE_DATA_DIR;
+//    std::string MatrixName = "cfd1.mtx";
+//    std::ifstream fin(path + "/" + MatrixName);
+//    long int M, N, L;
+//    while (fin.peek() == '%')
+//    {
+//        fin.ignore(2048, '\n');
+//    }
+//    fin >> M >> N >> L;
+//    Eigen::SparseMatrix<double> A(M, N);
+//    Eigen::SparseMatrix<double> A_BL;
+//    A.reserve(L * 2 - M);
+//    std::vector<Eigen::Triplet<double>> triple;
+//    for (size_t i = 0; i < L; i++)
+//    {
+//        int m, n;
+//        double data;
+//        fin >> m >> n >> data;
+//        triple.push_back(Eigen::Triplet<double>(m - 1, n - 1, data));
+//        if (m != n)
+//        {
+//            triple.push_back(Eigen::Triplet<double>(n - 1, m - 1, data));
+//        }
+//    }
+//    fin.close();
+//
+//    A.setFromTriplets(triple.begin(), triple.end());
+//
+//    std::cout << "Matrix Load OK" << std::endl;
+//
+//    // solver->setParameters(params);
+//    Eigen::VectorXd b(A.rows());
+//    b.setOnes();
+//    Eigen::VectorXd x_b(A.rows());
+//    x_b.setZero();
+//    Eigen::VectorXd x(A.rows());
+//    x.setZero();
+//    {
+//        amgcl::profiler<> prof("Block");
+//        json solver_info;
+//        auto solver = LinearSolver::create("AMGCL_B3", "");
+//        prof.tic("setup");
+//        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 500})"_json);
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        prof.toc("setup");
+//        prof.tic("solve");
+//        solver->solve(b, x_b);
+//        prof.toc("solve");
+//        solver->getInfo(solver_info);
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//        std::cout << solver_info["num_iterations"] << std::endl;
+//        std::cout << solver_info["final_res_norm"] << std::endl
+//                  << prof << std::endl;
+//    }
+//    {
+//        amgcl::profiler<> prof("Scalar");
+//        json solver_info;
+//        auto solver = LinearSolver::create("AMGCL", "");
+//        prof.tic("setup");
+//        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 500})"_json);
+//        solver->analyzePattern(A, A.rows());
+//        solver->factorize(A);
+//        prof.toc("setup");
+//        prof.tic("solve");
+//        solver->solve(b, x);
+//        prof.toc("solve");
+//        solver->getInfo(solver_info);
+//        REQUIRE(solver_info["num_iterations"] > 0);
+//        std::cout << solver_info["num_iterations"] << std::endl;
+//        std::cout << solver_info["final_res_norm"] << std::endl
+//                  << prof << std::endl;
+//    }
+//    REQUIRE((A * x - b).norm() / b.norm() < 1e-8);
+//    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-8);
+//}
+//#endif
 
-    Eigen::VectorXd b;
-    ok = loadMarketVector(b, path + "/b0.mat");
-    REQUIRE(ok);
 
-    auto solver = LinearSolver::create("SaddlePointSolver", "");
-    solver->analyzePattern(A, 9934);
-    solver->factorize(A);
-    Eigen::VectorXd x(A.rows());
-    solver->solve(b, x);
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-8);
-}
+
+

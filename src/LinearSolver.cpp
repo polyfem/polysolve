@@ -225,6 +225,14 @@ namespace polysolve
         else if (solver == "AMGCL")
         {
             return std::make_unique<LinearSolverAMGCL>();
+        }
+        else if (solver == "AMGCL_B2")
+        {
+            return std::make_unique<LinearSolverAMGCL_Block2>();
+        }
+        else if (solver == "AMGCL_B3")
+        {
+            return std::make_unique<LinearSolverAMGCL_Block3>();
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
@@ -294,6 +302,8 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+            "AMGCL_B3",
+            "AMGCL_B3",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

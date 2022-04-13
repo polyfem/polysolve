@@ -5,3 +5,4 @@ bin*
 *.code-workspace
 tests/data
 PolySolveOptions.cmake
+.vs

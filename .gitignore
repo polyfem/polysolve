@@ -3,6 +3,5 @@ bin*
 3rdparty*
 .vscode
 *.code-workspace
-tests/data
 PolySolveOptions.cmake
 .vs

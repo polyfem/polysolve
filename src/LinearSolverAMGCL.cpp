@@ -230,12 +230,12 @@ namespace polysolve
             if (!params_["precond"].contains("usolver"))
             {
                 params_["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                params_["precond"]["usolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].get<double>();
+                params_["precond"]["usolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].template get<double>();
             }
             if (!params_["precond"].contains("usolver"))
             {
                 params_["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                params_["precond"]["psolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].get<double>();
+                params_["precond"]["psolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].template get<double>();
             }
         }
     }

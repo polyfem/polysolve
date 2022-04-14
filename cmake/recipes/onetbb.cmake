@@ -1,5 +1,5 @@
 #
-# Copyright 2020 Adobe. All rights reserved.
+# Copyright 2021 Adobe. All rights reserved.
 # This file is licensed to you under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License. You may obtain a copy
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -9,7 +9,6 @@
 # OF ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 #
-
 if(TARGET TBB::tbb)
     return()
 endif()
@@ -20,7 +19,8 @@ include(FetchContent)
 FetchContent_Declare(
     tbb
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG 1098f48187c718ef782b0aa01861184886906cf4
+    GIT_TAG v2021.6.0-rc1
+    GIT_SHALLOW TRUE
 )
 
 option(TBB_TEST "Enable testing" OFF)

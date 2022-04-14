@@ -400,6 +400,10 @@ if(NOT MSVC)
     target_link_libraries(mkl::mkl INTERFACE ${LIBM_LIBRARY})
 endif()
 
+if(NOT MSVC)
+    target_link_libraries(mkl::mkl INTERFACE ${CMAKE_DL_LIBS})
+endif()
+
 # If using TBB, we need to specify the dependency
 if(MKL_THREADING STREQUAL "tbb")
     include(onetbb)

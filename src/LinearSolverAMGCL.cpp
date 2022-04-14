@@ -119,6 +119,16 @@ namespace polysolve
 
     void LinearSolverAMGCL::getInfo(json &params) const
     {
+        if (block_size==2)
+        {
+            block2_solver_.getInfo(params);
+            return;
+        }
+        else if (block_size==3)
+        {
+            block3_solver_.getInfo(params);
+            return;
+        }
         params["num_iterations"] = iterations_;
         params["final_res_norm"] = residual_error_;
     }
@@ -159,7 +169,6 @@ namespace polysolve
         boost::property_tree::read_json(ss_params, pt_params);
         auto A = std::tie(numRows, ia, ja, a);
         solver_ = std::make_unique<Solver>(A, pt_params);
-
         iterations_ = 0;
         residual_error_ = 0;
     }
@@ -207,20 +216,16 @@ namespace polysolve
                     "type": "spai0"
                 },
                 "class": "amg",
-                "max_levels": 6,
-                "direct_coarse": false,
-                "ncycle": 2,
+                "direct_coarse": true,
+                "ncycle": 1,
                 "coarsening": {
                     "type": "smoothed_aggregation",
-                    "estimate_spectral_radius": true,
-                    "relax": 1,
-                    "aggr": {
-                        "eps_strong": 0
-                    }
+                    "estimate_spectral_radius": false,
+                    "relax": 1.0
                 }
             },
             "solver": {
-                "tol": 1e-10,
+                "tol": 1e-8,
                 "maxiter": 1000,
                 "type": "cg"
             }
@@ -311,7 +316,6 @@ namespace polysolve
         auto A = std::tie(numRows, ia, ja, a);
         auto Ab = amgcl::adapter::block_matrix<dmat_type>(A);
         solver_ = std::make_unique<Solver>(Ab, pt_params);
-
         iterations_ = 0;
         residual_error_ = 0;
     }

@@ -298,7 +298,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
         json solver_info;
 
         auto solver = LinearSolver::create("AMGCL", "");
-        solver->setParameters(R"({"conv_tol": 1e-7})"_json);
+        solver->setParameters(R"({"conv_tol": 1e-8})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -312,7 +312,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
     {
         json solver_info;        
         auto solver = LinearSolver::create("AMGCL", "");        
-        solver->setParameters(R"({"conv_tol": 1e-7,"block_size": 3})"_json);
+        solver->setParameters(R"({"conv_tol": 1e-8,"block_size": 3})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x_b);
@@ -339,35 +339,14 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
      b.setRandom();
      Eigen::VectorXd x(A.rows());
      Eigen::VectorXd x_b(A.rows());
-     Eigen::VectorXd tempx(A.rows());
      x.setOnes();
      x_b.setOnes();
      {
-         amgcl::profiler<> prof("gr_30_30_Block");
-         json solver_info;        
-         auto solver = LinearSolver::create("AMGCL", "");
-         prof.tic("setup");
-         solver->setParameters(R"({"conv_tol": 1e-5,"max_iter": 1000,"block_size":2})"_json);
-         solver->analyzePattern(A, A.rows());
-         solver->factorize(A);
-         prof.toc("setup");
-         prof.tic("solve");
-         solver->solve(b, x_b);
-         prof.toc("solve");
-         solver->getInfo(solver_info);
-
-         REQUIRE(solver_info["num_iterations"] >0);
-        std::cout<<solver_info["num_iterations"]<<std::endl;
-         std::cout << solver_info["final_res_norm"] << std::endl
-                   << prof << std::endl;
-
-     }
-     {
          amgcl::profiler<> prof("gr_30_30_Scalar");
-         json solver_info;        
+         json solver_info;
          auto solver = LinearSolver::create("AMGCL", "");
          prof.tic("setup");
-         solver->setParameters(R"({"conv_tol": 1e-5,"max_iter": 1000})"_json);
+         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000})"_json);
          solver->analyzePattern(A, A.rows());
          solver->factorize(A);
          prof.toc("setup");
@@ -375,15 +354,32 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
          solver->solve(b, x);
          prof.toc("solve");
          solver->getInfo(solver_info);
-
-         REQUIRE(solver_info["num_iterations"] >0);
-
-        std::cout << solver_info["num_iterations"] << std::endl;
+         REQUIRE(solver_info["num_iterations"] > 0);
+         std::cout << solver_info["num_iterations"] << std::endl;
          std::cout << solver_info["final_res_norm"] << std::endl
                    << prof << std::endl;
      }
-     REQUIRE((A * x - b).norm() / b.norm() < 1e-5);
-     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-5);
+     {
+         amgcl::profiler<> prof("gr_30_30_Block");
+         json solver_info;        
+         auto solver = LinearSolver::create("AMGCL", "");
+         prof.tic("setup");
+         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"block_size": 2})"_json);
+         solver->analyzePattern(A, A.rows());
+         solver->factorize(A);
+         prof.toc("setup");
+         prof.tic("solve");
+         solver->solve(b, x_b);
+         prof.toc("solve");
+         solver->getInfo(solver_info);
+         REQUIRE(solver_info["num_iterations"] >0);
+         std::cout<<solver_info["num_iterations"]<<std::endl;
+         std::cout << solver_info["final_res_norm"] << std::endl
+                   << prof << std::endl;
+
+     }
+     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
     
  }
  #endif
@@ -466,7 +462,7 @@ TEST_CASE("amgcl_blocksolver_Serena_Bicgstab", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"solver_type": "bicgstab","block_size":3})"_json);
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"solver_type": "bicgstab","block_size": 3})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");

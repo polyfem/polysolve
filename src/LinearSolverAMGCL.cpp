@@ -62,8 +62,22 @@ namespace polysolve
 
     // Set solver parameters
     void LinearSolverAMGCL::setParameters(const json &params)
-    {
+    {        
         // Specially named parameters to match other solvers
+        if (params.contains("block_size"))
+        {
+            block_size = params["block_size"];
+        }
+        if (block_size==2)
+        {
+            block2_solver_.setParameters(params);
+            return;
+        }
+        else if (block_size==3)
+        {
+            block3_solver_.setParameters(params);
+            return;
+        }            
         if (params.contains("max_iter"))
         {
             params_["solver"]["maxiter"] = params["max_iter"];
@@ -114,6 +128,16 @@ namespace polysolve
     void LinearSolverAMGCL::factorize(const StiffnessMatrix &Ain)
     {
         assert(precond_num_ > 0);
+        if (block_size==2)
+        {
+            block2_solver_.factorize(Ain);
+            return;
+        }
+        else if (block_size==3)
+        {
+            block3_solver_.factorize(Ain);
+            return;
+        }      
 
         int numRows = Ain.rows();
 
@@ -147,6 +171,16 @@ namespace polysolve
     void LinearSolverAMGCL::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
         assert(result.size() == rhs.size());
+        if (block_size == 2)
+        {
+            block2_solver_.solve(rhs,result);
+            return;
+        }
+        else if (block_size == 3)
+        {
+            block3_solver_.solve(rhs, result);
+            return;
+        }      
         std::vector<double> _rhs(rhs.data(), rhs.data() + rhs.size());
         std::vector<double> x(result.data(), result.data() + result.size());
         auto rhs_b = Backend::copy_vector(_rhs, backend_params_);
@@ -298,10 +332,10 @@ namespace polysolve
 
         assert(solver_ != nullptr);
         std::tie(iterations_, residual_error_) = (*solver_)(rhs_b, x_b);
-        for (size_t i = 0; i < rhs.size() / 2; i++)
-            for (size_t j = 0; j < 2; j++)
+        for (size_t i = 0; i < rhs.size() / BLOCK_SIZE; i++)
+            for (size_t j = 0; j < BLOCK_SIZE; j++)
             {
-                result[2 * i + j] = x_b[i](j);
+                result[BLOCK_SIZE * i + j] = x_b[i](j);
             }
     }
 

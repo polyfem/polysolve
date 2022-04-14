@@ -294,8 +294,6 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
-            "AMGCL_B3",
-            "AMGCL_B3",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

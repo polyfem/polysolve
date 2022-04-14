@@ -139,6 +139,7 @@ namespace polysolve
         json params_;
         typename Backend::params backend_params_;
         int precond_num_;
+        int block_size = 1;
 
         // Output info
         size_t iterations_;

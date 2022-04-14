@@ -28,13 +28,10 @@ namespace polysolve
             const T *begin_;
             const T *end_;
         };
-    } // namespace
 
-    ////////////////////////////////////////////////////////////////////////////////
-
-    LinearSolverAMGCL::LinearSolverAMGCL()
-    {
-        params_ = R"({
+        json default_params()
+        {
+            json params = R"({
             "precond": {
                 "relax": {
                     "type": "spai0"
@@ -55,6 +52,56 @@ namespace polysolve
             }
         })"_json;
 
+            return params;
+        }
+
+        void set_params(const json &params, json &out)
+        {
+            if (params.contains("max_iter"))
+            {
+                out["solver"]["maxiter"] = params["max_iter"];
+            }
+            if (params.contains("conv_tol"))
+            {
+                out["solver"]["tol"] = params["conv_tol"];
+            }
+            else if (params.contains("tolerance"))
+            {
+                out["solver"]["tol"] = params["tolerance"];
+            }
+            if (params.contains("solver_type"))
+            {
+                out["solver"]["type"] = params["solver_type"];
+            }
+
+            // Patch the stored params with input ones
+            if (params.contains("precond"))
+                out["precond"].merge_patch(params["precond"]);
+            if (params.contains("solver"))
+                out["solver"].merge_patch(params["solver"]);
+
+            if (out["precond"]["class"] == "schur_pressure_correction")
+            {
+                // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
+                if (!out["precond"].contains("usolver"))
+                {
+                    out["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                    out["precond"]["usolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                }
+                if (!out["precond"].contains("usolver"))
+                {
+                    out["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                    out["precond"]["psolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                }
+            }
+        }
+    } // namespace
+
+    ////////////////////////////////////////////////////////////////////////////////
+
+    LinearSolverAMGCL::LinearSolverAMGCL()
+    {
+        params_ = default_params();
         // NOTE: usolver and psolver parameters are only used if the
         // preconditioner class is "schur_pressure_correction"
         precond_num_ = 0;
@@ -62,69 +109,34 @@ namespace polysolve
 
     // Set solver parameters
     void LinearSolverAMGCL::setParameters(const json &params)
-    {        
+    {
         // Specially named parameters to match other solvers
         if (params.contains("block_size"))
         {
-            block_size = params["block_size"];
+            block_size_ = params["block_size"];
         }
-        if (block_size==2)
+        if (block_size_ == 2)
         {
             block2_solver_.setParameters(params);
             return;
         }
-        else if (block_size==3)
+        else if (block_size_ == 3)
         {
             block3_solver_.setParameters(params);
             return;
-        }            
-        if (params.contains("max_iter"))
-        {
-            params_["solver"]["maxiter"] = params["max_iter"];
-        }
-        if (params.contains("conv_tol"))
-        {
-            params_["solver"]["tol"] = params["conv_tol"];
-        }
-        else if (params.contains("tolerance"))
-        {
-            params_["solver"]["tol"] = params["tolerance"];
-        }
-        if (params.contains("solver_type"))
-        {
-            params_["solver"]["type"] = params["solver_type"];
         }
 
-        // Patch the stored params with input ones
-        if (params.contains("precond"))
-            params_["precond"].merge_patch(params["precond"]);
-        if (params.contains("solver"))
-            params_["solver"].merge_patch(params["solver"]);
-
-        if (params_["precond"]["class"] == "schur_pressure_correction")
-        {
-            // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
-            if (!params_["precond"].contains("usolver"))
-            {
-                params_["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                params_["precond"]["usolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].get<double>();
-            }
-            if (!params_["precond"].contains("usolver"))
-            {
-                params_["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                params_["precond"]["psolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].get<double>();
-            }
-        }
+        set_params(params, params_);
     }
 
     void LinearSolverAMGCL::getInfo(json &params) const
     {
-        if (block_size==2)
+        if (block_size_ == 2)
         {
             block2_solver_.getInfo(params);
             return;
         }
-        else if (block_size==3)
+        else if (block_size_ == 3)
         {
             block3_solver_.getInfo(params);
             return;
@@ -138,16 +150,16 @@ namespace polysolve
     void LinearSolverAMGCL::factorize(const StiffnessMatrix &Ain)
     {
         assert(precond_num_ > 0);
-        if (block_size==2)
+        if (block_size_ == 2)
         {
             block2_solver_.factorize(Ain);
             return;
         }
-        else if (block_size==3)
+        else if (block_size_ == 3)
         {
             block3_solver_.factorize(Ain);
             return;
-        }      
+        }
 
         int numRows = Ain.rows();
 
@@ -180,16 +192,16 @@ namespace polysolve
     void LinearSolverAMGCL::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
         assert(result.size() == rhs.size());
-        if (block_size == 2)
+        if (block_size_ == 2)
         {
-            block2_solver_.solve(rhs,result);
+            block2_solver_.solve(rhs, result);
             return;
         }
-        else if (block_size == 3)
+        else if (block_size_ == 3)
         {
             block3_solver_.solve(rhs, result);
             return;
-        }      
+        }
         std::vector<double> _rhs(rhs.data(), rhs.data() + rhs.size());
         std::vector<double> x(result.data(), result.data() + result.size());
         auto rhs_b = Backend::copy_vector(_rhs, backend_params_);
@@ -210,26 +222,7 @@ namespace polysolve
     template <int BLOCK_SIZE>
     LinearSolverAMGCL_Block<BLOCK_SIZE>::LinearSolverAMGCL_Block()
     {
-        params_ = R"({
-            "precond": {
-                "relax": {
-                    "type": "spai0"
-                },
-                "class": "amg",
-                "direct_coarse": true,
-                "ncycle": 1,
-                "coarsening": {
-                    "type": "smoothed_aggregation",
-                    "estimate_spectral_radius": false,
-                    "relax": 1.0
-                }
-            },
-            "solver": {
-                "tol": 1e-8,
-                "maxiter": 1000,
-                "type": "cg"
-            }
-        })"_json;
+        params_ = default_params();
 
         // NOTE: usolver and psolver parameters are only used if the
         // preconditioner class is "schur_pressure_correction"
@@ -239,44 +232,7 @@ namespace polysolve
     template <int BLOCK_SIZE>
     void LinearSolverAMGCL_Block<BLOCK_SIZE>::setParameters(const json &params)
     {
-        // Specially named parameters to match other solvers
-        if (params.contains("max_iter"))
-        {
-            params_["solver"]["maxiter"] = params["max_iter"];
-        }
-        if (params.contains("conv_tol"))
-        {
-            params_["solver"]["tol"] = params["conv_tol"];
-        }
-        else if (params.contains("tolerance"))
-        {
-            params_["solver"]["tol"] = params["tolerance"];
-        }
-        if (params.contains("solver_type"))
-        {
-            params_["solver"]["type"] = params["solver_type"];
-        }
-
-        // Patch the stored params with input ones
-        if (params.contains("precond"))
-            params_["precond"].merge_patch(params["precond"]);
-        if (params.contains("solver"))
-            params_["solver"].merge_patch(params["solver"]);
-
-        if (params_["precond"]["class"] == "schur_pressure_correction")
-        {
-            // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
-            if (!params_["precond"].contains("usolver"))
-            {
-                params_["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                params_["precond"]["usolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].template get<double>();
-            }
-            if (!params_["precond"].contains("usolver"))
-            {
-                params_["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                params_["precond"]["psolver"]["solver"]["tol"] = 10 * params_["solver"]["tol"].template get<double>();
-            }
-        }
+        set_params(params, params_);
     }
 
     template <int BLOCK_SIZE>

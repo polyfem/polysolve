@@ -47,7 +47,7 @@ FetchContent_Declare(
     data
     SOURCE_DIR ${DATA_DIR}
     GIT_REPOSITORY https://github.com/polyfem/polyfem-data
-    GIT_TAG 9c1bdd5bd02215e80bc1668547e5dbeb5484a527
+    GIT_TAG 1e9a93d5c7ab5f6f386edd6b7ff1a78871553af6
 )
 FetchContent_GetProperties(data)
 if(NOT data_POPULATED)

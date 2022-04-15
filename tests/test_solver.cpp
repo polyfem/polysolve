@@ -385,11 +385,11 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
  #endif
 
 #ifdef POLYSOLVE_WITH_AMGCL
-TEST_CASE("amgcl_blocksolver_Serena_CG", "[solver]")
+TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
 {
     std::cout << "Polysolve AMGCL Solver" <<std::endl; 
     const std::string path = POLYSOLVE_DATA_DIR;
-    std::string MatrixName = "Serena.mtx";
+    std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
     std::cout<<"Matrix Load OK"<<std::endl;
@@ -400,11 +400,11 @@ TEST_CASE("amgcl_blocksolver_Serena_CG", "[solver]")
     Eigen::VectorXd x(A.rows());
     x.setZero();
     {
-        amgcl::profiler<> prof("Serena_Block");
+        amgcl::profiler<> prof("crystm03_Block");
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 500,"block_size": 3})"_json);
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000,"block_size": 3})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -418,11 +418,11 @@ TEST_CASE("amgcl_blocksolver_Serena_CG", "[solver]")
                   << prof << std::endl;
     }
      {
-         amgcl::profiler<> prof("Serena_Scalar");
+         amgcl::profiler<> prof("crystm03_Scalar");
          json solver_info; 
          auto solver = LinearSolver::create("AMGCL", "");  
          prof.tic("setup");
-         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 500})"_json);
+         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000})"_json);
          solver->analyzePattern(A, A.rows());
          solver->factorize(A);
          prof.toc("setup");
@@ -435,17 +435,17 @@ TEST_CASE("amgcl_blocksolver_Serena_CG", "[solver]")
          std::cout << solver_info["final_res_norm"] << std::endl
                    << prof << std::endl;
      }
-     REQUIRE((A * x - b).norm() / b.norm() < 1e-8);
-     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-8);
+     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
 }
 #endif
 
 #ifdef POLYSOLVE_WITH_AMGCL
-TEST_CASE("amgcl_blocksolver_Serena_Bicgstab", "[solver]")
+TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
 {
     std::cout << "Polysolve AMGCL Solver" << std::endl;
     const std::string path = POLYSOLVE_DATA_DIR;
-    std::string MatrixName = "Serena.mtx";
+    std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
 
@@ -458,11 +458,11 @@ TEST_CASE("amgcl_blocksolver_Serena_Bicgstab", "[solver]")
     Eigen::VectorXd x(A.rows());
     x.setZero();
     {
-        amgcl::profiler<> prof("Serena_Block");
+        amgcl::profiler<> prof("crystm03_Block");
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"solver_type": "bicgstab","block_size": 3})"_json);
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000,"solver_type": "bicgstab","block_size": 3})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -476,11 +476,11 @@ TEST_CASE("amgcl_blocksolver_Serena_Bicgstab", "[solver]")
                   << prof << std::endl;
     }
     {
-        amgcl::profiler<> prof("Serena_Scalar");
+        amgcl::profiler<> prof("crystm03_Scalar");
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"solver_type":"bicgstab"})"_json);
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000,"solver_type":"bicgstab"})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -493,8 +493,8 @@ TEST_CASE("amgcl_blocksolver_Serena_Bicgstab", "[solver]")
         std::cout << solver_info["final_res_norm"] << std::endl
                   << prof << std::endl;
     }
-    REQUIRE((A * x - b).norm() / b.norm() < 1e-8);
-    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-8);
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
 }
 #endif
 

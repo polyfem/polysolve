@@ -149,7 +149,6 @@ namespace polysolve
 
     void LinearSolverAMGCL::factorize(const StiffnessMatrix &Ain)
     {
-        assert(precond_num_ > 0);
         if (block_size_ == 2)
         {
             block2_solver_.factorize(Ain);
@@ -160,6 +159,7 @@ namespace polysolve
             block3_solver_.factorize(Ain);
             return;
         }
+        assert(precond_num_ > 0);
 
         int numRows = Ain.rows();
 
@@ -191,7 +191,6 @@ namespace polysolve
 
     void LinearSolverAMGCL::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
-        assert(result.size() == rhs.size());
         if (block_size_ == 2)
         {
             block2_solver_.solve(rhs, result);
@@ -202,6 +201,7 @@ namespace polysolve
             block3_solver_.solve(rhs, result);
             return;
         }
+        assert(result.size() == rhs.size());
         std::vector<double> _rhs(rhs.data(), rhs.data() + rhs.size());
         std::vector<double> x(result.data(), result.data() + result.size());
         auto rhs_b = Backend::copy_vector(_rhs, backend_params_);

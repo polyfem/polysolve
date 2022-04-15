@@ -282,6 +282,9 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
 {
+#ifndef NDEBUG
+    return;
+#endif
     const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
@@ -328,6 +331,9 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
  #ifdef POLYSOLVE_WITH_AMGCL
  TEST_CASE("amgcl_blocksolver_b2", "[solver]")
  {
+#ifndef NDEBUG
+     return;
+#endif
      const std::string path = POLYSOLVE_DATA_DIR;
      std::string MatrixName = "gr_30_30.mtx";
      Eigen::SparseMatrix<double> A;
@@ -387,6 +393,9 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
 {
+#ifndef NDEBUG
+    return;
+#endif
     std::cout << "Polysolve AMGCL Solver" <<std::endl; 
     const std::string path = POLYSOLVE_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";
@@ -443,6 +452,9 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
 {
+#ifndef NDEBUG
+    return;
+#endif
     std::cout << "Polysolve AMGCL Solver" << std::endl;
     const std::string path = POLYSOLVE_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";

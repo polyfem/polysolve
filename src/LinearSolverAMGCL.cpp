@@ -33,23 +33,32 @@ namespace polysolve
         {
             json params = R"({
             "precond": {
-                "relax": {
-                    "type": "spai0"
-                },
-                "class": "amg",
-                "direct_coarse": true,
-                "ncycle": 1,
-                "coarsening": {
-                    "type": "smoothed_aggregation",
-                    "estimate_spectral_radius": false,
-                    "relax": 1.0
-                }
+            "relax": {
+                "degree": 16,
+                "type": "chebyshev",
+                "power_iters": 100,
+                "higher": 2,
+                "lower": 0.008333333333,
+                "scale": true
             },
-            "solver": {
-                "tol": 1e-8,
-                "maxiter": 1000,
-                "type": "cg"
+            "class": "amg",
+            "max_levels": 6,
+            "direct_coarse": false,
+            "ncycle": 2,
+            "coarsening": {
+                "type": "smoothed_aggregation",
+                "estimate_spectral_radius": true,
+                "relax": 1,
+                "aggr": {
+                    "eps_strong": 0
+                }
             }
+        },
+        "solver": {
+            "tol": 1e-10,
+            "maxiter": 1000,
+            "type": "cg"
+        }
         })"_json;
 
             return params;

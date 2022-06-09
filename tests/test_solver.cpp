@@ -55,7 +55,7 @@ TEST_CASE("all", "[solver]")
             continue;
 #endif
         auto solver = LinearSolver::create(s, "");
-        solver->setParameters(R"({"conv_tol": 1e-10})"_json);
+        solver->setParameters(R"({"tolerance": 1e-10})"_json);
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());

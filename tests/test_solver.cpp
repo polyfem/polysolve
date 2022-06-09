@@ -55,7 +55,9 @@ TEST_CASE("all", "[solver]")
             continue;
 #endif
         auto solver = LinearSolver::create(s, "");
-        solver->setParameters(R"({"tolerance": 1e-10})"_json);
+        json params;
+        params[s]["tolerance"] = 1e-10;
+        solver->setParameters(params);
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());
@@ -335,7 +337,9 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
         json solver_info;
 
         auto solver = LinearSolver::create("AMGCL", "");
-        solver->setParameters(R"({"conv_tol": 1e-8})"_json);
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -349,7 +353,10 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
     {
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
-        solver->setParameters(R"({"conv_tol": 1e-8,"block_size": 3})"_json);
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["block_size"] = 3;
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x_b);
@@ -386,7 +393,10 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000})"_json);
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 1000;
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -404,7 +414,11 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"block_size": 2})"_json);
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 1000;
+        params["AMGCL"]["block_size"] = 2;
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -445,7 +459,11 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000,"block_size": 3})"_json);
+                json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 1000;
+        params["AMGCL"]["block_size"] = 3;
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -463,7 +481,10 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000})"_json);
+                json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 10000;
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -506,7 +527,12 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000,"solver_type": "bicgstab","block_size": 3})"_json);
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 10000;
+        params["AMGCL"]["block_size"] = 3;
+        params["AMGCL"]["solver_type"] = "bicgstab";
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
@@ -524,7 +550,11 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000,"solver_type":"bicgstab"})"_json);
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 10000;
+        params["AMGCL"]["solver_type"] = "bicgstab";
+        solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");

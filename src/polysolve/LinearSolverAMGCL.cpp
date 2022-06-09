@@ -32,33 +32,33 @@ namespace polysolve
         json default_params()
         {
             json params = R"({
-            "precond": {
-            "relax": {
-                "degree": 16,
-                "type": "chebyshev",
-                "power_iters": 100,
-                "higher": 2,
-                "lower": 0.008333333333,
-                "scale": true
-            },
-            "class": "amg",
-            "max_levels": 6,
-            "direct_coarse": false,
-            "ncycle": 2,
-            "coarsening": {
-                "type": "smoothed_aggregation",
-                "estimate_spectral_radius": true,
-                "relax": 1,
-                "aggr": {
-                    "eps_strong": 0
+                "precond": {
+                    "relax": {
+                        "degree": 16,
+                        "type": "chebyshev",
+                        "power_iters": 100,
+                        "higher": 2,
+                        "lower": 0.008333333333,
+                        "scale": true
+                    },
+                    "class": "amg",
+                    "max_levels": 6,
+                    "direct_coarse": false,
+                    "ncycle": 2,
+                    "coarsening": {
+                        "type": "smoothed_aggregation",
+                        "estimate_spectral_radius": true,
+                        "relax": 1,
+                        "aggr": {
+                            "eps_strong": 0
+                        }
+                    }
+                },
+                "solver": {
+                    "tol": 1e-10,
+                    "maxiter": 1000,
+                    "type": "cg"
                 }
-            }
-        },
-        "solver": {
-            "tol": 1e-10,
-            "maxiter": 1000,
-            "type": "cg"
-        }
         })"_json;
 
             return params;
@@ -66,41 +66,40 @@ namespace polysolve
 
         void set_params(const json &params, json &out)
         {
-            if (params.contains("max_iter"))
+            if (params.contains("AMGCL"))
             {
-                out["solver"]["maxiter"] = params["max_iter"];
-            }
-            if (params.contains("conv_tol"))
-            {
-                out["solver"]["tol"] = params["conv_tol"];
-            }
-            else if (params.contains("tolerance"))
-            {
-                out["solver"]["tol"] = params["tolerance"];
-            }
-            if (params.contains("solver_type"))
-            {
-                out["solver"]["type"] = params["solver_type"];
-            }
-
-            // Patch the stored params with input ones
-            if (params.contains("precond"))
-                out["precond"].merge_patch(params["precond"]);
-            if (params.contains("solver"))
-                out["solver"].merge_patch(params["solver"]);
-
-            if (out["precond"]["class"] == "schur_pressure_correction")
-            {
-                // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
-                if (!out["precond"].contains("usolver"))
+                if (params["AMGCL"].contains("max_iter"))
                 {
-                    out["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                    out["precond"]["usolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                    out["solver"]["maxiter"] = params["AMGCL"]["max_iter"];
                 }
-                if (!out["precond"].contains("usolver"))
+                if (params["AMGCL"].contains("tolerance"))
                 {
-                    out["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                    out["precond"]["psolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                    out["solver"]["tol"] = params["AMGCL"]["tolerance"];
+                }
+                if (params["AMGCL"].contains("solver_type"))
+                {
+                    out["solver"]["type"] = params["AMGCL"]["solver_type"];
+                }
+
+                // Patch the stored params with input ones
+                if (params["AMGCL"].contains("precond"))
+                    out["precond"].merge_patch(params["AMGCL"]["precond"]);
+                if (params["AMGCL"].contains("solver"))
+                    out["solver"].merge_patch(params["AMGCL"]["solver"]);
+
+                if (out["precond"]["class"] == "schur_pressure_correction")
+                {
+                    // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
+                    if (!out["precond"].contains("usolver"))
+                    {
+                        out["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                        out["precond"]["usolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                    }
+                    if (!out["precond"].contains("usolver"))
+                    {
+                        out["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                        out["precond"]["psolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                    }
                 }
             }
         }
@@ -119,23 +118,26 @@ namespace polysolve
     // Set solver parameters
     void LinearSolverAMGCL::setParameters(const json &params)
     {
-        // Specially named parameters to match other solvers
-        if (params.contains("block_size"))
+        if (params.contains("AMGCL"))
         {
-            block_size_ = params["block_size"];
-        }
-        if (block_size_ == 2)
-        {
-            block2_solver_.setParameters(params);
-            return;
-        }
-        else if (block_size_ == 3)
-        {
-            block3_solver_.setParameters(params);
-            return;
-        }
+            // Specially named parameters to match other solvers
+            if (params["AMGCL"].contains("block_size"))
+            {
+                block_size_ = params["AMGCL"]["block_size"];
+            }
+            if (block_size_ == 2)
+            {
+                block2_solver_.setParameters(params);
+                return;
+            }
+            else if (block_size_ == 3)
+            {
+                block3_solver_.setParameters(params);
+                return;
+            }
 
-        set_params(params, params_);
+            set_params(params, params_);
+        }
     }
 
     void LinearSolverAMGCL::getInfo(json &params) const

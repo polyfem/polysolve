@@ -17,9 +17,5 @@ set(SOURCES
 )
 
 polysolve_prepend_current_path(SOURCES)
-<<<<<<< HEAD
-# polysolve_copy_headers(${SOURCES})
-=======
->>>>>>> copy_headers
 polysolve_set_source_group(${SOURCES})
 target_sources(polysolve PRIVATE ${SOURCES})

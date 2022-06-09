@@ -85,16 +85,13 @@ TEST_CASE("eigen_params", "[solver]")
 
     for (const auto &s : solvers)
     {
-        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
+        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES" || s == "Eigen::LeastSquaresConjugateGradient" || s == "Eigen::DGMRES")
         {
             auto solver = LinearSolver::create(s, "");
             json params;
-            params[s]["max_iter"] = 1;
-            params[s]["tolerance"] = 1e-6;
-            params[s]["conv_tol"] = 1e-10;
+            params[s]["max_iter"] = 1000;
+            params[s]["tolerance"] = 1e-10;
             solver->setParameters(params);
-
-
 
             Eigen::VectorXd b(A.rows());
             b.setRandom();

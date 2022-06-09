@@ -1,23 +1,36 @@
 {
-    "Eigen::SimplicialLDLT": {
-        "max_iter": 100,
-        "tolerance": 1e-6,
-        "conv_tol": 1e-6
+    "Eigen::SimplicialLDLT": {},
+    "Eigen::SparseLU": {},
+    "Eigen::CholmodSupernodalLLT": {},
+    "Eigen::UmfPackLU": {},
+    "Eigen::SuperLU": {},
+    "Eigen::PardisoLDLT": {},
+    "Eigen::PardisoLU": {},
+    "Eigen::LeastSquaresConjugateGradient": {
+        "max_iter": 1000,
+        "tolerance": 1e-6
+    },
+    "Eigen::DGMRES": {
+        "max_iter": 1000,
+        "tolerance": 1e-6
+    },
+    "Eigen::ConjugateGradient": {
+        "max_iter": 1000,
+        "tolerance": 1e-6
+    },
+    "Eigen::BiCGSTAB": {
+        "max_iter": 1000,
+        "tolerance": 1e-6
+    },
+    "Eigen::GMRES": {
+        "max_iter": 1000,
+        "tolerance": 1e-6
+    },
+    "Eigen::MINRES": {
+        "max_iter": 1000,
+        "tolerance": 1e-6
     }
-}
-
-            "Eigen::SparseLU",
-"Eigen::CholmodSupernodalLLT",
-"Eigen::UmfPackLU",
-"Eigen::SuperLU",
-"Eigen::PardisoLDLT",
-"Eigen::PardisoLU",
-"Eigen::LeastSquaresConjugateGradient",
-"Eigen::DGMRES",
-"Eigen::ConjugateGradient",
-"Eigen::BiCGSTAB",
-"Eigen::GMRES",
-"Eigen::MINRES",
+},
 "Pardiso",
 "Hypre",
 "AMGCL",

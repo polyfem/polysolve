@@ -1,18 +1,18 @@
 set(SOURCES
-    FEMSolver.cpp
+    polysolve/FEMSolver.cpp
     polysolve/FEMSolver.hpp
     polysolve/LbfgsSolver.hpp
-    LinearSolver.cpp
+    polysolve/LinearSolver.cpp
     polysolve/LinearSolver.hpp
-    LinearSolverAMGCL.cpp
+    polysolve/LinearSolverAMGCL.cpp
     polysolve/LinearSolverAMGCL.hpp
     polysolve/LinearSolverEigen.hpp
     polysolve/LinearSolverEigen.tpp
-    LinearSolverHypre.cpp
+    polysolve/LinearSolverHypre.cpp
     polysolve/LinearSolverHypre.hpp
-    LinearSolverPardiso.cpp
+    polysolve/LinearSolverPardiso.cpp
     polysolve/LinearSolverPardiso.hpp
-    SaddlePointSolver.cpp
+    polysolve/SaddlePointSolver.cpp
     polysolve/SaddlePointSolver.hpp
 )
 

@@ -36,7 +36,7 @@ option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"  
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                      ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                      ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
-option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          OFF)
+option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
 
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)

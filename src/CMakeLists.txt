@@ -1,22 +1,21 @@
 set(SOURCES
-    FEMSolver.cpp
-    FEMSolver.hpp
-    LbfgsSolver.hpp
-    LinearSolver.cpp
-    LinearSolver.hpp
-    LinearSolverAMGCL.cpp
-    LinearSolverAMGCL.hpp
-    LinearSolverEigen.hpp
-    LinearSolverEigen.tpp
-    LinearSolverHypre.cpp
-    LinearSolverHypre.hpp
-    LinearSolverPardiso.cpp
-    LinearSolverPardiso.hpp
-    SaddlePointSolver.cpp
-    SaddlePointSolver.hpp
+    polysolve/FEMSolver.cpp
+    polysolve/FEMSolver.hpp
+    polysolve/LbfgsSolver.hpp
+    polysolve/LinearSolver.cpp
+    polysolve/LinearSolver.hpp
+    polysolve/LinearSolverAMGCL.cpp
+    polysolve/LinearSolverAMGCL.hpp
+    polysolve/LinearSolverEigen.hpp
+    polysolve/LinearSolverEigen.tpp
+    polysolve/LinearSolverHypre.cpp
+    polysolve/LinearSolverHypre.hpp
+    polysolve/LinearSolverPardiso.cpp
+    polysolve/LinearSolverPardiso.hpp
+    polysolve/SaddlePointSolver.cpp
+    polysolve/SaddlePointSolver.hpp
 )
 
 polysolve_prepend_current_path(SOURCES)
-polysolve_copy_headers(${SOURCES})
 polysolve_set_source_group(${SOURCES})
 target_sources(polysolve PRIVATE ${SOURCES})

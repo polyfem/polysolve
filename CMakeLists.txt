@@ -76,7 +76,6 @@ include(polysolve_use_colors)
 
 # IPC Toolkit utils
 include(polysolve_prepend_current_path)
-include(polysolve_copy_headers)
 include(polysolve_set_source_group)
 
 # Sort projects inside the solution
@@ -96,7 +95,7 @@ add_library(polysolve::polysolve ALIAS polysolve)
 add_subdirectory(src)
 
 # Public include directory for Polysolve
-target_include_directories(polysolve PUBLIC ${PROJECT_BINARY_DIR}/include)
+target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 ################################################################################
 # Definitions

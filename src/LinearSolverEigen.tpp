@@ -66,17 +66,21 @@ void polysolve::LinearSolverEigenDirect<SparseSolver>::solve(
 template <typename SparseSolver>
 void polysolve::LinearSolverEigenIterative<SparseSolver>::setParameters(const json &params)
 {
-    if (params.count("max_iter"))
+    const std::string solver_name = m_Solver.name();
+    if (params.count(solver_name))
     {
-        m_Solver.setMaxIterations(params["max_iter"]);
-    }
-    if (params.count("tolerance"))
-    {
-        m_Solver.setTolerance(params["tolerance"]);
-    }
-    else if (params.count("conv_tol"))
-    {
-        m_Solver.setTolerance(params["conv_tol"]);
+        if (params[solver_name].count("max_iter"))
+        {
+            m_Solver.setMaxIterations(params[solver_name]["max_iter"]);
+        }
+        if (params[solver_name].count("tolerance"))
+        {
+            m_Solver.setTolerance(params[solver_name]["tolerance"]);
+        }
+        else if (params[solver_name].count("conv_tol"))
+        {
+            m_Solver.setTolerance(params[solver_name]["conv_tol"]);
+        }
     }
 }
 

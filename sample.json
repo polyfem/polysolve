@@ -1,0 +1,23 @@
+{
+    "Eigen::SimplicialLDLT": {
+        "max_iter": 100,
+        "tolerance": 1e-6,
+        "conv_tol": 1e-6
+    }
+}
+
+            "Eigen::SparseLU",
+"Eigen::CholmodSupernodalLLT",
+"Eigen::UmfPackLU",
+"Eigen::SuperLU",
+"Eigen::PardisoLDLT",
+"Eigen::PardisoLU",
+"Eigen::LeastSquaresConjugateGradient",
+"Eigen::DGMRES",
+"Eigen::ConjugateGradient",
+"Eigen::BiCGSTAB",
+"Eigen::GMRES",
+"Eigen::MINRES",
+"Pardiso",
+"Hypre",
+"AMGCL",

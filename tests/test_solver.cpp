@@ -9,8 +9,6 @@
 #include <polysolve/LinearSolverAMGCL.hpp>
 //////////////////////////////////////////////////////////////////////////
 
-
-
 using namespace polysolve;
 
 void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
@@ -73,6 +71,47 @@ TEST_CASE("all", "[solver]")
         const double err = (A * x - b).norm();
         INFO("solver: " + s);
         REQUIRE(err < 1e-8);
+    }
+}
+
+TEST_CASE("eigen_params", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    auto solvers = LinearSolver::availableSolvers();
+
+    for (const auto &s : solvers)
+    {
+        if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
+        {
+            auto solver = LinearSolver::create(s, "");
+            json params;
+            params[s]["max_iter"] = 1;
+            params[s]["tolerance"] = 1e-6;
+            params[s]["conv_tol"] = 1e-10;
+            solver->setParameters(params);
+
+
+
+            Eigen::VectorXd b(A.rows());
+            b.setRandom();
+            Eigen::VectorXd x(b.size());
+            x.setZero();
+
+            solver->analyzePattern(A, A.rows());
+            solver->factorize(A);
+            solver->solve(b, x);
+
+            // solver->getInfo(solver_info);
+
+            // std::cout<<"Solver error: "<<x<<std::endl;
+            const double err = (A * x - b).norm();
+            INFO("solver: " + s);
+            REQUIRE(err < 1e-8);
+        }
     }
 }
 
@@ -212,7 +251,7 @@ TEST_CASE("hypre_initial_guess", "[solver]")
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_initial_guess", "[solver]")
 {
-     const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -252,32 +291,30 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 }
 #endif
 
+TEST_CASE("saddle_point_test", "[solver]")
+{
+#ifdef WIN32
+#ifndef NDEBUG
+    return;
+#endif
+#endif
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    bool ok = loadMarket(A, path + "/A0.mat");
+    REQUIRE(ok);
 
+    Eigen::VectorXd b;
+    ok = loadMarketVector(b, path + "/b0.mat");
+    REQUIRE(ok);
 
- TEST_CASE("saddle_point_test", "[solver]")
- {
- #ifdef WIN32
- #ifndef NDEBUG
-     return;
- #endif
- #endif
-     const std::string path = POLYSOLVE_DATA_DIR;
-     Eigen::SparseMatrix<double> A;
-     bool ok = loadMarket(A, path + "/A0.mat");
-     REQUIRE(ok);
-
-     Eigen::VectorXd b;
-     ok = loadMarketVector(b, path + "/b0.mat");
-     REQUIRE(ok);
-
-     auto solver = LinearSolver::create("SaddlePointSolver", "");
-     solver->analyzePattern(A, 9934);
-     solver->factorize(A);
-     Eigen::VectorXd x(A.rows());
-     solver->solve(b, x);
-     const double err = (A * x - b).norm();
-     REQUIRE(err < 1e-8);
- }
+    auto solver = LinearSolver::create("SaddlePointSolver", "");
+    solver->analyzePattern(A, 9934);
+    solver->factorize(A);
+    Eigen::VectorXd x(A.rows());
+    solver->solve(b, x);
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
 
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
@@ -313,8 +350,8 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
     }
 
     {
-        json solver_info;        
-        auto solver = LinearSolver::create("AMGCL", "");        
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
         solver->setParameters(R"({"conv_tol": 1e-8,"block_size": 3})"_json);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
@@ -328,67 +365,65 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
 }
 #endif
 
- #ifdef POLYSOLVE_WITH_AMGCL
- TEST_CASE("amgcl_blocksolver_b2", "[solver]")
- {
+#ifdef POLYSOLVE_WITH_AMGCL
+TEST_CASE("amgcl_blocksolver_b2", "[solver]")
+{
 #ifndef NDEBUG
-     return;
+    return;
 #endif
-     const std::string path = POLYSOLVE_DATA_DIR;
-     std::string MatrixName = "gr_30_30.mtx";
-     Eigen::SparseMatrix<double> A;
-     loadSymmetric(A, path + "/" + MatrixName);
+    const std::string path = POLYSOLVE_DATA_DIR;
+    std::string MatrixName = "gr_30_30.mtx";
+    Eigen::SparseMatrix<double> A;
+    loadSymmetric(A, path + "/" + MatrixName);
 
-     std::cout << "Matrix Load OK" << std::endl;
-    
-     Eigen::VectorXd b(A.rows());
-     b.setRandom();
-     Eigen::VectorXd x(A.rows());
-     Eigen::VectorXd x_b(A.rows());
-     x.setOnes();
-     x_b.setOnes();
-     {
-         amgcl::profiler<> prof("gr_30_30_Scalar");
-         json solver_info;
-         auto solver = LinearSolver::create("AMGCL", "");
-         prof.tic("setup");
-         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000})"_json);
-         solver->analyzePattern(A, A.rows());
-         solver->factorize(A);
-         prof.toc("setup");
-         prof.tic("solve");
-         solver->solve(b, x);
-         prof.toc("solve");
-         solver->getInfo(solver_info);
-         REQUIRE(solver_info["num_iterations"] > 0);
-         std::cout << solver_info["num_iterations"] << std::endl;
-         std::cout << solver_info["final_res_norm"] << std::endl
-                   << prof << std::endl;
-     }
-     {
-         amgcl::profiler<> prof("gr_30_30_Block");
-         json solver_info;        
-         auto solver = LinearSolver::create("AMGCL", "");
-         prof.tic("setup");
-         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"block_size": 2})"_json);
-         solver->analyzePattern(A, A.rows());
-         solver->factorize(A);
-         prof.toc("setup");
-         prof.tic("solve");
-         solver->solve(b, x_b);
-         prof.toc("solve");
-         solver->getInfo(solver_info);
-         REQUIRE(solver_info["num_iterations"] >0);
-         std::cout<<solver_info["num_iterations"]<<std::endl;
-         std::cout << solver_info["final_res_norm"] << std::endl
-                   << prof << std::endl;
+    std::cout << "Matrix Load OK" << std::endl;
 
-     }
-     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
-     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
-    
- }
- #endif
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(A.rows());
+    Eigen::VectorXd x_b(A.rows());
+    x.setOnes();
+    x_b.setOnes();
+    {
+        amgcl::profiler<> prof("gr_30_30_Scalar");
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
+        prof.tic("setup");
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000})"_json);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x);
+        prof.toc("solve");
+        solver->getInfo(solver_info);
+        REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl
+                  << prof << std::endl;
+    }
+    {
+        amgcl::profiler<> prof("gr_30_30_Block");
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
+        prof.tic("setup");
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 1000,"block_size": 2})"_json);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x_b);
+        prof.toc("solve");
+        solver->getInfo(solver_info);
+        REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl
+                  << prof << std::endl;
+    }
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
+}
+#endif
 
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
@@ -396,12 +431,12 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
 #ifndef NDEBUG
     return;
 #endif
-    std::cout << "Polysolve AMGCL Solver" <<std::endl; 
+    std::cout << "Polysolve AMGCL Solver" << std::endl;
     const std::string path = POLYSOLVE_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
-    std::cout<<"Matrix Load OK"<<std::endl;
+    std::cout << "Matrix Load OK" << std::endl;
     Eigen::VectorXd b(A.rows());
     b.setOnes();
     Eigen::VectorXd x_b(A.rows());
@@ -426,26 +461,26 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         std::cout << solver_info["final_res_norm"] << std::endl
                   << prof << std::endl;
     }
-     {
-         amgcl::profiler<> prof("crystm03_Scalar");
-         json solver_info; 
-         auto solver = LinearSolver::create("AMGCL", "");  
-         prof.tic("setup");
-         solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000})"_json);
-         solver->analyzePattern(A, A.rows());
-         solver->factorize(A);
-         prof.toc("setup");
-         prof.tic("solve");
-         solver->solve(b, x);
-         prof.toc("solve");
-         solver->getInfo(solver_info);
-         REQUIRE(solver_info["num_iterations"] > 0);
-         std::cout<<solver_info["num_iterations"]<<std::endl;
-         std::cout << solver_info["final_res_norm"] << std::endl
-                   << prof << std::endl;
-     }
-     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
-     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
+    {
+        amgcl::profiler<> prof("crystm03_Scalar");
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
+        prof.tic("setup");
+        solver->setParameters(R"({"conv_tol": 1e-8,"max_iter": 10000})"_json);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x);
+        prof.toc("solve");
+        solver->getInfo(solver_info);
+        REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl
+                  << prof << std::endl;
+    }
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
 }
 #endif
 
@@ -509,6 +544,3 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
 }
 #endif
-
-
-

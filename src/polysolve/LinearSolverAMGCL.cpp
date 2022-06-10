@@ -68,19 +68,6 @@ namespace polysolve
         {
             if (params.contains("AMGCL"))
             {
-                if (params["AMGCL"].contains("max_iter"))
-                {
-                    out["solver"]["maxiter"] = params["AMGCL"]["max_iter"];
-                }
-                if (params["AMGCL"].contains("tolerance"))
-                {
-                    out["solver"]["tol"] = params["AMGCL"]["tolerance"];
-                }
-                if (params["AMGCL"].contains("solver_type"))
-                {
-                    out["solver"]["type"] = params["AMGCL"]["solver_type"];
-                }
-
                 // Patch the stored params with input ones
                 if (params["AMGCL"].contains("precond"))
                     out["precond"].merge_patch(params["AMGCL"]["precond"]);

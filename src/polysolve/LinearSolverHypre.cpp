@@ -30,17 +30,17 @@ namespace polysolve
     // Set solver parameters
     void LinearSolverHypre::setParameters(const json &params)
     {
-        if (params.count("Hypre"))
+        if (params.contains("Hypre"))
         {
-            if (params["Hypre"].count("max_iter"))
+            if (params["Hypre"].contains("max_iter"))
             {
                 max_iter_ = params["Hypre"]["max_iter"];
             }
-            if (params["Hypre"].count("pre_max_iter"))
+            if (params["Hypre"].contains("pre_max_iter"))
             {
                 pre_max_iter_ = params["Hypre"]["pre_max_iter"];
             }
-            if (params["Hypre"].count("tolerance"))
+            if (params["Hypre"].contains("tolerance"))
             {
                 conv_tol_ = params["Hypre"]["tolerance"];
             }

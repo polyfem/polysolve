@@ -44,9 +44,9 @@ namespace polysolve
     // Set solver parameters
     void LinearSolverPardiso::setParameters(const json &params)
     {
-        if (params.count("Pardiso"))
+        if (params.contains("Pardiso"))
         {
-            if (params["Pardiso"].count("mtype"))
+            if (params["Pardiso"].contains("mtype"))
             {
                 setType(params["Pardiso"]["mtype"].get<int>());
             }

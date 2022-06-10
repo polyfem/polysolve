@@ -30,22 +30,20 @@ namespace polysolve
     // Set solver parameters
     void LinearSolverHypre::setParameters(const json &params)
     {
-        if (params.count("max_iter"))
+        if (params.contains("Hypre"))
         {
-            max_iter_ = params["max_iter"];
-        }
-        if (params.count("pre_max_iter"))
-        {
-            pre_max_iter_ = params["pre_max_iter"];
-        }
-
-        if (params.count("conv_tol"))
-        {
-            conv_tol_ = params["conv_tol"];
-        }
-        else if (params.count("tolerance"))
-        {
-            conv_tol_ = params["tolerance"];
+            if (params["Hypre"].contains("max_iter"))
+            {
+                max_iter_ = params["Hypre"]["max_iter"];
+            }
+            if (params["Hypre"].contains("pre_max_iter"))
+            {
+                pre_max_iter_ = params["Hypre"]["pre_max_iter"];
+            }
+            if (params["Hypre"].contains("tolerance"))
+            {
+                conv_tol_ = params["Hypre"]["tolerance"];
+            }
         }
     }
 
@@ -218,7 +216,7 @@ namespace polysolve
         HYPRE_PCGSetMaxIter(solver, max_iter_); /* max iterations */
         HYPRE_PCGSetTol(solver, conv_tol_);     /* conv. tolerance */
         HYPRE_PCGSetTwoNorm(solver, 1);         /* use the two norm as the stopping criteria */
-        //HYPRE_PCGSetPrintLevel(solver, 2); /* print solve info */
+        // HYPRE_PCGSetPrintLevel(solver, 2); /* print solve info */
         HYPRE_PCGSetLogging(solver, 1); /* needed to get run info later */
 
         /* Now set up the AMG preconditioner and specify any parameters */

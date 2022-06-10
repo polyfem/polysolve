@@ -38,40 +38,40 @@ namespace polysolve
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 
 // Magic macro because C++ has no introspection
-#define ENUMERATE_PRECOND(HelperFunctor, SolverType, DefaultPrecond, precond)                                   \
-    do                                                                                                          \
-    {                                                                                                           \
-        using namespace Eigen;                                                                                  \
-        if (precond == "Eigen::IdentityPreconditioner")                                                         \
-        {                                                                                                       \
-            return std::make_unique<typename HelperFunctor<SolverType,                                          \
-                                                           IdentityPreconditioner>::type>();                    \
-        }                                                                                                       \
-        else if (precond == "Eigen::DiagonalPreconditioner")                                                    \
-        {                                                                                                       \
-            return std::make_unique<typename HelperFunctor<SolverType,                                          \
-                                                           DiagonalPreconditioner<double>>::type>();            \
-        }                                                                                                       \
-        else if (precond == "Eigen::IncompleteCholesky")                                                        \
-        {                                                                                                       \
-            return std::make_unique<typename HelperFunctor<SolverType,                                          \
-                                                           IncompleteCholesky<double>>::type>();                \
-        }                                                                                                       \
-        else if (precond == "Eigen::LeastSquareDiagonalPreconditioner")                                         \
-        {                                                                                                       \
-            return std::make_unique<typename HelperFunctor<SolverType,                                          \
-                                                           LeastSquareDiagonalPreconditioner<double>>::type>(); \
-        }                                                                                                       \
-        else if (precond == "Eigen::IncompleteLUT")                                                             \
-        {                                                                                                       \
-            return std::make_unique<typename HelperFunctor<SolverType,                                          \
-                                                           IncompleteLUT<double>>::type>();                     \
-        }                                                                                                       \
-        else                                                                                                    \
-        {                                                                                                       \
-            return std::make_unique<typename HelperFunctor<SolverType,                                          \
-                                                           DefaultPrecond>::type>();                            \
-        }                                                                                                       \
+#define ENUMERATE_PRECOND(HelperFunctor, SolverType, DefaultPrecond, precond, name)                                 \
+    do                                                                                                              \
+    {                                                                                                               \
+        using namespace Eigen;                                                                                      \
+        if (precond == "Eigen::IdentityPreconditioner")                                                             \
+        {                                                                                                           \
+            return std::make_unique<typename HelperFunctor<SolverType,                                              \
+                                                           IdentityPreconditioner>::type>(name);                    \
+        }                                                                                                           \
+        else if (precond == "Eigen::DiagonalPreconditioner")                                                        \
+        {                                                                                                           \
+            return std::make_unique<typename HelperFunctor<SolverType,                                              \
+                                                           DiagonalPreconditioner<double>>::type>(name);            \
+        }                                                                                                           \
+        else if (precond == "Eigen::IncompleteCholesky")                                                            \
+        {                                                                                                           \
+            return std::make_unique<typename HelperFunctor<SolverType,                                              \
+                                                           IncompleteCholesky<double>>::type>(name);                \
+        }                                                                                                           \
+        else if (precond == "Eigen::LeastSquareDiagonalPreconditioner")                                             \
+        {                                                                                                           \
+            return std::make_unique<typename HelperFunctor<SolverType,                                              \
+                                                           LeastSquareDiagonalPreconditioner<double>>::type>(name); \
+        }                                                                                                           \
+        else if (precond == "Eigen::IncompleteLUT")                                                                 \
+        {                                                                                                           \
+            return std::make_unique<typename HelperFunctor<SolverType,                                              \
+                                                           IncompleteLUT<double>>::type>(name);                     \
+        }                                                                                                           \
+        else                                                                                                        \
+        {                                                                                                           \
+            return std::make_unique<typename HelperFunctor<SolverType,                                              \
+                                                           DefaultPrecond>::type>(name);                            \
+        }                                                                                                           \
     } while (0)
 
 #else
@@ -112,11 +112,11 @@ namespace polysolve
 
     // -----------------------------------------------------------------------------
 
-#define RETURN_DIRECT_SOLVER_PTR(EigenSolver)                        \
+#define RETURN_DIRECT_SOLVER_PTR(EigenSolver, Name)                  \
     do                                                               \
     {                                                                \
         return std::make_unique<LinearSolverEigenDirect<EigenSolver< \
-            polysolve::StiffnessMatrix>>>();                         \
+            polysolve::StiffnessMatrix>>>(Name);                     \
     } while (0)
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -145,9 +145,9 @@ namespace polysolve
             typename DefaultPrecond = Eigen::DiagonalPreconditioner<double>>
         struct PrecondHelper
         {
-            static std::unique_ptr<LinearSolver> create(const std::string &arg)
+            static std::unique_ptr<LinearSolver> create(const std::string &arg, const std::string &name)
             {
-                ENUMERATE_PRECOND(MakeSolver, SolverType, DefaultPrecond, arg);
+                ENUMERATE_PRECOND(MakeSolver, SolverType, DefaultPrecond, arg, name);
             }
         };
 
@@ -156,9 +156,9 @@ namespace polysolve
             typename DefaultPrecond = Eigen::DiagonalPreconditioner<double>>
         struct PrecondHelperSym
         {
-            static std::unique_ptr<LinearSolver> create(const std::string &arg)
+            static std::unique_ptr<LinearSolver> create(const std::string &arg, const std::string &name)
             {
-                ENUMERATE_PRECOND(MakeSolverSym, SolverType, DefaultPrecond, arg);
+                ENUMERATE_PRECOND(MakeSolverSym, SolverType, DefaultPrecond, arg, name);
             }
         };
 
@@ -173,40 +173,40 @@ namespace polysolve
 
         if (solver.empty() || solver == "Eigen::SimplicialLDLT")
         {
-            RETURN_DIRECT_SOLVER_PTR(SimplicialLDLT);
+            RETURN_DIRECT_SOLVER_PTR(SimplicialLDLT, "Eigen::SimplicialLDLT");
         }
         else if (solver == "Eigen::SparseLU")
         {
-            RETURN_DIRECT_SOLVER_PTR(SparseLU);
+            RETURN_DIRECT_SOLVER_PTR(SparseLU, "Eigen::SparseLU");
 #ifdef POLYSOLVE_WITH_CHOLMOD
         }
         else if (solver == "Eigen::CholmodSupernodalLLT")
         {
-            RETURN_DIRECT_SOLVER_PTR(CholmodSupernodalLLT);
+            RETURN_DIRECT_SOLVER_PTR(CholmodSupernodalLLT, "Eigen::CholmodSupernodalLLT");
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
 #ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::UmfPackLU")
         {
-            RETURN_DIRECT_SOLVER_PTR(UmfPackLU);
+            RETURN_DIRECT_SOLVER_PTR(UmfPackLU, "Eigen::UmfPackLU");
 #endif
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
         }
         else if (solver == "Eigen::SuperLU")
         {
-            RETURN_DIRECT_SOLVER_PTR(SuperLU);
+            RETURN_DIRECT_SOLVER_PTR(SuperLU, "Eigen::SuperLU");
 #endif
 #ifdef POLYSOLVE_WITH_MKL
         }
         else if (solver == "Eigen::PardisoLDLT")
         {
-            RETURN_DIRECT_SOLVER_PTR(PardisoLDLT);
+            RETURN_DIRECT_SOLVER_PTR(PardisoLDLT, "Eigen::PardisoLDLT");
         }
         else if (solver == "Eigen::PardisoLU")
         {
-            RETURN_DIRECT_SOLVER_PTR(PardisoLU);
+            RETURN_DIRECT_SOLVER_PTR(PardisoLU, "Eigen::PardisoLU");
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
         }
@@ -232,30 +232,30 @@ namespace polysolve
         }
         else if (solver == "Eigen::LeastSquaresConjugateGradient")
         {
-            return PrecondHelper<BiCGSTAB, LeastSquareDiagonalPreconditioner<double>>::create(precond);
+            return PrecondHelper<BiCGSTAB, LeastSquareDiagonalPreconditioner<double>>::create(precond, "Eigen::LeastSquaresConjugateGradient");
         }
         else if (solver == "Eigen::DGMRES")
         {
-            return PrecondHelper<DGMRES>::create(precond);
+            return PrecondHelper<DGMRES>::create(precond, "Eigen::DGMRES");
 #endif
 #endif
 #ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::ConjugateGradient")
         {
-            return PrecondHelperSym<ConjugateGradient>::create(precond);
+            return PrecondHelperSym<ConjugateGradient>::create(precond, "Eigen::ConjugateGradient");
         }
         else if (solver == "Eigen::BiCGSTAB")
         {
-            return PrecondHelper<BiCGSTAB>::create(precond);
+            return PrecondHelper<BiCGSTAB>::create(precond, "Eigen::BiCGSTAB");
         }
         else if (solver == "Eigen::GMRES")
         {
-            return PrecondHelper<GMRES>::create(precond);
+            return PrecondHelper<GMRES>::create(precond, "Eigen::GMRES");
         }
         else if (solver == "Eigen::MINRES")
         {
-            return PrecondHelperSym<MINRES>::create(precond);
+            return PrecondHelperSym<MINRES>::create(precond, "Eigen::MINRES");
 #endif
         }
         else if (solver == "SaddlePointSolver")

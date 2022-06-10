@@ -77,7 +77,7 @@ namespace cppoptlib
                 if (grad.norm() < relativeEpsilon)
                     break;
 
-                //Algorithm 7.4 (L-BFGS two-loop recursion)
+                // Algorithm 7.4 (L-BFGS two-loop recursion)
                 q = grad;
                 const int k = std::min(m, iter);
 
@@ -85,20 +85,18 @@ namespace cppoptlib
                 for (int i = k - 1; i >= 0; i--)
                 {
                     // alpha_i <- rho_i*s_i^T*q
-                    const double rho = 1.0 / static_cast<TVector>(sVector.col(i))
-                                                 .dot(static_cast<TVector>(yVector.col(i)));
+                    const double rho = 1.0 / static_cast<TVector>(sVector.col(i)).dot(static_cast<TVector>(yVector.col(i)));
                     alpha(i) = rho * static_cast<TVector>(sVector.col(i)).dot(q);
                     // q <- q - alpha_i*y_i
                     q = q - alpha(i) * yVector.col(i);
                 }
                 // r <- H_k^0*q
                 q = H0k * q;
-                //for i k − m, k − m + 1, . . . , k − 1
+                // for i k − m, k − m + 1, . . . , k − 1
                 for (int i = 0; i < k; i++)
                 {
                     // beta <- rho_i * y_i^T * r
-                    const Scalar rho = 1.0 / static_cast<TVector>(sVector.col(i))
-                                                 .dot(static_cast<TVector>(yVector.col(i)));
+                    const Scalar rho = 1.0 / static_cast<TVector>(sVector.col(i)).dot(static_cast<TVector>(yVector.col(i)));
                     const Scalar beta = rho * static_cast<TVector>(yVector.col(i)).dot(q);
                     // r <- r + s_i * ( alpha_i - beta)
                     q = q + sVector.col(i) * (alpha(i) - beta);

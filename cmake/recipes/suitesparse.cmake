@@ -24,7 +24,7 @@ include(FetchContent)
 FetchContent_Declare(
     suitesparse
     GIT_REPOSITORY https://github.com/sergiud/SuiteSparse.git
-    GIT_TAG 5.11.0-cmake.2
+    GIT_TAG 5.12.0-cmake.3
 )
 
 FetchContent_GetProperties(suitesparse)
@@ -81,6 +81,7 @@ if(SUITE_SPARSE_WITH_MKL)
         FetchContent_GetProperties(tbb)
         ignore_package(TBB)
         file(COPY "${tbb_BINARY_DIR}/TBBConfigVersion.cmake" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/TBB")
+        set (CMAKE_DISABLE_FIND_PACKAGE_TBB ON) # Disable find TBB completly (only SPQR uses it in SuiteSparse)
 
         ignore_package(BLAS)
         ignore_package(CBLAS)

@@ -32,6 +32,13 @@ namespace polysolve
     {
         if (params.contains("Hypre"))
         {
+            if (params["Hypre"].contains("block_size"))
+            {
+                if (params["Hypre"]["block_size"]==2 || params["Hypre"]["block_size"]==3)
+                {                    
+                    dimension_ = params["Hypre"]["block_size"];
+                }             
+            }
             if (params["Hypre"].contains("max_iter"))
             {
                 max_iter_ = params["Hypre"]["max_iter"];

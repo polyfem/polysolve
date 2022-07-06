@@ -11,7 +11,7 @@
 #
 
 # JSON MIT
-if(TARGET nlohmann_json)
+if(TARGET nlohmann::json)
     return()
 endif()
 
@@ -29,7 +29,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(nlohmann_json INTERFACE)
-add_library(nlohmann_json ALIAS nlohmann_json)
+add_library(nlohmann::json ALIAS nlohmann_json)
 
 include(GNUInstallDirs)
 target_include_directories(nlohmann_json INTERFACE

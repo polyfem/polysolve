@@ -137,7 +137,7 @@ endif()
 
 # Json (MIT)
 include(json)
-target_link_libraries(polysolve PUBLIC nlohmann_json)
+target_link_libraries(polysolve PUBLIC nlohmann::json)
 
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)

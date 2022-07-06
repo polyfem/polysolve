@@ -22,7 +22,7 @@ endif()
 
 ################################################################################
 
-set(HYPRE_SEQUENTIAL    ON CACHE INTERNAL "" FORCE)
+set(HYPRE_SEQUENTIAL    OFF CACHE INTERNAL "" FORCE)
 set(HYPRE_PRINT_ERRORS  ON CACHE INTERNAL "" FORCE)
 set(HYPRE_BIGINT        ON CACHE INTERNAL "" FORCE)
 set(HYPRE_USING_FEI    OFF CACHE INTERNAL "" FORCE)

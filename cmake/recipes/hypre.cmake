@@ -10,7 +10,7 @@ include(FetchContent)
 FetchContent_Declare(
     hypre
     GIT_REPOSITORY https://github.com/hypre-space/hypre.git
-    GIT_TAG v2.15.1
+    GIT_TAG v2.25.0
     GIT_SHALLOW TRUE
 )
 

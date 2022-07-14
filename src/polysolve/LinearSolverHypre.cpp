@@ -4,6 +4,7 @@
 #include <polysolve/LinearSolverHypre.hpp>
 
 #include <HYPRE_krylov.h>
+#include <HYPRE_utilities.h>
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -14,16 +15,22 @@ namespace polysolve
     LinearSolverHypre::LinearSolverHypre()
     {
         precond_num_ = 0;
-#ifdef MPI_VERSION
-        /* Initialize MPI */
-        int argc = 1;
-        char name[] = "";
-        char *argv[] = {name};
-        char **argvv = &argv[0];
-        int myid, num_procs;
-        MPI_Init(&argc, &argvv);
-        MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-        MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+#ifdef HYPRE_WITH_MPI
+        int done_already;
+
+        MPI_Initialized(&done_already);
+        if (!done_already)
+        {
+            /* Initialize MPI */
+            int argc = 1;
+            char name[] = "";
+            char *argv[] = {name};
+            char **argvv = &argv[0];
+            int myid, num_procs;
+            MPI_Init(&argc, &argvv);
+            MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+            MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+        }
 #endif
     }
 
@@ -75,8 +82,11 @@ namespace polysolve
         has_matrix_ = true;
         const HYPRE_Int rows = Ain.rows();
         const HYPRE_Int cols = Ain.cols();
-
+#ifdef HYPRE_WITH_MPI
         HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, rows - 1, 0, cols - 1, &A);
+#else
+        HYPRE_IJMatrixCreate(hypre_MPI_COMM_WORLD, 0, rows - 1, 0, cols - 1, &A);
+#endif
         // HYPRE_IJMatrixSetPrintLevel(A, 2);
         HYPRE_IJMatrixSetObjectType(A, HYPRE_PARCSR);
         HYPRE_IJMatrixInitialize(A);
@@ -187,11 +197,18 @@ namespace polysolve
         HYPRE_IJVector x;
         HYPRE_ParVector par_x;
 
+#ifdef HYPRE_WITH_MPI
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, rhs.size() - 1, &b);
+#else
+        HYPRE_IJVectorCreate(hypre_MPI_COMM_WORLD, 0, rhs.size() - 1, &b);
+#endif
         HYPRE_IJVectorSetObjectType(b, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(b);
-
+#ifdef HYPRE_WITH_MPI
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, rhs.size() - 1, &x);
+#else
+        HYPRE_IJVectorCreate(hypre_MPI_COMM_WORLD, 0, rhs.size() - 1, &b);
+#endif
         HYPRE_IJVectorSetObjectType(x, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x);
 
@@ -217,7 +234,11 @@ namespace polysolve
 
         /* Create solver */
         HYPRE_Solver solver, precond;
+#ifdef HYPRE_WITH_MPI
         HYPRE_ParCSRPCGCreate(MPI_COMM_WORLD, &solver);
+#else
+        HYPRE_ParCSRPCGCreate(hypre_MPI_COMM_WORLD, &solver);
+#endif
 
         /* Set some parameters (See Reference Manual for more parameters) */
         HYPRE_PCGSetMaxIter(solver, max_iter_); /* max iterations */

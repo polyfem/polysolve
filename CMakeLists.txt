@@ -38,6 +38,7 @@ option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                    
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
 
+option(POLYSOLVE_WITH_CUDA          "Enable CUDA"                                 ON)
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                   ON)
@@ -60,6 +61,10 @@ if(POLYSOLVE_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_STANDARD 14)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
 if (MSVC)
@@ -128,6 +133,41 @@ endif()
 include(eigen)
 target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 
+# CUDA
+if(POLYSOLVE_WITH_CUDA)
+    find_package(CUDAToolkit)
+    if (CUDAToolkit_FOUND)
+        set_target_properties(polysolve PROPERTIES
+                            CUDA_SEPARABLE_COMPILATION ON CUDA_ARCHITECTURES Pascal)
+        include_directories(${CUDAToolkit_INCLUDE_DIRS})
+        link_directories(${CUDAToolkit_LIBRARY_DIR})
+        target_link_libraries(polysolve INTERFACE CUDA::cusparse CUDA::cudart_static)
+    endif()
+endif()
+
+# if(POLYSOLVE_WITH_CUDA)
+#     find_package(CUDA)
+#     if (CUDA_FOUND)
+#         set(CUDA_TARGET_ARCH "Ampere" CACHE STRING "Target architecture(s) for CUDA")
+#         cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_TARGET_ARCH})
+
+#         if (OPENMP_FOUND)
+#             list(APPEND CUDA_NVCC_FLAGS -Xcompiler ${OpenMP_CXX_FLAGS})
+#         endif()
+
+#         if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+# 	    list(APPEND CUDA_NVCC_FLAGS
+#                 ${CUDA_ARCH_FLAGS} -Wno-deprecated-gpu-targets)
+
+#             list(APPEND CUDA_NVCC_FLAGS -Xcompiler -fPIC -Xcompiler -Wno-vla)
+#         endif()
+
+#         # add_library(cuda_target INTERFACE)
+#         include_directories(${CUDA_INCLUDE_DIRS})
+#         link_directories(${CUDA_LIBRARY_DIR})
+#         target_link_libraries(polysolve INTERFACE ${CUDA_cusparse_LIBRARY})
+#     endif()
+# endif()
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)

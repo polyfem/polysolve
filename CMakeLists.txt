@@ -24,6 +24,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
     include(${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
 endif()
 
+
 ################################################################################
 
 project(PolySolve
@@ -82,6 +83,7 @@ include(polysolve_use_colors)
 # IPC Toolkit utils
 include(polysolve_prepend_current_path)
 include(polysolve_set_source_group)
+include(polysolve_target_link_system_libraries)
 
 # Sort projects inside the solution
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -134,16 +136,44 @@ include(eigen)
 target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 
 # CUDA
+
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
 if(POLYSOLVE_WITH_CUDA)
-    find_package(CUDAToolkit)
-    if (CUDAToolkit_FOUND)
-        set_target_properties(polysolve PROPERTIES
-                            CUDA_SEPARABLE_COMPILATION ON CUDA_ARCHITECTURES Pascal)
-        include_directories(${CUDAToolkit_INCLUDE_DIRS})
-        link_directories(${CUDAToolkit_LIBRARY_DIR})
-        target_link_libraries(polysolve INTERFACE CUDA::cusparse CUDA::cudart_static)
+    include(CheckLanguage)
+    check_language(CUDA)
+    set(CMAKE_CUDA_ARCHITECTURES "70;75;86")
+    if(CMAKE_CUDA_COMPILER)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUDA)
+        enable_language(CUDA)
+    else()
+        message(FATAL_ERROR "No CUDA support found!")
     endif()
+  # We need to explicitly state that we need all CUDA files in the particle
+  # library to be built with -dc as the member functions could be called by
+  # other libraries and executables.
+  set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+  # Nvidia RTX8000 -> compute_75
+  # Nvidia V100 -> compute_70
+  # Nvidia 1080/1080Ti -> compute_61
+  # Nvidia 3080Ti -> compute_86
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 70 75 86)
+    endif()
+    set_target_properties(polysolve PROPERTIES CUDA_ARCHITECTURES "70;75;86")
+
+    if(APPLE)
+        # We need to add the path to the driver (libcuda.dylib) as an rpath,
+        # so that the static cuda runtime can find it at runtime.
+        set_property(TARGET polysolve
+                    PROPERTY
+                    BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+    endif()
+    find_package(CUDAToolkit)
+    polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cudart)
+    polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cusparse)
 endif()
+
 
 # if(POLYSOLVE_WITH_CUDA)
 #     find_package(CUDA)
@@ -168,6 +198,7 @@ endif()
 #         target_link_libraries(polysolve INTERFACE ${CUDA_cusparse_LIBRARY})
 #     endif()
 # endif()
+
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
@@ -266,4 +297,8 @@ if(POLYSOLVE_WITH_TESTS)
     include("${catch2_SOURCE_DIR}/contrib/Catch.cmake")
 
     add_subdirectory(tests)
+endif()
+
+if(POLYSOLVE_WITH_CUDA)
+    add_subdirectory(cudatest)
 endif()

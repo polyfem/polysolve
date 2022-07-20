@@ -1,6 +1,7 @@
 #pragma once
 
 #ifdef POLYSOLVE_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_CUDA
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolver.hpp>
@@ -102,4 +103,5 @@ namespace polysolve
 
 } // namespace polysolve
 
+#endif
 #endif

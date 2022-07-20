@@ -6,7 +6,7 @@
 #include <fstream>
 #include <vector>
 #include <ctime>
-#include <polysolve/LinearSolverAMGCL_cuda.hpp>
+#include <polysolve/LinearSolverAMGCL.hpp>
 //////////////////////////////////////////////////////////////////////////
 
 using namespace polysolve;
@@ -602,126 +602,6 @@ void loadSymmetric_test(Eigen::SparseMatrix<double> &A, std::string PATH)
 // }
 // #endif
 
-// #ifdef POLYSOLVE_WITH_HYPRE
-// TEST_CASE("Hypre_b2", "[solver]")
-// {
-//     const std::string path = POLYSOLVE_DATA_DIR;
-//     std::string MatrixName = "gr_30_30.mtx";
-//     Eigen::SparseMatrix<double> A;
-//     loadSymmetric(A, path + "/" + MatrixName);
-//     std::cout << "Matrix Load OK" << std::endl;
-//     Eigen::VectorXd b(A.rows());
-//     b.setOnes();
-//     Eigen::VectorXd x(b.size());
-//     x.setZero();
-//     Eigen::VectorXd x_b(b.size());
-//     x_b.setZero();
-//     {
-//         clock_t start, end;
-//         json solver_info;
-//         start = clock();
-//         auto solver = LinearSolver::create("Hypre", "");
-//         json params;
-//         params["Hypre"]["tolerance"] = 1e-8;
-//         params["Hypre"]["max_iter"] = 1000;
-//         solver->setParameters(params);
-//         solver->analyzePattern(A, A.rows());
-//         solver->factorize(A);
-//         solver->solve(b, x);
-//         end = clock();
-//         solver->getInfo(solver_info);
-//         std::cout << "Scalar Running time is " << double(end - start) / CLOCKS_PER_SEC << std::endl;
-//         std::cout << solver_info["num_iterations"] << std::endl;
-//         std::cout << solver_info["final_res_norm"] << std::endl;
-//     }
-//     {
-//         clock_t start, end;
-//         json solver_info;
-//         start = clock();
-//         auto solver = LinearSolver::create("Hypre", "");
-//         json params;
-//         params["Hypre"]["block_size"] = 2;
-//         params["Hypre"]["tolerance"] = 1e-8;
-//         params["Hypre"]["max_iter"] = 1000;
-//         solver->setParameters(params);
-//         solver->analyzePattern(A, A.rows());
-//         solver->factorize(A);
-//         solver->solve(b, x_b);
-//         end = clock();
-//         solver->getInfo(solver_info);
-//         std::cout << "Block Running time is " << double(end - start) / CLOCKS_PER_SEC << std::endl;
-//         std::cout << solver_info["num_iterations"] << std::endl;
-//         std::cout << solver_info["final_res_norm"] << std::endl;
-//     }
-//     const double err = (A * x - b).norm() / b.norm();
-//     const double err_b = (A * x_b - b).norm() / b.norm();
-//     std::cout << "Scalar relative error " << err << std::endl;
-//     std::cout << "Block relative error " << err_b << std::endl;
-//     REQUIRE(err < 1e-8);
-//     REQUIRE(err_b < 1e-8);
-// }
-// #endif
-
-// #ifdef POLYSOLVE_WITH_HYPRE
-// TEST_CASE("Hypre_crystm03", "[solver]")
-// {
-//     const std::string path = POLYSOLVE_DATA_DIR;
-//     std::string MatrixName = "crystm03.mtx";
-//     Eigen::SparseMatrix<double> A;
-//     loadSymmetric(A, path + "/" + MatrixName);
-//     std::cout << "Matrix Load OK" << std::endl;
-//     Eigen::VectorXd b(A.rows());
-//     b.setOnes();
-//     Eigen::VectorXd x(b.size());
-//     x.setZero();
-//     Eigen::VectorXd x_b(b.size());
-//     x_b.setZero();
-//     {
-//         clock_t start, end;
-//         json solver_info;
-//         start = clock();
-//         auto solver = LinearSolver::create("Hypre", "");
-//         json params;
-//         params["Hypre"]["tolerance"] = 1e-8;
-//         params["Hypre"]["max_iter"] = 1000;
-//         solver->setParameters(params);
-//         solver->analyzePattern(A, A.rows());
-//         solver->factorize(A);
-//         solver->solve(b, x);
-//         end = clock();
-//         solver->getInfo(solver_info);
-//         std::cout << "Scalar Running time is " << double(end - start) / CLOCKS_PER_SEC << std::endl;
-//         std::cout << solver_info["num_iterations"] << std::endl;
-//         std::cout << solver_info["final_res_norm"] << std::endl;
-//     }
-//     {
-//         clock_t start, end;
-//         json solver_info;
-//         start = clock();
-//         auto solver = LinearSolver::create("Hypre", "");
-//         json params;
-//         params["Hypre"]["block_size"] = 3;
-//         params["Hypre"]["tolerance"] = 1e-8;
-//         params["Hypre"]["max_iter"] = 1000;
-//         solver->setParameters(params);
-//         solver->analyzePattern(A, A.rows());
-//         solver->factorize(A);
-//         solver->solve(b, x_b);
-//         end = clock();
-//         solver->getInfo(solver_info);
-//         std::cout << "Block Running time is " << double(end - start) / CLOCKS_PER_SEC << std::endl;
-//         std::cout << solver_info["num_iterations"] << std::endl;
-//         std::cout << solver_info["final_res_norm"] << std::endl;
-//     }
-//     const double err = (A * x - b).norm() / b.norm();
-//     const double err_b = (A * x_b - b).norm() / b.norm();
-//     std::cout << "Scalar relative error " << err << std::endl;
-//     std::cout << "Block relative error " << err_b << std::endl;
-//     REQUIRE(err < 1e-8);
-//     REQUIRE(err_b < 1e-8);
-// }
-// #endif
-
 #ifdef POLYSOLVE_WITH_HYPRE
 TEST_CASE("hypre_smallscale", "[solver]")
 {
@@ -750,7 +630,6 @@ TEST_CASE("hypre_smallscale", "[solver]")
         solver->solve(b, x);
         end = clock();
         solver->getInfo(solver_info);
-        std::cout << "Scalar Running time is " << double(end - start) / CLOCKS_PER_SEC << std::endl;
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl;
     }
@@ -769,52 +648,185 @@ TEST_CASE("hypre_smallscale", "[solver]")
         solver->solve(b, x_b);
         end = clock();
         solver->getInfo(solver_info);
-        std::cout << "Block Running time is " << double(end - start) / CLOCKS_PER_SEC << std::endl;
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl;
     }
     const double err = (A * x - b).norm() / b.norm();
     const double err_b = (A * x_b - b).norm() / b.norm();
-    std::cout << "Scalar relative error " << err << std::endl;
-    std::cout << "Block relative error " << err_b << std::endl;
     REQUIRE(err < 1e-8);
     REQUIRE(err_b < 1e-8);
 }
 #endif
 
-TEST_CASE("amgcl_blocksolver_Bicgstab", "[solver]")
+#ifdef POLYSOLVE_WITH_HYPRE
+TEST_CASE("Hypre_b2", "[solver]")
 {
-#ifndef NDEBUG
-    return;
-#endif
-    std::cout << "Polysolve AMGCL Solver" << std::endl;
     const std::string path = POLYSOLVE_DATA_DIR;
-    std::string MatrixName = "crystm03.mtx";
+    std::string MatrixName = "gr_30_30.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
-
     std::cout << "Matrix Load OK" << std::endl;
-
     Eigen::VectorXd b(A.rows());
     b.setOnes();
-    Eigen::VectorXd x(A.rows());
+    Eigen::VectorXd x(b.size());
     x.setZero();
+    Eigen::VectorXd x_b(b.size());
+    x_b.setZero();
     {
+        clock_t start, end;
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL_cuda", "");
+        start = clock();
+        auto solver = LinearSolver::create("Hypre", "");
         json params;
-        params["AMGCL"]["tolerance"] = 1e-8;
-        params["AMGCL"]["max_iter"] = 10000;
-        params["AMGCL"]["solver_type"] = "cg";
+        params["Hypre"]["tolerance"] = 1e-8;
+        params["Hypre"]["max_iter"] = 1000;
         solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
+        end = clock();
         solver->getInfo(solver_info);
-        REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl;
     }
-    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+    {
+        clock_t start, end;
+        json solver_info;
+        start = clock();
+        auto solver = LinearSolver::create("Hypre", "");
+        json params;
+        params["Hypre"]["block_size"] = 2;
+        params["Hypre"]["tolerance"] = 1e-8;
+        params["Hypre"]["max_iter"] = 1000;
+        solver->setParameters(params);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x_b);
+        end = clock();
+        solver->getInfo(solver_info);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl;
+    }
+    const double err = (A * x - b).norm() / b.norm();
+    const double err_b = (A * x_b - b).norm() / b.norm();
+    REQUIRE(err < 1e-8);
+    REQUIRE(err_b < 1e-8);
 }
+#endif
 
+#ifdef POLYSOLVE_WITH_HYPRE
+TEST_CASE("Hypre_crystm03", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    std::string MatrixName = "crystm03.mtx";
+    Eigen::SparseMatrix<double> A;
+    loadSymmetric(A, path + "/" + MatrixName);
+    std::cout << "Matrix Load OK" << std::endl;
+    Eigen::VectorXd b(A.rows());
+    b.setOnes();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+    Eigen::VectorXd x_b(b.size());
+    x_b.setZero();
+    {
+        clock_t start, end;
+        json solver_info;
+        start = clock();
+        auto solver = LinearSolver::create("Hypre", "");
+        json params;
+        params["Hypre"]["tolerance"] = 1e-8;
+        params["Hypre"]["max_iter"] = 1000;
+        solver->setParameters(params);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+        end = clock();
+        solver->getInfo(solver_info);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl;
+    }
+    {
+        clock_t start, end;
+        json solver_info;
+        start = clock();
+        auto solver = LinearSolver::create("Hypre", "");
+        json params;
+        params["Hypre"]["block_size"] = 3;
+        params["Hypre"]["tolerance"] = 1e-8;
+        params["Hypre"]["max_iter"] = 1000;
+        solver->setParameters(params);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x_b);
+        end = clock();
+        solver->getInfo(solver_info);
+        std::cout << solver_info["num_iterations"] << std::endl;
+        std::cout << solver_info["final_res_norm"] << std::endl;
+    }
+    const double err = (A * x - b).norm() / b.norm();
+    const double err_b = (A * x_b - b).norm() / b.norm();
+    REQUIRE(err < 1e-8);
+    REQUIRE(err_b < 1e-8);
+}
+#endif
+
+#ifdef POLYSOLVE_WITH_AMGCL
+TEST_CASE("AMGCL_CPU", "[solver]")
+{
+#ifndef NDEBUG
+    return;
+#endif
+    const std::string path = POLYSOLVE_DATA_DIR;
+    std::string MatrixName = "Serena.mtx";
+    Eigen::SparseMatrix<double> A;
+    loadSymmetric(A, path + "/" + MatrixName);
+    std::cout << "Matrix Load OK" << std::endl;
+    Eigen::VectorXd b(A.rows());
+    b.setOnes();
+    Eigen::VectorXd x_b(A.rows());
+    x_b.setZero();
+    Eigen::VectorXd x(A.rows());
+    x.setZero();
+    {
+        amgcl::profiler<> prof("Serena_Block");
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
+        prof.tic("setup");
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 1000;
+        params["AMGCL"]["block_size"] = 3;
+        solver->setParameters(params);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x_b);
+        prof.toc("solve");
+        solver->getInfo(solver_info);
+        REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout<< prof << std::endl;
+    }
+    {
+        amgcl::profiler<> prof("Serena_Scalar");
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL", "");
+        prof.tic("setup");
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 10000;
+        solver->setParameters(params);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x);
+        prof.toc("solve");
+        solver->getInfo(solver_info);
+        REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout << prof << std::endl;
+    }
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+    REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
+}
+#endif

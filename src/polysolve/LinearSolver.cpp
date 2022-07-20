@@ -25,7 +25,9 @@
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
+#ifdef POLYSOLVE_WITH_CUDA
 #include <polysolve/LinearSolverAMGCL_cuda.hpp>
+#endif
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
 

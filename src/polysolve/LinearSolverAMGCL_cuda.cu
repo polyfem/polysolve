@@ -1,7 +1,8 @@
 #ifdef POLYSOLVE_WITH_AMGCL
+#ifdef POLYSOLVE_WITH_CUDA
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolverAMGCL_cuda.cuh>
+#include <polysolve/LinearSolverAMGCL_cuda.hpp>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -172,4 +173,5 @@ namespace polysolve
 
 } // namespace polysolve
 
+#endif
 #endif

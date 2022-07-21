@@ -136,8 +136,6 @@ include(eigen)
 target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 
 # CUDA
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
-
 if(POLYSOLVE_WITH_CUDA)
     include(CheckLanguage)
     check_language(CUDA)

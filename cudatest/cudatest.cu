@@ -37,9 +37,9 @@ void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
     A.setFromTriplets(triple.begin(), triple.end());
 };
 
-TEST_CASE("AMGCL_GPU", "[solver]"){
-    const std::string path = "/home/yiwei/polysolve/tests/data";
-    std::string MatrixName = "Serena.mtx";
+TEST_CASE("amgcl_crystm03_cg", "[solver]"){
+    const std::string path = POLYSOLVE_DATA_DIR;
+    std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
 
@@ -50,7 +50,7 @@ TEST_CASE("AMGCL_GPU", "[solver]"){
     Eigen::VectorXd x(A.rows());
     x.setZero();
     {
-        amgcl::profiler<> prof("Serena_GPU");
+        amgcl::profiler<> prof("crystm03_GPU");
         json solver_info;
         auto solver = LinearSolver::create("AMGCL_cuda", "");
         prof.tic("setup");
@@ -58,6 +58,41 @@ TEST_CASE("AMGCL_GPU", "[solver]"){
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 10000;
         params["AMGCL"]["solver_type"] = "cg";
+        solver->setParameters(params);
+        solver->analyzePattern(A, A.rows());
+        solver->factorize(A);
+        prof.toc("setup");
+        prof.tic("solve");
+        solver->solve(b, x);
+        prof.toc("solve");
+        solver->getInfo(solver_info);
+        REQUIRE(solver_info["num_iterations"] > 0);
+        std::cout<< prof << std::endl;    
+    }
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);    
+}
+
+TEST_CASE("amgcl_crystm03_bicgstab", "[solver]"){
+    const std::string path = POLYSOLVE_DATA_DIR;
+    std::string MatrixName = "crystm03.mtx";
+    Eigen::SparseMatrix<double> A;
+    loadSymmetric(A, path + "/" + MatrixName);
+
+    std::cout << "Matrix Load OK" << std::endl;
+
+    Eigen::VectorXd b(A.rows());
+    b.setOnes();
+    Eigen::VectorXd x(A.rows());
+    x.setZero();
+    {
+        amgcl::profiler<> prof("crystm03_GPU");
+        json solver_info;
+        auto solver = LinearSolver::create("AMGCL_cuda", "");
+        prof.tic("setup");
+        json params;
+        params["AMGCL"]["tolerance"] = 1e-8;
+        params["AMGCL"]["max_iter"] = 10000;
+        params["AMGCL"]["solver_type"] = "bicgstab";
         solver->setParameters(params);
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);

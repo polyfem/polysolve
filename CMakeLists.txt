@@ -136,8 +136,8 @@ include(eigen)
 target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 
 # CUDA
-
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
+
 if(POLYSOLVE_WITH_CUDA)
     include(CheckLanguage)
     check_language(CUDA)
@@ -174,31 +174,6 @@ if(POLYSOLVE_WITH_CUDA)
     polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cusparse)
 endif()
 
-
-# if(POLYSOLVE_WITH_CUDA)
-#     find_package(CUDA)
-#     if (CUDA_FOUND)
-#         set(CUDA_TARGET_ARCH "Ampere" CACHE STRING "Target architecture(s) for CUDA")
-#         cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS ${CUDA_TARGET_ARCH})
-
-#         if (OPENMP_FOUND)
-#             list(APPEND CUDA_NVCC_FLAGS -Xcompiler ${OpenMP_CXX_FLAGS})
-#         endif()
-
-#         if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-# 	    list(APPEND CUDA_NVCC_FLAGS
-#                 ${CUDA_ARCH_FLAGS} -Wno-deprecated-gpu-targets)
-
-#             list(APPEND CUDA_NVCC_FLAGS -Xcompiler -fPIC -Xcompiler -Wno-vla)
-#         endif()
-
-#         # add_library(cuda_target INTERFACE)
-#         include_directories(${CUDA_INCLUDE_DIRS})
-#         link_directories(${CUDA_LIBRARY_DIR})
-#         target_link_libraries(polysolve INTERFACE ${CUDA_cusparse_LIBRARY})
-#     endif()
-# endif()
-
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
@@ -211,7 +186,7 @@ endif()
 
 # Json (MIT)
 include(json)
-target_link_libraries(polysolve PUBLIC nlohmann::json)
+target_link_libraries(polysolve PUBLIC nlohmann_json::nlohmann_json)
 
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)
@@ -297,8 +272,11 @@ if(POLYSOLVE_WITH_TESTS)
     include("${catch2_SOURCE_DIR}/contrib/Catch.cmake")
 
     add_subdirectory(tests)
+    
+    # Cuda test
+    if(POLYSOLVE_WITH_CUDA)
+        add_subdirectory(cudatest)
+    endif()
 endif()
 
-if(POLYSOLVE_WITH_CUDA)
-    add_subdirectory(cudatest)
-endif()
+

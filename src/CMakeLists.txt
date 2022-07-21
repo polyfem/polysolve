@@ -17,14 +17,9 @@ set(SOURCES
     polysolve/LinearSolverAMGCL_cuda.cu
     polysolve/LinearSolverAMGCL_cuda.hpp
 )
-# set(CUDA_SOURCES
-#     polysolve/LinearSolverAMGCL_cuda.cu
-#     polysolve/LinearSolverAMGCL_cuda.hpp
-# )
 
 polysolve_prepend_current_path(SOURCES)
 polysolve_set_source_group(${SOURCES})
-# polysolve_prepend_current_path(CUDA_SOURCES)
-# polysolve_set_source_group(${CUDA_SOURCES})
+
 
 target_sources(polysolve PRIVATE ${SOURCES})

@@ -24,5 +24,5 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(hypre)
 
-add_subdirectory("${hypre_SOURCE_DIR}/src")
+add_subdirectory("${hypre_SOURCE_DIR}/src" ${hypre_BINARY_DIR})
 file(REMOVE "${hypre_SOURCE_DIR}/src/utilities/version")

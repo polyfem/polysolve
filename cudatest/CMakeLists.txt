@@ -3,7 +3,7 @@
 ################################################################################
 set(test_sources
 	main.cpp
-	cudatest.cu
+	cudatest.cpp
 )
 add_executable(cuda_test ${test_sources})
 
@@ -33,3 +33,5 @@ catch_discover_tests(cuda_test)
 ################################################################################
 set(DATA_DIR "${CMAKE_SOURCE_DIR}/tests/data")
 target_compile_definitions(cuda_test PUBLIC -DPOLYSOLVE_DATA_DIR=\"${DATA_DIR}\")
+polysolve_target_link_system_libraries(cuda_test PRIVATE CUDA::cudart)
+polysolve_target_link_system_libraries(cuda_test PRIVATE CUDA::cusparse)

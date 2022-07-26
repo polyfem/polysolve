@@ -5,6 +5,7 @@
 #include <vector>
 #include <ctime>
 #include <polysolve/LinearSolverAMGCL_cuda.hpp>
+#include <cuda_runtime_api.h>
 //////////////////////////////////////////////////////////////////////////
 #include <catch2/catch.hpp>
 

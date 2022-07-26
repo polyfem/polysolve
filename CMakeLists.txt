@@ -137,11 +137,14 @@ target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 
 # CUDA
 if(POLYSOLVE_WITH_CUDA)
+    include(CheckLanguage)
+    check_language(CUDA)
+    set(CMAKE_CUDA_ARCHITECTURES "61")
     find_package(CUDAToolkit)    
     if(CUDAToolkit_FOUND)
-        if(NOT DEFINED CMAKE_CUDA_COMPILER)
-            set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
-        endif()
+        message(STATUS "Found CUDATooklkit")
+        set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
+        enable_language(CUDA)
         target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUDA)        
     else()
         message(FATAL_ERROR "No CUDA support found!")
@@ -149,7 +152,6 @@ if(POLYSOLVE_WITH_CUDA)
   # We need to explicitly state that we need all CUDA files in the particle
   # library to be built with -dc as the member functions could be called by
   # other libraries and executables.
-  set(CMAKE_CUDA_ARCHITECTURES "70;75;86")
   set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
   # Nvidia RTX8000 -> compute_75

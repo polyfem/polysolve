@@ -2,7 +2,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 #include <polysolve/LinearSolverHypre.hpp>
-#include <iostream>
+
 #include <HYPRE_krylov.h>
 #include <HYPRE_utilities.h>
 #include <_hypre_utilities.h>
@@ -89,11 +89,14 @@ namespace polysolve
 #else
         HYPRE_IJMatrixCreate(hypre_MPI_COMM_WORLD, 0, rows - 1, 0, cols - 1, &A);
 #endif
-        HYPRE_IJMatrixSetPrintLevel(A, 3);
+        // HYPRE_IJMatrixSetPrintLevel(A, 2);
         HYPRE_IJMatrixSetObjectType(A, HYPRE_PARCSR);
         HYPRE_IJMatrixInitialize(A);
 
-       for (HYPRE_Int k = 0; k < Ain.outerSize(); ++k)
+        // HYPRE_IJMatrixSetValues(A, 1, &nnz, &i, cols, values);
+
+        // TODO: More efficient initialization of the Hypre matrix?
+        for (HYPRE_Int k = 0; k < Ain.outerSize(); ++k)
         {
             for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
             {
@@ -106,9 +109,6 @@ namespace polysolve
             }
         }
 
-        // HYPRE_IJMatrixSetValues(A, 1, &nnz, &i, cols, values);
-
-        // TODO: More efficient initialization of the Hypre matrix?
         HYPRE_IJMatrixAssemble(A);
         HYPRE_IJMatrixGetObject(A, (void **)&parcsr_A);
     }
@@ -134,7 +134,7 @@ namespace polysolve
             int relax_sweeps = 1; // relaxation sweeps on each level
 
             // Additional options:
-            int print_level = 1; // print AMG iterations? 1 = no, 2 = yes
+            int print_level = 0; // print AMG iterations? 1 = no, 2 = yes
             int max_levels = 25; // max number of levels in AMG hierarchy
 
             HYPRE_BoomerAMGSetCoarsenType(amg_precond, coarsen_type);
@@ -246,7 +246,7 @@ namespace polysolve
         HYPRE_PCGSetMaxIter(solver, max_iter_); /* max iterations */
         HYPRE_PCGSetTol(solver, conv_tol_);     /* conv. tolerance */
         HYPRE_PCGSetTwoNorm(solver, 1);         /* use the two norm as the stopping criteria */
-        HYPRE_PCGSetPrintLevel(solver, 2); /* print solve info */
+        // HYPRE_PCGSetPrintLevel(solver, 2); /* print solve info */
         HYPRE_PCGSetLogging(solver, 1); /* needed to get run info later */
 
         /* Now set up the AMG preconditioner and specify any parameters */

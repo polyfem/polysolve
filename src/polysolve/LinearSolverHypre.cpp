@@ -5,7 +5,9 @@
 
 #include <HYPRE_krylov.h>
 #include <HYPRE_utilities.h>
+
 #include <_hypre_utilities.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve

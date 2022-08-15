@@ -138,9 +138,8 @@ namespace polysolve
             int max_levels = 6;  // max number of levels in AMG hierarchy
 
             // Chebyshev Settings
-            int cheby_poly = 16; // polynomial variant for chebyshev
             int eig_est = 100;   // Number of CG iterations to determine the smallest and largest eigenvalue
-            double ratio = 0.008333333333 / 2.0;
+            double ratio = 0.008333333333;
 
             HYPRE_BoomerAMGSetCoarsenType(amg_precond, coarsen_type);
             HYPRE_BoomerAMGSetAggNumLevels(amg_precond, agg_levels);
@@ -160,7 +159,7 @@ namespace polysolve
 
             // Settings from AMGCL
             HYPRE_BoomerAMGSetChebyScale(amg_precond, 1);
-            HYPRE_BoomerAMGSetChebyVariant(amg_precond, cheby_poly);
+            HYPRE_BoomerAMGSetChebyVariant(amg_precond, 0);
             HYPRE_BoomerAMGSetChebyEigEst(amg_precond, eig_est);
 
             // Use as a preconditioner (one V-cycle, zero tolerance)

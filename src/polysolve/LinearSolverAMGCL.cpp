@@ -34,7 +34,7 @@ namespace polysolve
             json params = R"({
                 "precond": {
                     "relax": {
-                        "degree": 16,
+                        "degree": 5,
                         "type": "chebyshev",
                         "power_iters": 100,
                         "higher": 2,
@@ -44,7 +44,7 @@ namespace polysolve
                     "class": "amg",
                     "max_levels": 6,
                     "direct_coarse": false,
-                    "ncycle": 2,
+                    "ncycle": 1,
                     "coarsening": {
                         "type": "smoothed_aggregation",
                         "estimate_spectral_radius": true,

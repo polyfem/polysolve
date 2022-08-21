@@ -5,9 +5,7 @@
 
 #include <HYPRE_krylov.h>
 #include <HYPRE_utilities.h>
-
 #include <_hypre_utilities.h>
-
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -140,9 +138,8 @@ namespace polysolve
             int max_levels = 6;  // max number of levels in AMG hierarchy
 
             // Chebyshev Settings
-            int cheby_poly = 16; // polynomial variant for chebyshev
             int eig_est = 100;   // Number of CG iterations to determine the smallest and largest eigenvalue
-            double ratio = 0.008333333333 / 2.0;
+            double ratio = 0.008333333333;
 
             HYPRE_BoomerAMGSetCoarsenType(amg_precond, coarsen_type);
             HYPRE_BoomerAMGSetAggNumLevels(amg_precond, agg_levels);
@@ -156,13 +153,13 @@ namespace polysolve
 
             // To do, figure out what does these functions mean
             // Defines the Order for Chebyshev smoother. The default is 2 (valid options are 1-4).
-            HYPRE_BoomerAMGSetChebyOrder(amg_precond, 2);
+            HYPRE_BoomerAMGSetChebyOrder(amg_precond, 4);
             // Fraction of the spectrum to use for the Chebyshev smoother. The default is .3 (i.e., damp on upper 30% of the spectrum).
             HYPRE_BoomerAMGSetChebyFraction(amg_precond, ratio);
 
             // Settings from AMGCL
             HYPRE_BoomerAMGSetChebyScale(amg_precond, 1);
-            HYPRE_BoomerAMGSetChebyVariant(amg_precond, cheby_poly);
+            HYPRE_BoomerAMGSetChebyVariant(amg_precond, 0);
             HYPRE_BoomerAMGSetChebyEigEst(amg_precond, eig_est);
 
             // Use as a preconditioner (one V-cycle, zero tolerance)

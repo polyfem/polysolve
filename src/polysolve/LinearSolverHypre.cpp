@@ -153,7 +153,7 @@ namespace polysolve
 
             // To do, figure out what does these functions mean
             // Defines the Order for Chebyshev smoother. The default is 2 (valid options are 1-4).
-            HYPRE_BoomerAMGSetChebyOrder(amg_precond, 2);
+            HYPRE_BoomerAMGSetChebyOrder(amg_precond, 4);
             // Fraction of the spectrum to use for the Chebyshev smoother. The default is .3 (i.e., damp on upper 30% of the spectrum).
             HYPRE_BoomerAMGSetChebyFraction(amg_precond, ratio);
 

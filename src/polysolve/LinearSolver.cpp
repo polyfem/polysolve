@@ -204,6 +204,10 @@ namespace polysolve
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLDLT, "Eigen::PardisoLDLT");
         }
+                else if (solver == "Eigen::PardisoLLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(PardisoLLT, "Eigen::PardisoLLT");
+        }
         else if (solver == "Eigen::PardisoLU")
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU, "Eigen::PardisoLU");
@@ -285,6 +289,7 @@ namespace polysolve
 #ifdef POLYSOLVE_WITH_MKL
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
+            "Eigen::PardisoLLT",
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",

@@ -42,22 +42,23 @@ namespace polysolve
                         "scale": true
                     },
                     "class": "amg",
-                    "max_levels": 6,
-                    "direct_coarse": false,
+                    "max_levels": 25,
+                    "direct_coarse": true,
                     "ncycle": 1,
                     "coarsening": {
                         "type": "smoothed_aggregation",
                         "estimate_spectral_radius": true,
                         "relax": 1,
                         "aggr": {
-                            "eps_strong": 0
+                            "eps_strong": 0.25
                         }
                     }
                 },
                 "solver": {
                     "tol": 1e-10,
                     "maxiter": 1000,
-                    "type": "cg"
+                    "type": "cg",
+                    "verbose": true
                 }
         })"_json;
 
@@ -69,25 +70,25 @@ namespace polysolve
             if (params.contains("AMGCL"))
             {
                 // Patch the stored params with input ones
-                if (params["AMGCL"].contains("precond"))
-                    out["precond"].merge_patch(params["AMGCL"]["precond"]);
-                if (params["AMGCL"].contains("solver"))
-                    out["solver"].merge_patch(params["AMGCL"]["solver"]);
-
-                if (out["precond"]["class"] == "schur_pressure_correction")
-                {
-                    // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
-                    if (!out["precond"].contains("usolver"))
-                    {
-                        out["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                        out["precond"]["usolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
-                    }
-                    if (!out["precond"].contains("usolver"))
-                    {
-                        out["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
-                        out["precond"]["psolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
-                    }
-                }
+                // if (params["AMGCL"].contains("precond"))
+                //     out["precond"].merge_patch(params["AMGCL"]["precond"]);
+                // if (params["AMGCL"].contains("solver"))
+                //     out["solver"].merge_patch(params["AMGCL"]["solver"]);
+                out.merge_patch(params["AMGCL"]);
+                // if (out["precond"]["class"] == "schur_pressure_correction")
+                // {
+                //     // Initialize the u and p solvers with a tolerance that is comparable to the main solver's
+                //     if (!out["precond"].contains("usolver"))
+                //     {
+                //         out["precond"]["usolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                //         out["precond"]["usolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                //     }
+                //     if (!out["precond"].contains("usolver"))
+                //     {
+                //         out["precond"]["psolver"] = R"({"solver": {"maxiter": 100}})"_json;
+                //         out["precond"]["psolver"]["solver"]["tol"] = 10 * out["solver"]["tol"].get<double>();
+                //     }
+                // }
             }
         }
     } // namespace
@@ -209,6 +210,7 @@ namespace polysolve
         std::tie(iterations_, residual_error_) = (*solver_)(*rhs_b, *x_b);
 
         std::copy(&(*x_b)[0], &(*x_b)[0] + result.size(), result.data());
+        std::cout << (*solver_) << std::endl;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -295,6 +297,7 @@ namespace polysolve
             {
                 result[BLOCK_SIZE * i + j] = x_b[i](j);
             }
+        std::cout << (*solver_) << std::endl;
     }
 
     template <int BLOCK_SIZE>

@@ -89,7 +89,7 @@ namespace polysolve
 #else
         HYPRE_IJMatrixCreate(hypre_MPI_COMM_WORLD, 0, rows - 1, 0, cols - 1, &A);
 #endif
-        // HYPRE_IJMatrixSetPrintLevel(A, 2);
+        HYPRE_IJMatrixSetPrintLevel(A, 2);
         HYPRE_IJMatrixSetObjectType(A, HYPRE_PARCSR);
         HYPRE_IJMatrixInitialize(A);
 
@@ -134,12 +134,13 @@ namespace polysolve
             int relax_sweeps = 1; // relaxation sweeps on each level
 
             // Additional options:
-            int print_level = 0; // print AMG iterations? 1 = no, 2 = yes
-            int max_levels = 6;  // max number of levels in AMG hierarchy
+            int print_level = 3; // print AMG iterations? 1 = no, 2 = yes
+            int max_levels = 25;  // max number of levels in AMG hierarchy
 
             // Chebyshev Settings
             int eig_est = 100;   // Number of CG iterations to determine the smallest and largest eigenvalue
             double ratio = 0.008333333333;
+            int relax_coarse = 9; // smoother on the coarsest grid: 9=Gauss Elimination
 
             HYPRE_BoomerAMGSetCoarsenType(amg_precond, coarsen_type);
             HYPRE_BoomerAMGSetAggNumLevels(amg_precond, agg_levels);
@@ -150,6 +151,7 @@ namespace polysolve
             HYPRE_BoomerAMGSetPMaxElmts(amg_precond, Pmax);
             HYPRE_BoomerAMGSetPrintLevel(amg_precond, print_level);
             HYPRE_BoomerAMGSetMaxLevels(amg_precond, max_levels);
+            HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_coarse, 3);
 
             // To do, figure out what does these functions mean
             // Defines the Order for Chebyshev smoother. The default is 2 (valid options are 1-4).
@@ -185,8 +187,6 @@ namespace polysolve
             int nodal_diag = 1; // diagonal in strength matrix: 0, 1 or 2
             // int relax_coarse = 8; // smoother on the coarsest grid: 8, 99 or 29
 
-            // Chebyshev preconditioner
-            int relax_coarse = 16; // Chebyshev relax
 
             // Elasticity interpolation options
             int interp_vec_variant = 2;    // 1 = GM-1, 2 = GM-2, 3 = LN
@@ -199,7 +199,6 @@ namespace polysolve
 
             HYPRE_BoomerAMGSetNodal(amg_precond, nodal);
             HYPRE_BoomerAMGSetNodalDiag(amg_precond, nodal_diag);
-            HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_coarse, 3);
 
             HYPRE_BoomerAMGSetInterpVecVariant(amg_precond, interp_vec_variant);
             HYPRE_BoomerAMGSetInterpVecQMax(amg_precond, q_max);
@@ -268,7 +267,7 @@ namespace polysolve
         HYPRE_PCGSetMaxIter(solver, max_iter_); /* max iterations */
         HYPRE_PCGSetTol(solver, conv_tol_);     /* conv. tolerance */
         HYPRE_PCGSetTwoNorm(solver, 1);         /* use the two norm as the stopping criteria */
-        // HYPRE_PCGSetPrintLevel(solver, 2); /* print solve info */
+        HYPRE_PCGSetPrintLevel(solver, 2); /* print solve info */
         HYPRE_PCGSetLogging(solver, 1); /* needed to get run info later */
 
         /* Now set up the AMG preconditioner and specify any parameters */

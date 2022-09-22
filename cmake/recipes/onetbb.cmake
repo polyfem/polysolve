@@ -19,7 +19,7 @@ include(FetchContent)
 FetchContent_Declare(
     tbb
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG v2021.6.0-rc1
+    GIT_TAG v2021.6.0
     GIT_SHALLOW TRUE
 )
 
@@ -56,5 +56,9 @@ foreach(name IN ITEMS tbb tbbmalloc tbbmalloc_proxy)
         # Without this macro, TBB will explicitly link against "tbb12_debug.lib" in Debug configs.
         # This is undesirable, since our pre-compiled version of MKL is linked against "tbb12.dll".
         target_compile_definitions(${name} PUBLIC -D__TBB_NO_IMPLICIT_LINKAGE=1)
+
+        if (NOT MSVC AND NOT APPLE)
+            target_compile_options(${name} PRIVATE -Wno-error=stringop-overflow)
+        endif()
     endif()
 endforeach()

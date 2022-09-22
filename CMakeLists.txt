@@ -24,6 +24,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
     include(${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
 endif()
 
+###############################################################################
+# CMake Policies
+################################################################################
+
+cmake_policy(VERSION 3.24)
+cmake_policy(SET CMP0135 NEW) # https://cmake.org/cmake/help/latest/policy/CMP0135.html
+
 ################################################################################
 
 project(PolySolve

@@ -21,7 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        sp: [on, off]
         config: [Debug, Release]
         include:
           - os: macos-latest
@@ -44,19 +43,11 @@ jobs:
           ccache
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
 
-      - name: SuiteSparse (Linux)
-        if: runner.os == 'Linux' && runner.sp == 'on'
-        run: sudo apt-get install libsuitesparse-dev
-
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install ccache
           echo 'CACHE_PATH=~/Library/Caches/ccache' >> "$GITHUB_ENV"
-
-      - name: SuiteSparse (macOS)
-        if: runner.os == 'macOS' && runner.sp == 'on'
-        run: brew install suite-sparse
 
       - name: Cache Build
         id: cache-build

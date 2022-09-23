@@ -45,6 +45,13 @@ if(NOT TARGET TBB::tbb)
     message(FATAL_ERROR "TBB::tbb is still not defined!")
 endif()
 
+include(CheckCXXCompilerFlag)
+set(FLAG "-Wno-error=stringop-overflow")
+string(REPLACE "=" "-" FLAG_VAR "${FLAG}")
+if(NOT DEFINED IS_SUPPORTED_${FLAG_VAR})
+    check_cxx_compiler_flag("-Wno-error=stringop-overflow" IS_SUPPORTED_${FLAG_VAR})
+endif()
+
 foreach(name IN ITEMS tbb tbbmalloc tbbmalloc_proxy)
     if(TARGET ${name})
         # Folder name for IDE
@@ -57,8 +64,9 @@ foreach(name IN ITEMS tbb tbbmalloc tbbmalloc_proxy)
         # This is undesirable, since our pre-compiled version of MKL is linked against "tbb12.dll".
         target_compile_definitions(${name} PUBLIC -D__TBB_NO_IMPLICIT_LINKAGE=1)
 
-        if (NOT MSVC AND NOT APPLE)
-            target_compile_options(${name} PRIVATE -Wno-error=stringop-overflow)
+        # https://github.com/oneapi-src/oneTBB/issues/843
+        if(IS_SUPPORTED_${FLAG_VAR})
+            target_compile_options(${name} PRIVATE ${FLAG})
         endif()
     endif()
 endforeach()

@@ -23,8 +23,8 @@ message(STATUS "Third-party: creating targets 'SuiteSparse::SuiteSparse'")
 include(FetchContent)
 FetchContent_Declare(
     suitesparse
-    GIT_REPOSITORY https://github.com/sergiud/SuiteSparse.git
-    GIT_TAG 5.12.0-cmake.3
+    URL https://github.com/sergiud/SuiteSparse/archive/refs/tags/5.12.0-cmake.3.zip
+    URL_HASH MD5=73a6fbfc949d43f37c2c8749662fb35e
 )
 
 FetchContent_GetProperties(suitesparse)

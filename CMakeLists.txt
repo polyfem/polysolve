@@ -209,7 +209,7 @@ if(POLYSOLVE_WITH_SPECTRA)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SPECTRA)
 endif()
 
-# cuSOLVER solver
+# cuSolver solvers
 if(POLYSOLVE_WITH_CUSOLVER)
     include(CheckLanguage)
     check_language(CUDA)

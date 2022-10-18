@@ -10,6 +10,7 @@
 
 //find cuda libraries?
 
+#include <cuda_runtime.h>
 #include <cusolverDn.h>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -37,7 +38,7 @@ namespace polysolve
         // Set solver parameters
         virtual void setParameters(const json &params) override;
 
-        // Retrieve memory information from Pardiso
+        // Retrieve memory information from cuSolverDN
         virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
@@ -56,6 +57,9 @@ namespace polysolve
         
 
     private:
+
+        cusolverDnHandle_t cuHandle;
+        cusolverDnParams_t params;
         
     };
 

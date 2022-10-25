@@ -220,6 +220,7 @@ namespace polysolve
 #ifdef POLYSOLVE_WITH_CUSOLVER
         }
         else if (solver == "cuSolverDN")
+        
         {
             return std::make_unique<LinearSolverCuSolverDN>();
 #endif

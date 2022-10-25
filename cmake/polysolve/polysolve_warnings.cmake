@@ -166,7 +166,6 @@ foreach(FLAG IN ITEMS ${POLYSOLVE_WARNING_FLAGS})
 		check_cxx_compiler_flag("${FLAG}" IS_SUPPORTED_${FLAG_VAR})
 	endif()
 	if(IS_SUPPORTED_${FLAG_VAR})
-	
 		target_compile_options(polysolve_warnings INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
 	endif()
 endforeach()

@@ -75,8 +75,6 @@ namespace polysolve
         int numrows;
 
         Eigen::MatrixXd Adense;
-        
-        
     };
 
 //TODO: complete this -MP

@@ -60,7 +60,6 @@ namespace polysolve
         cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, &Adense, 
         numrows, nullptr, CUDA_R_64F, d_work, d_lwork, h_work, h_lwork, nullptr);
     }
-    }
 
     void LinearSolverCuSolverDN::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
@@ -74,8 +73,7 @@ namespace polysolve
             CUDA_R_64F, d_b, numrows, nullptr);
         
         //copy result to x
-        cudaMemcpyAsync(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost,
-                               stream);
+        cudaMemcpyAsync(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost, stream);
         //TODO: fill this in -MP
     }
 

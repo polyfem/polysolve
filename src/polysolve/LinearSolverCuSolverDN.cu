@@ -51,6 +51,7 @@ namespace polysolve
         //copy A to device
         cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * Adense.size());
         cudaMemcpyAsync(d_A, (const void *)Adense.data(), sizeof(double) * Adense.size(), cudaMemcpyHostToDevice, stream);
+        cudaMemcpy(d_A, (const void *)Adense.data(), sizeof(double) * Adense.size(), cudaMemcpyHostToDevice);
 
         //calculate buffer size
         cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A,
@@ -65,7 +66,8 @@ namespace polysolve
     {
         //copy b to device
         cudaMalloc(reinterpret_cast<void **>(&d_b), sizeof(double) * b.size());
-        cudaMemcpyAsync(d_b, (const void *)b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice, stream);
+        //cudaMemcpyAsync(d_b, (const void *)b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice, stream);
+        cudaMemcpy(d_b, (const void *)b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice);
 
         //solve
         cusolverDnXgetrs(cuHandle, cuParams, CUBLAS_OP_N, numrows, 1,
@@ -73,7 +75,8 @@ namespace polysolve
             CUDA_R_64F, d_b, numrows, nullptr);
         
         //copy result to x
-        cudaMemcpyAsync(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost, stream);
+        //cudaMemcpyAsync(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost, stream);
+        cudaMemcpyAsync(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost);
         //TODO: fill this in -MP
     }
 

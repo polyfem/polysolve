@@ -600,8 +600,6 @@ TEST_CASE("cusolverdn", "[solver]")
     std::ofstream actuals("./actualres.txt");
     actuals << "test";
 
-    // solver->getInfo(solver_info);
-
     // std::cout<<"Solver error: "<<x<<std::endl;
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);

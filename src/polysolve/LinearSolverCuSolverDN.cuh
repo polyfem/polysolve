@@ -54,12 +54,25 @@ namespace polysolve
         virtual std::string name() const override { return "cuSolverDN"; }
 
     protected:
-        
+        void init();
 
-    private:
+    protected:
 
         cusolverDnHandle_t cuHandle;
-        cusolverDnParams_t params;
+        cusolverDnParams_t cuParams;
+        cudaStream_t stream;
+
+        //device copies
+        double *d_A;
+        double *d_b;
+
+        //device work buffers
+        size_t d_lwork = 0;     /* size of workspace */
+        void *d_work = nullptr; /* device workspace for getrf */
+        size_t h_lwork = 0;     /* size of workspace */
+        void *h_work = nullptr; /* host workspace for getrf */
+
+        int numrows;
         
     };
 

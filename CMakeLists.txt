@@ -233,10 +233,11 @@ if(POLYSOLVE_WITH_CUSOLVER)
           
              --ptxas-options=-v
              --maxrregcount=7
-             
+             --compiler-options
             -fPIC # https://stackoverflow.com/questions/5311515/gcc-fpic-option
-            --compiler-options
+            
             >
+
             )
             target_link_libraries(polysolve PUBLIC CUDA::cusolver)
             target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUSOLVER)

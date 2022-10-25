@@ -73,6 +73,9 @@ namespace polysolve
         void *h_work = nullptr; /* host workspace for getrf */
 
         int numrows;
+
+        Eigen::MatrixXd Adense;
+        
         
     };
 

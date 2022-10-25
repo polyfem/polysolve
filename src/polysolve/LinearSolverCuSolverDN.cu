@@ -12,7 +12,7 @@ namespace polysolve
         //TODO: fill this in -MP
     }
 
-    LinearSolverCuSolverDN::init()
+    void LinearSolverCuSolverDN::init()
     {
         cusolverDnCreate(&cuHandle);
 
@@ -21,7 +21,7 @@ namespace polysolve
         //TODO: fill this in -MP
     }
 
-    LinearSolverCuSolverDN::setParameters(const json &params)
+    void LinearSolverCuSolverDN::setParameters(const json &params)
     {
         cusolverDnCreateParams(&cuParams);
 
@@ -30,38 +30,52 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverCuSolverDN::factorize(const StiffnessMatrix &A)
+    void LinearSolverCuSolverDN::getInfo(json &params) const
+    {
+
+    }
+
+    void LinearSolverCuSolverDN::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+    {
+
+    }
+
+    void LinearSolverCuSolverDN::factorize(const StiffnessMatrix &A)
     {
         //find number of rows in A
         numrows = (int)A.rows();
 
+        //convert A to dense (temporary)
+        Adense = Eigen::MatrixXd(A);
+
         //copy A to device
-        cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * A.size());
-        cudaMemcpyAsync(d_A, A.data(), sizeof(double) * A.size(), cudaMemcpyHostToDevice, stream);
+        cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * Adense.size());
+        cudaMemcpyAsync(d_A, (const void *)Adense.data(), sizeof(double) * Adense.size(), cudaMemcpyHostToDevice, stream);
 
         //calculate buffer size
-        cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, traits<double>::cuda_data_type, d_A,
-                                    numrows, traits<double>::cuda_data_type, &d_lwork, &h_lwork);
+        cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A,
+                                    numrows, CUDA_R_64F, &d_lwork, &h_lwork);
         
         //factorize
-        cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, traits<double>::cuda_data_type, &A, 
-        numrows, nullptr, traits<double>::cuda_data_type, d_work, d_lwork, h_work, h_lwork, nullptr);
+        cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, &Adense, 
+        numrows, nullptr, CUDA_R_64F, d_work, d_lwork, h_work, h_lwork, nullptr);
+    }
     }
 
-    LinearSolverCuSolverDN::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
+    void LinearSolverCuSolverDN::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
         //copy b to device
         cudaMalloc(reinterpret_cast<void **>(&d_b), sizeof(double) * b.size());
-        cudaMemcpyAsync(d_b, b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_b, (const void *)b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice, stream);
 
         //solve
         cusolverDnXgetrs(cuHandle, cuParams, CUBLAS_OP_N, numrows, 1,
-            traits<double>::cuda_data_type, d_A, numrows, nullptr,
-            traits<double>::cuda_data_type, d_b, numrows, nullptr);
+            CUDA_R_64F, d_A, numrows, nullptr,
+            CUDA_R_64F, d_b, numrows, nullptr);
         
         //copy result to x
-        cudaMemcpyAsync(x.data(), d_b, sizeof(data_type) * x.size(), cudaMemcpyDeviceToHost,
-                               stream)
+        cudaMemcpyAsync(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost,
+                               stream);
         //TODO: fill this in -MP
     }
 

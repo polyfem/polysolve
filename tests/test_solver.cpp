@@ -68,7 +68,10 @@ TEST_CASE("all", "[solver]")
         solver->solve(b, x);
 
         // solver->getInfo(solver_info);
-
+        if(s == "cuSolverDN"){
+            std::ofstream actuals("./actualres.txt");
+            actuals << x;
+        }
         // std::cout<<"Solver error: "<<x<<std::endl;
         const double err = (A * x - b).norm();
         INFO("solver: " + s);
@@ -569,5 +572,38 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     }
     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
+}
+#endif
+
+#ifdef POLYSOLVE_WITH_CUSOLVER
+TEST_CASE("cusolverdn", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    //Eigen::MatrixXd Adense = Eigen::MatrixXd(A);
+
+    auto solver = LinearSolver::create("cuSolverDN", "");
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+
+    std::ofstream intendeds("./intendedres.txt");
+    std::ofstream actuals("./actualres.txt");
+    actuals << "test";
+
+    // solver->getInfo(solver_info);
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
 }
 #endif

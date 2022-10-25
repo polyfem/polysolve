@@ -60,7 +60,7 @@ namespace polysolve
             traits<double>::cuda_data_type, d_b, numrows, nullptr);
         
         //copy result to x
-        cudaMemcpyAsync(x.data(), d_b, sizeof(data_type) * X.size(), cudaMemcpyDeviceToHost,
+        cudaMemcpyAsync(x.data(), d_b, sizeof(data_type) * x.size(), cudaMemcpyDeviceToHost,
                                stream)
         //TODO: fill this in -MP
     }

@@ -27,6 +27,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
 endif()
 
 # ###############################################################################
+# CMake Policies
+# ###############################################################################
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+    cmake_policy(SET CMP0135 NEW) # https://cmake.org/cmake/help/latest/policy/CMP0135.html
+endif()
+
+# ###############################################################################
 project(PolySolve
     DESCRIPTION "Easy-to-use wrapper for linear solver"
     LANGUAGES CXX)

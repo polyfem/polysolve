@@ -1,5 +1,6 @@
 # Detects whether this is a top-level project
 get_directory_property(HAS_PARENT PARENT_DIRECTORY)
+
 if(HAS_PARENT)
     set(POLYSOLVE_TOPLEVEL_PROJECT OFF)
 else()
@@ -8,6 +9,7 @@ endif()
 
 # Check required CMake version
 set(REQUIRED_CMAKE_VERSION "3.14.0")
+
 if(POLYSOLVE_TOPLEVEL_PROJECT)
     cmake_minimum_required(VERSION ${REQUIRED_CMAKE_VERSION})
 else()
@@ -24,34 +26,35 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
     include(${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
 endif()
 
-
-################################################################################
-
+# ###############################################################################
 project(PolySolve
-        DESCRIPTION "Easy-to-use wrapper for linear solver"
-        LANGUAGES CXX)
+    DESCRIPTION "Easy-to-use wrapper for linear solver"
+    LANGUAGES CXX)
 
 # Polysolve options
-option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"   OFF)
-# Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                      ON)
-option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                      ON)
-option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
-option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
+option(POLYSOLVE_WITH_SANITIZERS "Enable sanitizers in compilation targets" OFF)
 
-option(POLYSOLVE_WITH_CUDA          "Enable CUDA"                                 ON)
-option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
-option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)
-option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                   ON)
-option(POLYSOLVE_WITH_SPECTRA       "Enable computing spectrum"                   ON)
+# Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_CHOLMOD "Enable Cholmod library" ON)
+option(POLYSOLVE_WITH_UMFPACK "Enable UmfPack library" ON)
+option(POLYSOLVE_WITH_SUPERLU "Enable SuperLU library" ON)
+option(POLYSOLVE_WITH_MKL "Enable MKL library" ON)
+
+option(POLYSOLVE_WITH_CUDA "Enable CUDA" ON)
+option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" OFF)
+option(POLYSOLVE_WITH_HYPRE "Enable hypre" OFF)
+option(POLYSOLVE_WITH_AMGCL "Use AMGCL" ON)
+option(POLYSOLVE_WITH_SPECTRA "Enable computing spectrum" ON)
+
 # Sanitizer options
-option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                           OFF)
-option(POLYSOLVE_SANITIZE_MEMORY    "Sanitize Memory"                            OFF)
-option(POLYSOLVE_SANITIZE_THREAD    "Sanitize Thread"                            OFF)
-option(POLYSOLVE_SANITIZE_UNDEFINED "Sanitize Undefined"                         OFF)
+option(POLYSOLVE_SANITIZE_ADDRESS "Sanitize Address" OFF)
+option(POLYSOLVE_SANITIZE_MEMORY "Sanitize Memory" OFF)
+option(POLYSOLVE_SANITIZE_THREAD "Sanitize Thread" OFF)
+option(POLYSOLVE_SANITIZE_UNDEFINED "Sanitize Undefined" OFF)
+
 # Misc.
-option(POLYSOLVE_LARGE_INDEX        "Build for large indices"                    OFF)
-option(POLYSOLVE_WITH_TESTS         "Build unit-tests" ${POLYSOLVE_TOPLEVEL_PROJECT})
+option(POLYSOLVE_LARGE_INDEX "Build for large indices" OFF)
+option(POLYSOLVE_WITH_TESTS "Build unit-tests" ${POLYSOLVE_TOPLEVEL_PROJECT})
 
 include(CMakeDependentOption)
 cmake_dependent_option(SUITE_SPARSE_WITH_MKL "Build SuiteSparse using MKL" ON "POLYSOLVE_WITH_MKL" OFF)
@@ -63,16 +66,17 @@ if(POLYSOLVE_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
+
 if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD 14)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
-if (MSVC)
+if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
-### Configuration
+# ## Configuration
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/polysolve/")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/recipes/")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/find/")
@@ -91,9 +95,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Generate position independent code by default
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-################################################################################
+# ###############################################################################
 # PolySolve Library
-################################################################################
+# ###############################################################################
 
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve)
@@ -104,10 +108,9 @@ add_subdirectory(src)
 # Public include directory for Polysolve
 target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
-################################################################################
+# ###############################################################################
 # Definitions
-################################################################################
-
+# ###############################################################################
 if(POLYSOLVE_LARGE_INDEX)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_LARGE_INDEX)
 endif()
@@ -118,9 +121,9 @@ target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=0)
 # 8MB
 # target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=8388608)
 
-################################################################################
+# ###############################################################################
 # Dependencies
-################################################################################
+# ###############################################################################
 
 # Extra warnings
 include(polysolve_warnings)
@@ -140,46 +143,50 @@ if(POLYSOLVE_WITH_CUDA)
     include(CheckLanguage)
     check_language(CUDA)
     set(CMAKE_CUDA_ARCHITECTURES "61")
-    find_package(CUDAToolkit)    
+    find_package(CUDAToolkit)
+
     if(CUDAToolkit_FOUND)
         message(STATUS "Found CUDATooklkit")
         set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
         enable_language(CUDA)
-        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUDA)        
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUDA)
     else()
         message(FATAL_ERROR "No CUDA support found!")
     endif()
-  # We need to explicitly state that we need all CUDA files in the particle
-  # library to be built with -dc as the member functions could be called by
-  # other libraries and executables.
-  set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-  # Nvidia RTX8000 -> compute_75
-  # Nvidia V100 -> compute_70
-  # Nvidia 1080/1080Ti -> compute_61
-  # Nvidia 3080Ti -> compute_86
+    # We need to explicitly state that we need all CUDA files in the particle
+    # library to be built with -dc as the member functions could be called by
+    # other libraries and executables.
+    set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+    # Nvidia RTX8000 -> compute_75
+    # Nvidia V100 -> compute_70
+    # Nvidia 1080/1080Ti -> compute_61
+    # Nvidia 3080Ti -> compute_86
     if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
         set(CMAKE_CUDA_ARCHITECTURES 70 75 86)
     endif()
+
     set_target_properties(polysolve PROPERTIES CUDA_ARCHITECTURES "70;75;86")
 
     if(APPLE)
         # We need to add the path to the driver (libcuda.dylib) as an rpath,
         # so that the static cuda runtime can find it at runtime.
         set_property(TARGET polysolve
-                    PROPERTY
-                    BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+            PROPERTY
+            BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
     endif()
+
     polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cudart)
     polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cusparse)
 endif()
-
 
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
     target_link_libraries(polysolve PUBLIC HYPRE::HYPRE)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_HYPRE)
+
     if(HYPRE_WITH_MPI)
         target_compile_definitions(polysolve PUBLIC HYPRE_WITH_MPI)
     endif()
@@ -205,6 +212,7 @@ endif()
 # Pardiso solver
 if(POLYSOLVE_WITH_PARDISO)
     include(pardiso)
+
     if(TARGET Pardiso::Pardiso)
         target_link_libraries(polysolve PUBLIC Pardiso::Pardiso)
         target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_PARDISO)
@@ -216,6 +224,7 @@ endif()
 # UmfPack solver
 if(POLYSOLVE_WITH_UMFPACK)
     include(umfpack)
+
     if(TARGET UMFPACK::UMFPACK)
         target_link_libraries(polysolve PUBLIC UMFPACK::UMFPACK)
         target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_UMFPACK)
@@ -227,6 +236,7 @@ endif()
 # SuperLU solver
 if(POLYSOLVE_WITH_SUPERLU)
     include(superlu)
+
     if(TARGET SuperLU::SuperLU)
         target_link_libraries(polysolve PUBLIC SuperLU::SuperLU)
         target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SUPERLU)
@@ -234,7 +244,6 @@ if(POLYSOLVE_WITH_SUPERLU)
         message(WARNING "SuperLU not found, solver will not be available.")
     endif()
 endif()
-
 
 # AMGCL solver
 if(POLYSOLVE_WITH_AMGCL)
@@ -250,16 +259,16 @@ if(POLYSOLVE_WITH_SPECTRA)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SPECTRA)
 endif()
 
-################################################################################
+# ###############################################################################
 # Compiler options
-################################################################################
+# ###############################################################################
 
 # Use C++14
 target_compile_features(polysolve PUBLIC cxx_std_14)
 
-################################################################################
+# ###############################################################################
 # Tests
-################################################################################
+# ###############################################################################
 
 # Compile extras only if this is a top-level project
 if(POLYSOLVE_WITH_TESTS)
@@ -273,11 +282,9 @@ if(POLYSOLVE_WITH_TESTS)
     include("${catch2_SOURCE_DIR}/contrib/Catch.cmake")
 
     add_subdirectory(tests)
-    
+
     # Cuda test
     if(POLYSOLVE_WITH_CUDA)
         add_subdirectory(cudatest)
     endif()
 endif()
-
-

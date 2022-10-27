@@ -34,26 +34,7 @@ namespace polysolve
         {
             json params = R"({
                 "precond": {
-                    "relax": {
-                        "degree": 16,
-                        "type": "chebyshev",
-                        "power_iters": 100,
-                        "higher": 2,
-                        "lower": 0.008333333333,
-                        "scale": true
-                    },
-                    "class": "amg",
-                    "max_levels": 6,
-                    "direct_coarse": false,
-                    "ncycle": 2,
-                    "coarsening": {
-                        "type": "smoothed_aggregation",
-                        "estimate_spectral_radius": true,
-                        "relax": 1,
-                        "aggr": {
-                            "eps_strong": 0
-                        }
-                    }
+                    "class": "relaxation"
                 },
                 "solver": {
                     "tol": 1e-10,
@@ -144,7 +125,7 @@ namespace polysolve
         boost::property_tree::ptree pt_params;
         boost::property_tree::read_json(ss_params, pt_params);
         auto A = std::tie(numRows, ia, ja, a);
-        solver_ = std::make_unique<Solver>(A, pt_params,backend_params_);
+        solver_ = std::make_unique<Solver>(A, pt_params, backend_params_);
         iterations_ = 0;
         residual_error_ = 0;
     }
@@ -162,7 +143,7 @@ namespace polysolve
         auto x_b = Backend::copy_vector(x, backend_params_);
 
         std::tie(iterations_, residual_error_) = (*solver_)(*rhs_b, *x_b);
-        thrust::copy(x_b->begin(), x_b->end(),result.data());
+        thrust::copy(x_b->begin(), x_b->end(), result.data());
     }
 
     ////////////////////////////////////////////////////////////////////////////////

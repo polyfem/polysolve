@@ -23,6 +23,10 @@
 #include <amgcl/solver/runtime.hpp>
 #include <amgcl/profiler.hpp>
 #include <amgcl/io/mm.hpp>
+
+// SET THIS AS AN OPTIONAL HEADER
+#include <amgcl/relaxation/cusparse_ilu0.hpp>
+
 #include <amgcl/relaxation/chebyshev.hpp>
 #include <amgcl/coarsening/runtime.hpp>
 #include <amgcl/relaxation/runtime.hpp>

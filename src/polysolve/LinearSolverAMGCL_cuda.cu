@@ -34,7 +34,8 @@ namespace polysolve
         {
             json params = R"({
                 "precond": {
-                    "class": "relaxation"
+                    "class": "relaxation",
+                    "type": "ilu0"
                 },
                 "solver": {
                     "tol": 1e-10,

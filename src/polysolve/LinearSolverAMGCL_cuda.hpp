@@ -25,7 +25,9 @@
 #include <amgcl/io/mm.hpp>
 
 // SET THIS AS AN OPTIONAL HEADER
+#ifdef POLYSOLVE_WITH_CUSPARSEILU0
 #include <amgcl/relaxation/cusparse_ilu0.hpp>
+#endif
 
 #include <amgcl/relaxation/chebyshev.hpp>
 #include <amgcl/coarsening/runtime.hpp>

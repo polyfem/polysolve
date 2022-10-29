@@ -49,13 +49,13 @@ namespace polysolve
 
         void set_params(const json &params, json &out)
         {
-            if (params.contains("AMGCL"))
+            if (params.contains("AMGCL_cuda"))
             {
                 // Patch the stored params with input ones
-                if (params["AMGCL"].contains("precond"))
-                    out["precond"].merge_patch(params["AMGCL"]["precond"]);
-                if (params["AMGCL"].contains("solver"))
-                    out["solver"].merge_patch(params["AMGCL"]["solver"]);
+                if (params["AMGCL_cuda"].contains("precond"))
+                    out["precond"].merge_patch(params["AMGCL_cuda"]["precond"]);
+                if (params["AMGCL_cuda"].contains("solver"))
+                    out["solver"].merge_patch(params["AMGCL_cuda"]["solver"]);
 
                 if (out["precond"]["class"] == "schur_pressure_correction")
                 {
@@ -89,7 +89,7 @@ namespace polysolve
     // Set solver parameters
     void LinearSolverAMGCL_cuda::setParameters(const json &params)
     {
-        if (params.contains("AMGCL"))
+        if (params.contains("AMGCL_cuda"))
         {
             set_params(params, params_);
         }

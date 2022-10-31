@@ -63,17 +63,11 @@ TEST_CASE("all", "[solver]")
         Eigen::VectorXd x(b.size());
         x.setZero();
 
-        if(s == "cuSolverDN"){
-            x(2) = 1;
-        }
-
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
 
         // solver->getInfo(solver_info);
-        std::ofstream actuals("./actualres" + s + ".txt");
-        actuals << x;
 
         // std::cout<<"Solver error: "<<x<<std::endl;
         const double err = (A * x - b).norm();
@@ -597,8 +591,31 @@ TEST_CASE("cusolverdn", "[solver]")
     solver->factorize(A);
     solver->solve(b, x);
 
-    std::ofstream actuals("./actualres.txt");
-    actuals << "test";
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+TEST_CASE("cusolverdn_dense", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+
+    Eigen::MatrixXd A(4, 4);
+    for(int i = 0; i < 4; i++){
+        A(i,i) = 1.0;
+    }
+    A(0,1) = 1.0;
+    A(3,0) = 1.0;
+
+    auto solver = LinearSolver::create("cuSolverDN", "");
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
 
     // std::cout<<"Solver error: "<<x<<std::endl;
     const double err = (A * x - b).norm();

@@ -621,4 +621,52 @@ TEST_CASE("cusolverdn_dense", "[solver]")
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
+/*
+TEST_CASE("cusolverdn_5cubes", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    auto solver = LinearSolver::create("cuSolverDN", "");
+    
+    std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");
+    std::ofstream solve_times_file(path+"/solve_times_5cubes.txt");
+
+    for(int i = 0; i < 1000; i++){
+        Eigen::MatrixXd A(120, 120);
+        std::string hessian_path = path + "/matrixdata-5cubes/hessian" + std::to_string(i) + ".txt";
+        std::ifstream hessian_file(hessian_path);
+        for(int m = 0; m < 120; m++){
+            for(int n = 0; n < 120; n++){
+                hessian_file >> A(m,n);
+            }
+        }
+
+        Eigen::VectorXd b(A.rows());
+        std::string gradient_path = path + "/matrixdata-5cubes/gradient" + std::to_string(i) + ".txt";
+        std::ifstream gradient_file(gradient_path);
+        for(int m = 0; m < 120; m++){
+            gradient_file >> b(m);
+        }
+
+        Eigen::VectorXd x(b.size());
+        x.setZero();
+
+        solver->analyzePattern(A, A.rows());
+        
+        std::chrono::steady_clock::time_point beginf = std::chrono::steady_clock::now();
+        solver->factorize(A);
+        std::chrono::steady_clock::time_point endf = std::chrono::steady_clock::now();
+        std::cout << "time to factorize: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << std::endl;
+        factorize_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << " ";
+
+        std::chrono::steady_clock::time_point begins = std::chrono::steady_clock::now();
+        solver->solve(b, x);
+        std::chrono::steady_clock::time_point ends = std::chrono::steady_clock::now();
+        std::cout << "time to solve: " << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << std::endl;
+        solve_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << " ";
+
+        const double err = (A * x - b).norm();
+        REQUIRE(err < 1e-8);
+    }
+}
+*/
 #endif

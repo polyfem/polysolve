@@ -5,6 +5,20 @@
 #include <fstream>
 #include <string>
 #include <iostream>
+
+#include "spdlog/spdlog.h"
+
+#define gpuErrchk(ans){ gpuAssert((ans), __FILE__, __LINE__); }
+
+inline void gpuAssert(cudaError_t code, const char *file, int line,
+                      bool abort = true) {
+  if (code != cudaSuccess) {
+    spdlog::error("GPUassert: {} {} {:d}\n", cudaGetErrorString(code), file,
+                  line);
+    if (abort)
+      exit(code);
+  }
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -46,25 +60,21 @@ namespace polysolve
 
     void LinearSolverCuSolverDN::factorize(const StiffnessMatrix &A)
     {
-        //find number of rows in A
         numrows = (int)A.rows();
 
-        //convert A to dense
         Adense = Eigen::MatrixXd(A);
 
         //copy A to device
-        cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * Adense.size());
-        cudaMemcpy(d_A, (const void *)Adense.data(), sizeof(double) * Adense.size(), cudaMemcpyHostToDevice);
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * Adense.size()));
+        gpuErrchk(cudaMemcpy(d_A, (const void *)Adense.data(), sizeof(double) * Adense.size(), cudaMemcpyHostToDevice));
         
-        //allocate pivots
-        cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows);
-
-        //calculate buffer size
         cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A,
                                     numrows, CUDA_R_64F, &d_lwork, &h_lwork);
-        cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(double) * d_lwork);
-        cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(double) * h_lwork);
-        cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(double) * d_lwork));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(double) * h_lwork));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int)));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows));
+        int info = 0;
         
         //factorize
         cusolverStatus_t solvererr = cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A, 
@@ -76,28 +86,25 @@ namespace polysolve
         }else if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
             std::cout << "invalid value" << std::endl;
         }
-        int info = 0;
-        cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream);
+        
+        gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
     }
 
     void LinearSolverCuSolverDN::factorize(const Eigen::MatrixXd &A)
     {
-        //find number of rows in A
         numrows = (int)A.rows();
 
         //copy A to device
-        cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * A.size());
-        cudaMemcpy(d_A, (const void *)A.data(), sizeof(double) * A.size(), cudaMemcpyHostToDevice);
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * A.size()));
+        gpuErrchk(cudaMemcpy(d_A, (const void *)A.data(), sizeof(double) * A.size(), cudaMemcpyHostToDevice));
         
-        //allocate pivots
-        cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows);
-
-        //calculate buffer size
         cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A,
                                     numrows, CUDA_R_64F, &d_lwork, &h_lwork);
-        cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(double) * d_lwork);
-        cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(double) * h_lwork);
-        cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(double) * d_lwork));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(double) * h_lwork));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int)));
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows));
+        int info = 0;
         
         //factorize
         cusolverStatus_t solvererr = cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A, 
@@ -108,15 +115,15 @@ namespace polysolve
         }else if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
             std::cout << "invalid value" << std::endl;
         }
-        int info = 0;
-        cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream);
+
+        gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
     }
 
     void LinearSolverCuSolverDN::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
         //copy b to device
-        cudaMalloc(reinterpret_cast<void **>(&d_b), sizeof(double) * b.size());
-        cudaMemcpy(d_b, (const void *)b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice);
+        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_b), sizeof(double) * b.size()));
+        gpuErrchk(cudaMemcpy(d_b, (const void *)b.data(), sizeof(double) * b.size(), cudaMemcpyHostToDevice));
 
         //solve
         cusolverStatus_t solvererr = cusolverDnXgetrs(cuHandle, cuParams, CUBLAS_OP_N, numrows, 1,
@@ -128,20 +135,20 @@ namespace polysolve
             std::cout << "invalid value" << std::endl;
         }
         int info = 0;
-        cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream);
+        gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
 
         //copy result to x
-        cudaMemcpy(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost);
+        gpuErrchk(cudaMemcpy(x.data(), d_b, sizeof(double) * x.size(), cudaMemcpyDeviceToHost));
     }
 
     ////////////////////////////////////////////////////////////////////////////////
 
     LinearSolverCuSolverDN::~LinearSolverCuSolverDN()
     {
-        cudaFree(d_A);
-        cudaFree(d_b);
-        cudaFree(d_work);
-        cudaFree(d_Ipiv);
+        gpuErrchk(cudaFree(d_A));
+        gpuErrchk(cudaFree(d_b));
+        gpuErrchk(cudaFree(d_work));
+        gpuErrchk(cudaFree(d_Ipiv));
 
         cusolverDnDestroyParams(cuParams);
         cusolverDnDestroy(cuHandle);

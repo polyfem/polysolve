@@ -47,8 +47,8 @@ option(POLYSOLVE_WITH_UMFPACK "Enable UmfPack library" ON)
 option(POLYSOLVE_WITH_SUPERLU "Enable SuperLU library" ON)
 option(POLYSOLVE_WITH_MKL "Enable MKL library" ON)
 
-option(POLYSOLVE_WITH_CUDA "Enable CUDA" ON)
-option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" OFF)
+option(POLYSOLVE_WITH_CUDA "Enable CUDA" OFF)
+option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" ON)
 option(POLYSOLVE_WITH_HYPRE "Enable hypre" OFF)
 option(POLYSOLVE_WITH_AMGCL "Use AMGCL" ON)
 option(POLYSOLVE_WITH_SPECTRA "Enable computing spectrum" ON)
@@ -171,10 +171,10 @@ if(POLYSOLVE_WITH_CUDA)
     # Nvidia 1080/1080Ti -> compute_61
     # Nvidia 3080Ti -> compute_86
     if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-        set(CMAKE_CUDA_ARCHITECTURES 70 75 86)
+        set(CMAKE_CUDA_ARCHITECTURES 60 70 75 86)
     endif()
 
-    set_target_properties(polysolve PROPERTIES CUDA_ARCHITECTURES "70;75;86")
+    set_target_properties(polysolve PROPERTIES CUDA_ARCHITECTURES "60;70;75;86")
 
     if(APPLE)
         # We need to add the path to the driver (libcuda.dylib) as an rpath,

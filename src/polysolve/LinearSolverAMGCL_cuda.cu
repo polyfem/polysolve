@@ -34,8 +34,21 @@ namespace polysolve
         {
             json params = R"({
                 "precond": {
-                    "class": "relaxation",
-                    "type": "ilu0"
+                    "relax": {
+                        "type": "spai0"
+                    },
+                    "class": "amg",
+                    "max_levels": 6,
+                    "direct_coarse": false,
+                    "ncycle": 2,
+                    "coarsening": {
+                        "type": "smoothed_aggregation",
+                        "estimate_spectral_radius": true,
+                        "relax": 1,
+                        "aggr": {
+                            "eps_strong": 0
+                        }
+                    }
                 },
                 "solver": {
                     "tol": 1e-10,
@@ -127,6 +140,7 @@ namespace polysolve
         boost::property_tree::read_json(ss_params, pt_params);
         auto A = std::tie(numRows, ia, ja, a);
         solver_ = std::make_unique<Solver>(A, pt_params, backend_params_);
+        // std::cout << *solver_.get() << std::endl;
         iterations_ = 0;
         residual_error_ = 0;
     }

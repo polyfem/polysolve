@@ -228,10 +228,12 @@ namespace polysolve
         else if (solver == "AMGCL")
         {
             return std::make_unique<LinearSolverAMGCL>();
+#ifdef POLYSOLVE_WITH_CUDA
         }
         else if (solver == "AMGCL_cuda")
         {
-           return std::make_unique<LinearSolverAMGCL_cuda>();
+            return std::make_unique<LinearSolverAMGCL_cuda>();
+#endif
 #endif
 
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
@@ -302,7 +304,9 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+#ifdef POLYSOLVE_WITH_CUDA
             "AMGCL_cuda",
+#endif
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

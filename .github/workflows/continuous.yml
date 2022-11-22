@@ -61,6 +61,9 @@ jobs:
           ccache --max-size=1.0G
           ccache -V && ccache --show-stats && ccache --zero-stats
 
+      - name: cuda-toolkit
+        uses: Jimver/cuda-toolkit@v0.2.8
+
       - name: Configure
         run: |
           mkdir -p build
@@ -115,6 +118,9 @@ jobs:
           scoop install sccache --global
           # Scoop modifies the PATH so we make it available for the next steps of the job
           echo "${env:PATH}" >> ${env:GITHUB_PATH}
+      
+      - name: cuda-toolkit
+        uses: Jimver/cuda-toolkit@v0.2.8
 
       - name: Configure and build
         shell: cmd

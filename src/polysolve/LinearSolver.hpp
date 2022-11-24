@@ -85,13 +85,11 @@ namespace polysolve
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) {}
 
-        #ifdef POLYSOLVE_WITH_CUSOLVER
         // Analyze sparsity pattern of a dense matrix
         virtual void analyzePattern(const Eigen::MatrixXd &A, const int precond_num) {}
 
         // Factorize system matrix of a dense matrix
         virtual void factorize(const Eigen::MatrixXd &A) {}
-        #endif
 
         //
         // @brief         { Solve the linear system Ax = b }

@@ -6,17 +6,12 @@
 #include <string>
 #include <iostream>
 
-#include "spdlog/spdlog.h"
-
 #define gpuErrchk(ans){ gpuAssert((ans), __FILE__, __LINE__); }
 
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
   if (code != cudaSuccess) {
-    spdlog::error("GPUassert: {} {} {:d}\n", cudaGetErrorString(code), file,
-                  line);
-    if (abort)
-      exit(code);
+    throw cudaGetErrorString(code);
   }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -80,11 +75,8 @@ namespace polysolve
         cusolverStatus_t solvererr = cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A, 
         numrows, d_Ipiv, CUDA_R_64F, d_work, d_lwork, h_work, h_lwork, d_info);
 
-        //check for errors
-        if(solvererr == CUSOLVER_STATUS_SUCCESS){
-            //std::cout << "success" << std::endl;
-        }else if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
-            std::cout << "invalid value" << std::endl;
+        if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
+            throw std::invalid_argument("CUDA returned invalid value");
         }
         
         gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
@@ -110,10 +102,8 @@ namespace polysolve
         cusolverStatus_t solvererr = cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A, 
         numrows, d_Ipiv, CUDA_R_64F, d_work, d_lwork, h_work, h_lwork, d_info);
 
-        if(solvererr == CUSOLVER_STATUS_SUCCESS){
-            //std::cout << "success" << std::endl;
-        }else if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
-            std::cout << "invalid value" << std::endl;
+        if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
+            throw std::invalid_argument("CUDA returned invalid value");
         }
 
         gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
@@ -129,10 +119,8 @@ namespace polysolve
         cusolverStatus_t solvererr = cusolverDnXgetrs(cuHandle, cuParams, CUBLAS_OP_N, numrows, 1,
             CUDA_R_64F, d_A, numrows, d_Ipiv,
             CUDA_R_64F, d_b, numrows, d_info);
-        if(solvererr == CUSOLVER_STATUS_SUCCESS){
-            //std::cout << "success" << std::endl;
-        }else if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
-            std::cout << "invalid value" << std::endl;
+        if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
+            throw std::invalid_argument("CUDA returned invalid value");
         }
         int info = 0;
         gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
@@ -149,6 +137,7 @@ namespace polysolve
         gpuErrchk(cudaFree(d_b));
         gpuErrchk(cudaFree(d_work));
         gpuErrchk(cudaFree(d_Ipiv));
+        gpuErrchk(cudaFree(d_info));
 
         cusolverDnDestroyParams(cuParams);
         cusolverDnDestroy(cuHandle);

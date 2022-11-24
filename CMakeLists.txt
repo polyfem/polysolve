@@ -36,7 +36,7 @@ endif()
 
 project(PolySolve
         DESCRIPTION "Easy-to-use wrapper for linear solver"
-        LANGUAGES CXX CUDA)
+        LANGUAGES CXX)
 
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"   OFF)

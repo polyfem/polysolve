@@ -56,7 +56,7 @@ namespace polysolve
     void LinearSolverCuSolverDN::factorize(const StiffnessMatrix &A)
     {
         numrows = (int)A.rows();
-
+        
         Adense = Eigen::MatrixXd(A);
 
         //copy A to device

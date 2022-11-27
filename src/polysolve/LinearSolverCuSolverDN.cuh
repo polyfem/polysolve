@@ -8,8 +8,6 @@
 #include <Eigen/Sparse>
 #include <vector>
 
-//find cuda libraries?
-
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
 
@@ -74,18 +72,17 @@ namespace polysolve
         int64_t *d_Ipiv;
 
         //device work buffers
-        size_t d_lwork = 0;     /* size of workspace */
-        void *d_work = nullptr; /* device workspace for getrf */
-        size_t h_lwork = 0;     /* size of workspace */
-        void *h_work = nullptr; /* host workspace for getrf */
-        int *d_info = nullptr; //error info
+        size_t d_lwork = 0;     //size of workspace
+        void *d_work = nullptr; //device workspace for getrf
+        size_t h_lwork = 0;     //size of workspace
+        void *h_work = nullptr; //host workspace for getrf
+        int *d_info = nullptr;  //error info
 
         int numrows;
 
         Eigen::MatrixXd Adense;
     };
 
-//TODO: complete this -MP
 }//namespace polysolve
 
 

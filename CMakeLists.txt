@@ -212,8 +212,12 @@ endif()
 # cuSolver solvers
 if(POLYSOLVE_WITH_CUSOLVER)
     include(cusolverdn)
-    target_link_libraries(polysolve PUBLIC CUDA::cusolver)
-    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUSOLVER)
+    if(TARGET CUDA::cusolver)
+        target_link_libraries(polysolve PUBLIC CUDA::cusolver)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUSOLVER)
+    else()
+        message(WARNING "cuSOLVER not found, solver will not be available.")
+    endif()
 endif()
 
 ################################################################################

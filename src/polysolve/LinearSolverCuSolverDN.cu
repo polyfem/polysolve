@@ -6,10 +6,7 @@
 #include <string>
 #include <iostream>
 
-#define gpuErrchk(ans){ gpuAssert((ans), __FILE__, __LINE__); }
-
-inline void gpuAssert(cudaError_t code, const char *file, int line,
-                      bool abort = true) {
+inline void gpuErrchk(cudaError_t code) {
   if (code != cudaSuccess) {
     throw cudaGetErrorString(code);
   }
@@ -33,7 +30,7 @@ namespace polysolve
 
     void LinearSolverCuSolverDN::setParameters(const json &params)
     {
-        //TODO: make a json option for legacy solver vs new solver
+
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -56,30 +53,8 @@ namespace polysolve
     void LinearSolverCuSolverDN::factorize(const StiffnessMatrix &A)
     {
         numrows = (int)A.rows();
-        
         Adense = Eigen::MatrixXd(A);
-
-        //copy A to device
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(double) * Adense.size()));
-        gpuErrchk(cudaMemcpy(d_A, (const void *)Adense.data(), sizeof(double) * Adense.size(), cudaMemcpyHostToDevice));
-        
-        cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A,
-                                    numrows, CUDA_R_64F, &d_lwork, &h_lwork);
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(double) * d_lwork));
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(double) * h_lwork));
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int)));
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows));
-        int info = 0;
-        
-        //factorize
-        cusolverStatus_t solvererr = cusolverDnXgetrf(cuHandle, cuParams, numrows, numrows, CUDA_R_64F, d_A, 
-        numrows, d_Ipiv, CUDA_R_64F, d_work, d_lwork, h_work, h_lwork, d_info);
-
-        if(solvererr == CUSOLVER_STATUS_INVALID_VALUE){
-            throw std::invalid_argument("CUDA returned invalid value");
-        }
-        
-        gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
+        factorize(Adense);
     }
 
     void LinearSolverCuSolverDN::factorize(const Eigen::MatrixXd &A)

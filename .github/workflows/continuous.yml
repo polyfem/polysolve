@@ -131,6 +131,12 @@ jobs:
       - name: cuda-toolkit
         uses: Jimver/cuda-toolkit@v0.2.8
 
+      - name: Test CUDA
+        run: |
+          echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"
+          echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+          nvcc -V
+
       - name: Configure and build
         shell: cmd
         run: |

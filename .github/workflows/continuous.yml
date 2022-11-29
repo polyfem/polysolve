@@ -66,11 +66,12 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.8
       
       - name: Test CUDA
+        if: runner.os == 'Linux'
         run: |
           echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"
           echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
           nvcc -V
-          nvidia-smi
+          modinfo /usr/lib/modules/$(uname -r)/kernel/drivers/video/nvidia.ko | grep ^version
 
       - name: Configure
         run: |

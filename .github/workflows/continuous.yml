@@ -42,6 +42,10 @@ jobs:
           xorg-dev \
           ccache
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
+      
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
 
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'

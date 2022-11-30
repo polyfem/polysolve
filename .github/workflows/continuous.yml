@@ -36,16 +36,13 @@ jobs:
       - name: Dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
+          sudo apt update
           sudo apt-get install \
           libblas-dev \
           libglu1-mesa-dev \
           xorg-dev \
           ccache
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
-      
-      - name: Setup tmate session
-        if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
 
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'

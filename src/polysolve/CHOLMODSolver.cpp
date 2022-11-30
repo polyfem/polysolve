@@ -2,41 +2,49 @@
 
 #include "CHOLMODSolver.hpp"
 #include <Eigen/CholmodSupport>
+
+#include <stdio.h>
 #include <iostream>
+#include <memory>
 
 namespace polysolve
 {
-
-    cholmod_sparse eigen2cholmod(StiffnessMatrixL &mat)
+    namespace
     {
-        cholmod_sparse res;
-        res.nzmax = mat.nonZeros();
-        res.nrow = mat.rows();
-        res.ncol = mat.cols();
-        res.p = mat.outerIndexPtr();
-        res.i = mat.innerIndexPtr();
-        res.x = mat.valuePtr();
-        res.z = 0;
-        res.sorted = 1;
-        if (mat.isCompressed())
+        cholmod_sparse eigen2cholmod(const StiffnessMatrix &mat)
         {
-            res.packed = 1;
-            res.nz = 0;
+            cholmod_sparse res;
+            res.nzmax = mat.nonZeros();
+            res.nrow = mat.rows();
+            res.ncol = mat.cols();
+
+            memcpy(res.p, mat.outerIndexPtr(), sizeof(mat.outerIndexPtr()));
+            memcpy(res.i, mat.innerIndexPtr(), sizeof(mat.innerIndexPtr()));
+            memcpy(res.x, mat.valuePtr(), sizeof(mat.valuePtr()));
+
+            res.z = 0;
+            res.sorted = 1;
+            // if (mat.isCompressed())
+            {
+                assert(mat.isCompressed());
+                res.packed = 1;
+                res.nz = 0;
+            }
+            // else
+            // {
+            //     res.packed = 0;
+            //     res.nz = mat.innerNonZeroPtr();
+            // }
+
+            res.dtype = CHOLMOD_DOUBLE;
+
+            res.itype = CHOLMOD_LONG;
+            res.stype = 1;
+            res.xtype = CHOLMOD_REAL;
+
+            return res;
         }
-        else
-        {
-            res.packed = 0;
-            res.nz = mat.innerNonZeroPtr();
-        }
-
-        res.dtype = CHOLMOD_DOUBLE;
-
-        res.itype = CHOLMOD_LONG;
-        res.stype = 1;
-        res.xtype = CHOLMOD_REAL;
-
-        return res;
-    }
+    } // namespace
 
     cholmod_dense eigen2cholmod(Eigen::VectorXd &mat)
     {
@@ -72,26 +80,27 @@ namespace polysolve
     //     params["final_res_norm"] = final_res_norm;
     // }
 
-    void CHOLMODSolver::analyzePattern(StiffnessMatrixL &Ain)
+    void CHOLMODSolver::analyzePattern(const StiffnessMatrix &Ain, const int precond_num)
     {
-        if (!Ain.isCompressed())
-        {
-            Ain.makeCompressed();
-        }
+        assert(Ain.isCompressed());
+
         A = eigen2cholmod(Ain);
         L = cholmod_l_analyze(&A, cm);
     }
 
-    void CHOLMODSolver::factorize(StiffnessMatrixL &Ain)
+    void CHOLMODSolver::factorize(const StiffnessMatrix &Ain)
     {
         cholmod_l_factorize(&A, L, cm);
     }
 
-    void CHOLMODSolver::solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result)
+    void CHOLMODSolver::solve(const Ref<const VectorXd> rhs, Ref<VectorXd> result)
     {
-        b = eigen2cholmod(rhs);
+        assert(result.size() == rhs.size());
+
+        // b = eigen2cholmod(rhs); //TODO: fix me
+
         x = cholmod_l_solve(CHOLMOD_A, L, &b, cm);
-        result.conservativeResize(rhs.size());
+
         memcpy(result.data(), x->x, result.size() * sizeof(result[0]));
     }
 

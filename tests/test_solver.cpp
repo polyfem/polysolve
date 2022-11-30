@@ -585,10 +585,10 @@ TEST_CASE("CHOLMOD", "[solver]")
     Eigen::VectorXd x(A.rows());
     x.setZero();
 
-    CHOLMODSolver solver;
-    solver.analyzePattern(A);
-    solver.factorize(A);
-    solver.solve(b, x);
+    auto solver = LinearSolver::create("CholmodGPU", "");
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
 
     const double err = (b - (A * x)).norm();
     REQUIRE(err < 1e-8);

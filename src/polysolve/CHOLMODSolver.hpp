@@ -4,6 +4,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <polysolve/LinearSolver.hpp>
+
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
@@ -15,11 +17,10 @@ using json = nlohmann::json;
 
 namespace polysolve
 {
-    typedef Eigen::SparseMatrix<double, Eigen::ColMajor, long int> StiffnessMatrixL;
     /**
      @brief      Base class for cholmod solver.
- */
-    class CHOLMODSolver
+     */
+    class CHOLMODSolver : public LinearSolver
     {
 
     protected:
@@ -32,17 +33,20 @@ namespace polysolve
         CHOLMODSolver();
         ~CHOLMODSolver();
 
+    private:
+        POLYSOLVE_DELETE_MOVE_COPY(CHOLMODSolver)
+    public:
         // Set solver parameters
         // virtual void setParameters(const json &params) {}
 
         // Get info on the last solve step
-        void getInfo(json &params) const;
+        virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
-        void analyzePattern(StiffnessMatrixL &Ain);
+        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
 
         // Factorize system matrix
-        void factorize(StiffnessMatrixL &Ain);
+        void factorize(const StiffnessMatrix &A) override;
 
         //
         // @brief         { Solve the linear system Ax = b }
@@ -53,7 +57,7 @@ namespace polysolve
         //                      initial guess, and must thus be properly allocated
         //                      and initialized. }
         //
-        void solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result);
+        virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
     };
 
 } // namespace polysolve

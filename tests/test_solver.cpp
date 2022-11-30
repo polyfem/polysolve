@@ -621,16 +621,16 @@ TEST_CASE("cusolverdn_dense", "[solver]")
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
-/*
+
 TEST_CASE("cusolverdn_5cubes", "[solver]")
 {
     const std::string path = POLYSOLVE_DATA_DIR;
     auto solver = LinearSolver::create("cuSolverDN", "");
     
-    std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");
-    std::ofstream solve_times_file(path+"/solve_times_5cubes.txt");
+    //std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");
+    //std::ofstream solve_times_file(path+"/solve_times_5cubes.txt");
 
-    for(int i = 0; i < 1000; i++){
+    for(int i = 0; i <= 1091; i++){
         Eigen::MatrixXd A(120, 120);
         std::string hessian_path = path + "/matrixdata-5cubes/hessian" + std::to_string(i) + ".txt";
         std::ifstream hessian_file(hessian_path);
@@ -652,21 +652,23 @@ TEST_CASE("cusolverdn_5cubes", "[solver]")
 
         solver->analyzePattern(A, A.rows());
         
-        std::chrono::steady_clock::time_point beginf = std::chrono::steady_clock::now();
+        //std::chrono::steady_clock::time_point beginf = std::chrono::steady_clock::now();
         solver->factorize(A);
-        std::chrono::steady_clock::time_point endf = std::chrono::steady_clock::now();
-        std::cout << "time to factorize: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << std::endl;
-        factorize_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << " ";
+        //std::chrono::steady_clock::time_point endf = std::chrono::steady_clock::now();
+        //std::cout << "time to factorize: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << std::endl;
+        //factorize_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << " ";
 
-        std::chrono::steady_clock::time_point begins = std::chrono::steady_clock::now();
+        //std::chrono::steady_clock::time_point begins = std::chrono::steady_clock::now();
         solver->solve(b, x);
-        std::chrono::steady_clock::time_point ends = std::chrono::steady_clock::now();
-        std::cout << "time to solve: " << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << std::endl;
-        solve_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << " ";
+        //std::chrono::steady_clock::time_point ends = std::chrono::steady_clock::now();
+        //std::cout << "time to solve: " << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << std::endl;
+        //solve_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << " ";
+
+        //std::cout << "Ax norm: " << (A*x).norm() << std::endl;
+        //std::cout << "b norm: " << b.norm() << std::endl;
 
         const double err = (A * x - b).norm();
         REQUIRE(err < 1e-8);
     }
 }
-*/
 #endif

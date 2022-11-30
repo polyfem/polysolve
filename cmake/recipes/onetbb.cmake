@@ -1,5 +1,5 @@
 #
-# Copyright 2020 Adobe. All rights reserved.
+# Copyright 2021 Adobe. All rights reserved.
 # This file is licensed to you under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License. You may obtain a copy
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -9,7 +9,6 @@
 # OF ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 #
-
 if(TARGET TBB::tbb)
     return()
 endif()
@@ -20,7 +19,8 @@ include(FetchContent)
 FetchContent_Declare(
     tbb
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
-    GIT_TAG 1098f48187c718ef782b0aa01861184886906cf4
+    GIT_TAG v2021.6.0
+    GIT_SHALLOW TRUE
 )
 
 option(TBB_TEST "Enable testing" OFF)
@@ -45,6 +45,13 @@ if(NOT TARGET TBB::tbb)
     message(FATAL_ERROR "TBB::tbb is still not defined!")
 endif()
 
+include(CheckCXXCompilerFlag)
+set(FLAG "-Wno-error=stringop-overflow")
+string(REPLACE "=" "-" FLAG_VAR "${FLAG}")
+if(NOT DEFINED IS_SUPPORTED_${FLAG_VAR})
+    check_cxx_compiler_flag("-Wno-error=stringop-overflow" IS_SUPPORTED_${FLAG_VAR})
+endif()
+
 foreach(name IN ITEMS tbb tbbmalloc tbbmalloc_proxy)
     if(TARGET ${name})
         # Folder name for IDE
@@ -56,5 +63,10 @@ foreach(name IN ITEMS tbb tbbmalloc tbbmalloc_proxy)
         # Without this macro, TBB will explicitly link against "tbb12_debug.lib" in Debug configs.
         # This is undesirable, since our pre-compiled version of MKL is linked against "tbb12.dll".
         target_compile_definitions(${name} PUBLIC -D__TBB_NO_IMPLICIT_LINKAGE=1)
+
+        # https://github.com/oneapi-src/oneTBB/issues/843
+        if(IS_SUPPORTED_${FLAG_VAR})
+            target_compile_options(${name} PRIVATE ${FLAG})
+        endif()
     endif()
 endforeach()

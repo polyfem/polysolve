@@ -16,9 +16,15 @@ namespace polysolve
         // Solver class
         SparseSolver m_Solver;
 
+        // Name of the solver
+        std::string m_Name;
+
     public:
         // Name of the solver type (for debugging purposes)
-        virtual std::string name() const override { return typeid(m_Solver).name(); }
+        virtual std::string name() const override { return m_Name; }
+
+        // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
+        LinearSolverEigenDirect(const std::string &name) { m_Name = name; }
 
     public:
         // Get info on the last solve step
@@ -43,9 +49,15 @@ namespace polysolve
         // Solver class
         SparseSolver m_Solver;
 
+        // Name of the solver
+        std::string m_Name;
+
     public:
         // Name of the solver type (for debugging purposes)
-        virtual std::string name() const override { return typeid(m_Solver).name(); }
+        virtual std::string name() const override { return m_Name; }
+
+        // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
+        LinearSolverEigenIterative(const std::string &name) { m_Name = name; }
 
     public:
         // Set solver parameters

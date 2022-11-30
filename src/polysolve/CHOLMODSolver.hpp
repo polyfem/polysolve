@@ -1,15 +1,17 @@
 #pragma once
 
+#ifdef POLYSOLVE_WITH_CHOLMOD
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include "cholmod.h"
+
+#include <cholmod.h>
 #include <memory>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
-
 
 namespace polysolve
 {
@@ -19,9 +21,8 @@ namespace polysolve
  */
     class CHOLMODSolver
     {
-        
-    protected:
 
+    protected:
         cholmod_common *cm;
         cholmod_sparse A;
         cholmod_dense *x, b;
@@ -56,3 +57,5 @@ namespace polysolve
     };
 
 } // namespace polysolve
+
+#endif

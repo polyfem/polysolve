@@ -67,36 +67,36 @@ namespace polysolve
     // Set solver parameters
     void SaddlePointSolver::setParameters(const json &params)
     {
-        if (params.count("max_iter"))
+        if (params.contains("max_iter"))
         {
             max_iter_ = params["max_iter"];
         }
 
-        if (params.count("conv_tol"))
+        if (params.contains("conv_tol"))
         {
             conv_tol_ = params["conv_tol"];
         }
-        else if (params.count("tolerance"))
+        else if (params.contains("tolerance"))
         {
             conv_tol_ = params["tolerance"];
         }
 
-        if (params.count("asymmetric_solver_name"))
+        if (params.contains("asymmetric_solver_name"))
         {
             asymmetric_solver_name_ = params["asymmetric_solver_name"].get<std::string>();
         }
 
-        if (params.count("asymmetric_solver_params"))
+        if (params.contains("asymmetric_solver_params"))
         {
             asymmetric_solver_params_ = params["asymmetric_solver_params"];
         }
 
-        if (params.count("symmetric_solver_name"))
+        if (params.contains("symmetric_solver_name"))
         {
             symmetric_solver_name_ = params["symmetric_solver_name"].get<std::string>();
         }
 
-        if (params.count("symmetric_solver_params"))
+        if (params.contains("symmetric_solver_params"))
         {
             symmetric_solver_params_ = params["symmetric_solver_params"];
         }

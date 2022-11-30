@@ -25,6 +25,14 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
 endif()
 
 ################################################################################
+# CMake Policies
+################################################################################
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+    cmake_policy(SET CMP0135 NEW) # https://cmake.org/cmake/help/latest/policy/CMP0135.html
+endif()
+
+################################################################################
 
 project(PolySolve
         DESCRIPTION "Easy-to-use wrapper for linear solver"
@@ -76,7 +84,6 @@ include(polysolve_use_colors)
 
 # IPC Toolkit utils
 include(polysolve_prepend_current_path)
-include(polysolve_copy_headers)
 include(polysolve_set_source_group)
 
 # Sort projects inside the solution
@@ -96,7 +103,7 @@ add_library(polysolve::polysolve ALIAS polysolve)
 add_subdirectory(src)
 
 # Public include directory for Polysolve
-target_include_directories(polysolve PUBLIC ${PROJECT_BINARY_DIR}/include)
+target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 ################################################################################
 # Definitions
@@ -138,12 +145,12 @@ endif()
 
 # Json (MIT)
 include(json)
-target_link_libraries(polysolve PUBLIC nlohmann::json)
+target_link_libraries(polysolve PUBLIC nlohmann_json::nlohmann_json)
 
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)
     include(suitesparse)
-    target_link_libraries(polysolve PUBLIC SuiteSparse::SuiteSparse)
+    target_link_libraries(polysolve PUBLIC SuiteSparse::CHOLMOD)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CHOLMOD)
 endif()
 

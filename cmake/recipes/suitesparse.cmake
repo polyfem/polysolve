@@ -23,8 +23,8 @@ message(STATUS "Third-party: creating targets 'SuiteSparse::SuiteSparse'")
 include(FetchContent)
 FetchContent_Declare(
     suitesparse
-    GIT_REPOSITORY https://github.com/sergiud/SuiteSparse.git
-    GIT_TAG 3b92085cb5c7fe7917d12bcd5dd346502366d10f
+    URL https://github.com/sergiud/SuiteSparse/archive/refs/tags/5.12.0-cmake.3.zip
+    URL_HASH MD5=73a6fbfc949d43f37c2c8749662fb35e
 )
 
 FetchContent_GetProperties(suitesparse)
@@ -41,14 +41,8 @@ option(WITH_TBB "Enables Intel Threading Building Blocks support" OFF)
 option(WITH_LGPL "Enable GNU LGPL modules" ON)
 option(WITH_CUDA "Enable CUDA support" OFF)
 option(WITH_OPENMP "Enable OpenMP support" OFF)
-cmake_dependent_option(WITH_GPL "Enable GNU GPL modules" ON "WITH_LGPL" OFF)
-cmake_dependent_option(WITH_CAMD "Enable interfaces to CAMD, CCOLAMD, CSYMAMD in Partition module" OFF "WITH_LGPL" OFF)
-cmake_dependent_option(WITH_PARTITION "Enable the Partition module" OFF "WITH_LGPL AND METIS_FOUND" OFF)
-cmake_dependent_option(WITH_CHOLESKY "Enable the Cholesky module" ON "WITH_LGPL" OFF)
-cmake_dependent_option(WITH_CHECK "Enable the Check module" OFF "WITH_LGPL" OFF)
-cmake_dependent_option(WITH_MODIFY "Enable the Modify module" OFF "WITH_GPL" OFF)
-cmake_dependent_option(WITH_MATRIXOPS "Enable the MatrixOps module" OFF "WITH_GPL" OFF)
-cmake_dependent_option(WITH_SUPERNODAL "Enable the Supernodal module" ON "WITH_GPL" OFF)
+set (WITH_LICENSE "GPL" CACHE STRING "Software license the binary distribution should adhere")
+set_property (CACHE WITH_LICENSE PROPERTY STRINGS "Minimal;GPL;LGPL")
 
 option(SUITE_SPARSE_WITH_MKL "Build SuiteSparse using MKL" ON)
 
@@ -56,10 +50,22 @@ if(SUITE_SPARSE_WITH_MKL)
     include(mkl)
     if(NOT TARGET blas)
         add_library(blas INTERFACE IMPORTED GLOBAL)
+        add_library(BLAS::BLAS ALIAS blas) # This alias is used by SuiteSparse
     endif()
     if(NOT TARGET lapack)
         add_library(lapack INTERFACE IMPORTED GLOBAL)
+        add_library(LAPACK::LAPACK ALIAS lapack) # This alias is used by SuiteSparse
     endif()
+
+    # This is copied from SuiteSparse/CMakeLists.txt. Needs to use blas and
+    # lapack instead of BLAS::BLAS and LAPACK::LAPACK
+    include(CMakePushCheckState)
+    include (CheckFunctionExists)
+    cmake_push_check_state (RESET)
+    set(CMAKE_REQUIRED_LIBRARIES blas lapack)
+    check_function_exists (sgemm HAVE_BLAS_NO_UNDERSCORE)
+    check_function_exists (sgemm_ HAVE_BLAS_UNDERSCORE)
+    cmake_pop_check_state ()
 
     function(suitesparse_import_target)
         macro(ignore_package NAME)
@@ -69,6 +75,13 @@ if(SUITE_SPARSE_WITH_MKL)
 
         # Prefer Config mode before Module mode
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+
+        # Copy over the TBB version file so SuiteSparse wont complain
+        include(onetbb)
+        FetchContent_GetProperties(tbb)
+        ignore_package(TBB)
+        file(COPY "${tbb_BINARY_DIR}/TBBConfigVersion.cmake" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/TBB")
+        set (CMAKE_DISABLE_FIND_PACKAGE_TBB ON) # Disable find TBB completly (only SPQR uses it in SuiteSparse)
 
         ignore_package(BLAS)
         ignore_package(CBLAS)
@@ -102,21 +115,7 @@ else()
     suitesparse_import_target()
 endif()
 
-macro(suitesparse_add_library LIBRARY_NAME)
-    add_library(SuiteSparse_${LIBRARY_NAME} INTERFACE)
-    add_library(SuiteSparse::${LIBRARY_NAME} ALIAS SuiteSparse_${LIBRARY_NAME})
-    foreach(name IN ITEMS ${LIBRARY_NAME})
-        if(NOT TARGET ${name})
-            message(FATAL_ERROR "${name} is not a valid CMake target. Please check your config!")
-        endif()
-        target_link_libraries(SuiteSparse_${LIBRARY_NAME} INTERFACE ${name})
-    endforeach()
-endmacro()
-
-suitesparse_add_library(cholmod)
-# suitesparse_add_library(umfpack)
-
 add_library(SuiteSparse_SuiteSparse INTERFACE)
 add_library(SuiteSparse::SuiteSparse ALIAS SuiteSparse_SuiteSparse)
-target_link_libraries(SuiteSparse_SuiteSparse INTERFACE SuiteSparse::cholmod)
+target_link_libraries(SuiteSparse_SuiteSparse INTERFACE SuiteSparse::CHOLMOD)
 # target_link_libraries(SuiteSparse_SuiteSparse INTERFACE SuiteSparse::umfpack)

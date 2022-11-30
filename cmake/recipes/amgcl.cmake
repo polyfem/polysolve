@@ -20,7 +20,7 @@ include(FetchContent)
 FetchContent_Declare(
     amgcl
     GIT_REPOSITORY https://github.com/ddemidov/amgcl.git
-    GIT_TAG 1.4.2
+    GIT_TAG 1.4.3
     GIT_SHALLOW TRUE
 )
 

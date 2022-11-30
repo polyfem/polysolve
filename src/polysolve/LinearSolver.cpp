@@ -7,6 +7,7 @@
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_CHOLMOD
 #include <Eigen/CholmodSupport>
+#include <polysolve/CHOLMODSolver.hpp>
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
 #include <Eigen/UmfPackSupport>
@@ -183,6 +184,10 @@ namespace polysolve
         else if (solver == "Eigen::CholmodSupernodalLLT")
         {
             RETURN_DIRECT_SOLVER_PTR(CholmodSupernodalLLT, "Eigen::CholmodSupernodalLLT");
+        }
+        else if (solver == "CholmodGPU")
+        {
+            std::make_unique<CHOLMODSolver>();
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -275,6 +280,7 @@ namespace polysolve
             "Eigen::SparseLU",
 #ifdef POLYSOLVE_WITH_CHOLMOD
             "Eigen::CholmodSupernodalLLT",
+            "CholmodGPU",
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
             "Eigen::UmfPackLU",

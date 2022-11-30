@@ -459,7 +459,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-                json params;
+        json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 1000;
         params["AMGCL"]["block_size"] = 3;
@@ -481,7 +481,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         json solver_info;
         auto solver = LinearSolver::create("AMGCL", "");
         prof.tic("setup");
-                json params;
+        json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 10000;
         solver->setParameters(params);
@@ -569,5 +569,28 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     }
     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
+}
+#endif
+
+#ifdef POLYSOLVE_WITH_CHOLMOD
+TEST_CASE("CHOLMOD", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double, Eigen::ColMajor, long int> A;
+    bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    Eigen::VectorXd b(A.rows());
+    b.setOnes();
+    Eigen::VectorXd x(A.rows());
+    x.setZero();
+
+    auto solver = LinearSolver::create("CholmodGPU", "");
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+
+    const double err = (b - (A * x)).norm();
+    REQUIRE(err < 1e-8);
 }
 #endif

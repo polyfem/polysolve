@@ -26,6 +26,9 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
 #endif
+#ifdef POLYSOLVE_WITH_CUSOLVER
+#include <polysolve/LinearSolverCuSolverDN.cuh>
+#endif
 #include <unsupported/Eigen/IterativeSolvers>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,6 +217,12 @@ namespace polysolve
         {
             return std::make_unique<LinearSolverPardiso>();
 #endif
+#ifdef POLYSOLVE_WITH_CUSOLVER
+        }
+        else if (solver == "cuSolverDN")
+        {
+            return std::make_unique<LinearSolverCuSolverDN>();
+#endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
@@ -288,6 +297,9 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",
+#endif
+#ifdef POLYSOLVE_WITH_CUSOLVER
+            "cuSolverDN",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

@@ -45,6 +45,7 @@ option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                    
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                      ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
+option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                    OFF)
 
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)
@@ -206,6 +207,17 @@ if(POLYSOLVE_WITH_SPECTRA)
     include(spectra)
     target_link_libraries(polysolve PUBLIC spectra::spectra)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SPECTRA)
+endif()
+
+# cuSolver solvers
+if(POLYSOLVE_WITH_CUSOLVER)
+    include(cusolverdn)
+    if(TARGET CUDA::cusolver)
+        target_link_libraries(polysolve PUBLIC CUDA::cusolver)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUSOLVER)
+    else()
+        message(WARNING "cuSOLVER not found, solver will not be available.")
+    endif()
 endif()
 
 ################################################################################

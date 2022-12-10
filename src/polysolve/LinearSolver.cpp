@@ -29,6 +29,9 @@
 #include <polysolve/LinearSolverAMGCL_cuda.hpp>
 #endif
 #endif
+#ifdef POLYSOLVE_WITH_CUSOLVER
+#include <polysolve/LinearSolverCuSolverDN.cuh>
+#endif
 #include <unsupported/Eigen/IterativeSolvers>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -203,6 +206,10 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_MKL
         }
+        else if (solver == "Eigen::PardisoLLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(PardisoLLT, "Eigen::PardisoLLT");
+        }
         else if (solver == "Eigen::PardisoLDLT")
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLDLT, "Eigen::PardisoLDLT");
@@ -216,6 +223,12 @@ namespace polysolve
         else if (solver == "Pardiso")
         {
             return std::make_unique<LinearSolverPardiso>();
+#endif
+#ifdef POLYSOLVE_WITH_CUSOLVER
+        }
+        else if (solver == "cuSolverDN")
+        {
+            return std::make_unique<LinearSolverCuSolverDN>();
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
@@ -293,11 +306,15 @@ namespace polysolve
             "Eigen::SuperLU",
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+            "Eigen::PardisoLLT",
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",
+#endif
+#ifdef POLYSOLVE_WITH_CUSOLVER
+            "cuSolverDN",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

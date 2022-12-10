@@ -42,14 +42,17 @@ project(PolySolve
 option(POLYSOLVE_WITH_SANITIZERS "Enable sanitizers in compilation targets" OFF)
 
 # Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_CUDA "Enable CUDA" OFF)
+
 option(POLYSOLVE_WITH_CHOLMOD "Enable Cholmod library" ON)
 option(POLYSOLVE_WITH_UMFPACK "Enable UmfPack library" ON)
 option(POLYSOLVE_WITH_SUPERLU "Enable SuperLU library" ON)
 option(POLYSOLVE_WITH_MKL "Enable MKL library" ON)
+option(POLYSOLVE_WITH_CUSOLVER "Enable cuSOLVER library" OFF)
 
-option(POLYSOLVE_WITH_CUDA "Enable CUDA" OFF)
-option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" ON)
-option(POLYSOLVE_WITH_HYPRE "Enable hypre" OFF)
+option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" OFF)
+option(POLYSOLVE_WITH_HYPRE "Enable hypre" ON)
+option(HYPRE_WITH_MPI "Enable hypre" OFF)
 option(POLYSOLVE_WITH_AMGCL "Use AMGCL" ON)
 option(POLYSOLVE_WITH_SPECTRA "Enable computing spectrum" ON)
 
@@ -267,6 +270,21 @@ if(POLYSOLVE_WITH_SPECTRA)
 endif()
 
 # ###############################################################################
+
+# cuSolver solvers
+if(POLYSOLVE_WITH_CUSOLVER)
+    include(cusolverdn)
+
+    if(TARGET CUDA::cusolver)
+        target_link_libraries(polysolve PUBLIC CUDA::cusolver)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUSOLVER)
+    else()
+        message(WARNING "cuSOLVER not found, solver will not be available.")
+    endif()
+endif()
+
+# ###############################################################################
+
 # Compiler options
 # ###############################################################################
 

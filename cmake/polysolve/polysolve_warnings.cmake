@@ -169,7 +169,6 @@ foreach(FLAG IN ITEMS ${POLYSOLVE_WARNING_FLAGS})
 	endif()
 
 	if(IS_SUPPORTED_${FLAG_VAR})
-		target_compile_options(polysolve_warnings INTERFACE $<$<COMPILE_LANGUAGE:CXX>: ${FLAG}
-			>)
+		target_compile_options(polysolve_warnings INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
 	endif()
 endforeach()

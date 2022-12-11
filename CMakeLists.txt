@@ -42,17 +42,18 @@ project(PolySolve
 option(POLYSOLVE_WITH_SANITIZERS "Enable sanitizers in compilation targets" OFF)
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_CUDA "Enable CUDA" OFF)
-
 option(POLYSOLVE_WITH_CHOLMOD "Enable Cholmod library" ON)
 option(POLYSOLVE_WITH_UMFPACK "Enable UmfPack library" ON)
 option(POLYSOLVE_WITH_SUPERLU "Enable SuperLU library" ON)
 option(POLYSOLVE_WITH_MKL "Enable MKL library" ON)
-option(POLYSOLVE_WITH_CUSOLVER "Enable cuSOLVER library" OFF)
 
-option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" OFF)
+option(POLYSOLVE_WITH_CUSOLVER "Enable cuSOLVER library" ON)
+
+option(POLYSOLVE_WITH_CUDA "Enable CUDA" ON)
+option(POLYSOLVE_WITH_PETSC "Enable PETSC" ON)
+option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" ON)
 option(POLYSOLVE_WITH_HYPRE "Enable hypre" ON)
-option(HYPRE_WITH_MPI "Enable hypre" OFF)
+option(HYPRE_WITH_MPI "Enable hypre MPI" OFF)
 option(POLYSOLVE_WITH_AMGCL "Use AMGCL" ON)
 option(POLYSOLVE_WITH_SPECTRA "Enable computing spectrum" ON)
 
@@ -156,7 +157,7 @@ if(POLYSOLVE_WITH_CUDA)
     find_package(CUDAToolkit)
 
     if(CUDAToolkit_FOUND)
-        message(STATUS "Found CUDATooklkit")
+        message(STATUS "Found CUDAToolkit")
         set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
         enable_language(CUDA)
         target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUDA)
@@ -199,6 +200,7 @@ if(POLYSOLVE_WITH_HYPRE)
 
     if(HYPRE_WITH_MPI)
         target_compile_definitions(polysolve PUBLIC HYPRE_WITH_MPI)
+        message(STATUS "HYPRE WITH MPI.")
     endif()
 endif()
 
@@ -278,9 +280,27 @@ if(POLYSOLVE_WITH_CUSOLVER)
     if(TARGET CUDA::cusolver)
         target_link_libraries(polysolve PUBLIC CUDA::cusolver)
         target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUSOLVER)
+        message(STATUS "cuSOLVER found!")
     else()
         message(WARNING "cuSOLVER not found, solver will not be available.")
     endif()
+endif()
+
+# ###############################################################################
+
+# PETSC solvers
+if(POLYSOLVE_WITH_PETSC)
+    # include(PETSC PETSc)
+    find_package(MPI)
+
+    # if(TARGET PETSC::PETSc)
+    target_link_libraries(polysolve PUBLIC -lpetsc MPI::MPI_CXX)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_PETSC)
+    message(STATUS "PETSc found!")
+
+    # else()
+    # message(WARNING "PETSc not found, solver will not be available.")
+    # endif()
 endif()
 
 # ###############################################################################

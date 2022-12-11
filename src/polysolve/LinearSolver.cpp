@@ -32,6 +32,9 @@
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include <polysolve/LinearSolverCuSolverDN.cuh>
 #endif
+#ifdef POLYSOLVE_WITH_PETSC
+#include <polysolve/LinearSolverPETSC.hpp>
+#endif
 #include <unsupported/Eigen/IterativeSolvers>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -230,6 +233,12 @@ namespace polysolve
         {
             return std::make_unique<LinearSolverCuSolverDN>();
 #endif
+#ifdef POLYSOLVE_WITH_PETSC
+        }
+        else if (solver == "PETSC_Solver")
+        {
+            return std::make_unique<LinearSolverPETSC>();
+#endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
@@ -315,6 +324,9 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
             "cuSolverDN",
+#endif
+#ifdef POLYSOLVE_WITH_PETSC
+            "PETSC_Solver",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

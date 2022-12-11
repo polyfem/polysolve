@@ -38,7 +38,8 @@ void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
     A.setFromTriplets(triple.begin(), triple.end());
 };
 
-TEST_CASE("amgcl_crystm03_cg", "[solver]"){
+TEST_CASE("amgcl_crystm03_cg", "[solver]")
+{
     const std::string path = POLYSOLVE_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
@@ -68,12 +69,13 @@ TEST_CASE("amgcl_crystm03_cg", "[solver]"){
         prof.toc("solve");
         solver->getInfo(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
-        std::cout<< prof << std::endl;    
+        std::cout << prof << std::endl;
     }
-    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);    
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
 }
 
-TEST_CASE("amgcl_crystm03_bicgstab", "[solver]"){
+TEST_CASE("amgcl_crystm03_bicgstab", "[solver]")
+{
     const std::string path = POLYSOLVE_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
@@ -103,7 +105,134 @@ TEST_CASE("amgcl_crystm03_bicgstab", "[solver]"){
         prof.toc("solve");
         solver->getInfo(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
-        std::cout<< prof << std::endl;    
+        std::cout << prof << std::endl;
     }
-    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);    
+    REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
+}
+
+TEST_CASE("PETSC_MUMPS", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    auto solver = LinearSolver::create("PETSC_Solver", "");
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A, 0);
+    solver->solve(b, x);
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+
+TEST_CASE("cusolverdn", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    auto solver = LinearSolver::create("cuSolverDN", "");
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+TEST_CASE("cusolverdn_dense", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+
+    Eigen::MatrixXd A(4, 4);
+    for (int i = 0; i < 4; i++)
+    {
+        A(i, i) = 1.0;
+    }
+    A(0, 1) = 1.0;
+    A(3, 0) = 1.0;
+
+    auto solver = LinearSolver::create("cuSolverDN", "");
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+
+TEST_CASE("cusolverdn_5cubes", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    auto solver = LinearSolver::create("cuSolverDN", "");
+
+    // std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");
+    // std::ofstream solve_times_file(path+"/solve_times_5cubes.txt");
+
+    for (int i = 0; i <= 1091; i++)
+    {
+        Eigen::MatrixXd A(120, 120);
+        std::string hessian_path = path + "/matrixdata-5cubes/hessian" + std::to_string(i) + ".txt";
+        std::ifstream hessian_file(hessian_path);
+        for (int m = 0; m < 120; m++)
+        {
+            for (int n = 0; n < 120; n++)
+            {
+                hessian_file >> A(m, n);
+            }
+        }
+
+        Eigen::VectorXd b(A.rows());
+        std::string gradient_path = path + "/matrixdata-5cubes/gradient" + std::to_string(i) + ".txt";
+        std::ifstream gradient_file(gradient_path);
+        for (int m = 0; m < 120; m++)
+        {
+            gradient_file >> b(m);
+        }
+
+        Eigen::VectorXd x(b.size());
+        x.setZero();
+
+        solver->analyzePattern(A, A.rows());
+
+        // std::chrono::steady_clock::time_point beginf = std::chrono::steady_clock::now();
+        solver->factorize(A);
+        // std::chrono::steady_clock::time_point endf = std::chrono::steady_clock::now();
+        // std::cout << "time to factorize: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << std::endl;
+        // factorize_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(endf-beginf).count() << " ";
+
+        // std::chrono::steady_clock::time_point begins = std::chrono::steady_clock::now();
+        solver->solve(b, x);
+        // std::chrono::steady_clock::time_point ends = std::chrono::steady_clock::now();
+        // std::cout << "time to solve: " << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << std::endl;
+        // solve_times_file << std::chrono::duration_cast<std::chrono::nanoseconds>(ends-begins).count() << " ";
+
+        // std::cout << "Ax norm: " << (A*x).norm() << std::endl;
+        // std::cout << "b norm: " << b.norm() << std::endl;
+
+        const double err = (A * x - b).norm();
+        REQUIRE(err < 1e-8);
+    }
 }

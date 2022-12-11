@@ -7,7 +7,9 @@ set(SOURCES
     polysolve/LinearSolverAMGCL.cpp
     polysolve/LinearSolverAMGCL.hpp
     polysolve/LinearSolverCuSolverDN.cu
+    polysolve/LinearSolverPETSC.cpp
     polysolve/LinearSolverCuSolverDN.cuh
+    polysolve/LinearSolverPETSC.hpp
     polysolve/LinearSolverEigen.hpp
     polysolve/LinearSolverEigen.tpp
     polysolve/LinearSolverHypre.cpp
@@ -22,6 +24,5 @@ set(SOURCES
 
 polysolve_prepend_current_path(SOURCES)
 polysolve_set_source_group(${SOURCES})
-
 
 target_sources(polysolve PRIVATE ${SOURCES})

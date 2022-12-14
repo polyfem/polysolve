@@ -38,6 +38,29 @@ void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
     A.setFromTriplets(triple.begin(), triple.end());
 };
 
+TEST_CASE("PETSC-STRUMPACK", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/crystm03.mtx");
+    REQUIRE(ok);
+
+    auto solver = LinearSolver::create("PETSC_Solver", "");
+    // solver->setParameters(params);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A, 0, 5);
+    solver->solve(b, x);
+
+    // std::cout<<"Solver error: "<<x<<std::endl;
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
+}
+
 TEST_CASE("amgcl_crystm03_cg", "[solver]")
 {
     const std::string path = POLYSOLVE_DATA_DIR;
@@ -108,29 +131,6 @@ TEST_CASE("amgcl_crystm03_bicgstab", "[solver]")
         std::cout << prof << std::endl;
     }
     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
-}
-
-TEST_CASE("PETSC_MUMPS", "[solver]")
-{
-    const std::string path = POLYSOLVE_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
-
-    auto solver = LinearSolver::create("PETSC_Solver", "");
-    // solver->setParameters(params);
-    Eigen::VectorXd b(A.rows());
-    b.setRandom();
-    Eigen::VectorXd x(b.size());
-    x.setZero();
-
-    solver->analyzePattern(A, A.rows());
-    solver->factorize(A, 0);
-    solver->solve(b, x);
-
-    // std::cout<<"Solver error: "<<x<<std::endl;
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-8);
 }
 
 TEST_CASE("cusolverdn", "[solver]")

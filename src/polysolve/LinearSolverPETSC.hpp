@@ -41,8 +41,17 @@ namespace polysolve
         // Analyze sparsity pattern (sparse)
         virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
 
-        // Factorize system matrix (sparse)
-        virtual void factorize(StiffnessMatrix &A, int dummy) override;
+        // Factorize system matrix for PETSC(AIJ_CUSPARSE: TRUE OR FALSE)
+        /*SOLVER INDEX
+        0 = PARDISO
+        1 = SUPERLU_DIST
+        2 = CHOLMOD
+        3 = MUMPS
+        4 = CUSPARSE
+        5 = STRUMPACK
+        6 = HYPRE // NOT FULLY IMPLEMENTED YET
+        */
+        virtual void factorize(StiffnessMatrix &A, int AIJ_CUSPARSE, int SOLVER_INDEX) override;
 
         // Analyze sparsity pattern (dense, preferred)
         virtual void analyzePattern(const Eigen::MatrixXd &A, const int precond_num) override;
@@ -54,7 +63,7 @@ namespace polysolve
         virtual std::string name() const override { return "PETSC_Solver"; }
 
     protected:
-        void init();
+        int init();
 
     protected:
         // PETSC variables
@@ -63,7 +72,7 @@ namespace polysolve
         KSP ksp;
         PC pc;
         PetscReal norm;
-        PetscInt its;
+        PetscInt its, GPU_vec;
 
         // Eigen variables
         Eigen::SparseMatrix<double> A;

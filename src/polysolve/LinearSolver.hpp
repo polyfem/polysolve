@@ -85,8 +85,8 @@ namespace polysolve
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) {}
 
-        // Factorize system matrix
-        virtual void factorize(StiffnessMatrix &A, int dummy) {}
+        // Factorize system matrix (for PETSC)
+        virtual void factorize(StiffnessMatrix &A, int AIJ_CUSPARSE, int SOLVER_INDEX) {}
 
         // Analyze sparsity pattern of a dense matrix
         virtual void analyzePattern(const Eigen::MatrixXd &A, const int precond_num) {}

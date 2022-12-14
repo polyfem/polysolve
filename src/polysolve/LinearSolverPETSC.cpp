@@ -13,13 +13,11 @@ namespace polysolve
         init();
     }
 
-    void LinearSolverPETSC::init()
+    int LinearSolverPETSC::init()
     {
-        //        PetscCall(PetscInitialize(NULL, NULL, NULL, NULL));
-        //        PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
-        PetscInitialize(NULL, NULL, NULL, NULL);
-        PetscDeviceInitialize(PETSC_DEVICE_CUDA);
-        return;
+        PetscCall(PetscInitialize(NULL, NULL, NULL, NULL));
+        PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
+        return 0;
     }
 
     void LinearSolverPETSC::setParameters(const json &params)
@@ -40,60 +38,131 @@ namespace polysolve
     {
     }
 
-    void LinearSolverPETSC::factorize(StiffnessMatrix &A, int dummy)
+    void LinearSolverPETSC::factorize(StiffnessMatrix &A, int AIJ_CUSPARSE, int SOLVER_INDEX)
     {
-        //        PetscCall(MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, A.rows(), A.cols(), A.outerIndexPtr(), A.innerIndexPtr(), A.valuePtr(), &A_petsc));
-        //        PetscCall(MatConvert(A_petsc, MATAIJCUSPARSE, MAT_INPLACE_MATRIX, &A_petsc));
-        //        PetscCall(MatTranspose(A_petsc, MAT_INPLACE_MATRIX, &A_petsc));
-        //        PetscCall(MatCreateVecs(A_petsc, &x_petsc, NULL));
-        MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, A.rows(), A.cols(), A.outerIndexPtr(), A.innerIndexPtr(), A.valuePtr(), &A_petsc);
-        //   MatCreateSeqAIJWithArrays(PETSC_COMM_SELF, A.rows(), A.cols(), A_outer, A_inner, A_value, &A_petsc);
+        GPU_vec = AIJ_CUSPARSE;
+        /*CHOLMOD requires 64-bit int indices for GPU backend support*/
+#ifdef CHOLMOD_WITH_GPU
+        std::vector<long int> outer_(A.outerSize() + 1);
+        std::vector<long int> inner_(A.nonZeros());
+        for (int k = 0; k < A.outerSize() + 1; ++k)
+        {
+            outer_[k] = A.outerIndexPtr()[k];
+        }
+        for (int j = 0; j < A.nonZeros(); ++j)
+        {
+            inner_[j] = A.innerIndexPtr()[j];
+        }
+        MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, A.rows(), A.cols(), outer_.data(), inner_.data(), A.valuePtr(), &A_petsc);
         MatConvert(A_petsc, MATAIJCUSPARSE, MAT_INPLACE_MATRIX, &A_petsc);
+#else
+        MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, A.rows(), A.cols(), A.outerIndexPtr(), A.innerIndexPtr(), A.valuePtr(), &A_petsc);
+        if (AIJ_CUSPARSE)
+            MatConvert(A_petsc, MATAIJCUSPARSE, MAT_INPLACE_MATRIX, &A_petsc);
+#endif
+        // AS EIGEN IS COLUMN MAJOR WE DO A TRANSPOSE
         MatTranspose(A_petsc, MAT_INPLACE_MATRIX, &A_petsc);
+
         MatCreateVecs(A_petsc, &x_petsc, NULL);
+
+        KSPCreate(PETSC_COMM_WORLD, &ksp);
+        KSPSetOperators(ksp, A_petsc, A_petsc);
+        KSPSetTolerances(ksp, PETSC_DEFAULT, 1e-50, PETSC_DEFAULT, PETSC_DEFAULT);
+        if (SOLVER_INDEX == 5)
+            KSPSetType(ksp, KSPGMRES);
+        else
+            KSPSetType(ksp, KSPPREONLY);
+        KSPGetPC(ksp, &pc);
+
+        switch (SOLVER_INDEX)
+        {
+        case 0:
+            PCSetType(pc, PCLU);
+            PCFactorSetMatSolverType(pc, MATSOLVERMKL_PARDISO);
+            break;
+        case 1:
+            PCSetType(pc, PCLU);
+            PCFactorSetMatSolverType(pc, MATSOLVERSUPERLU_DIST);
+            break;
+        case 2:
+            PCSetType(pc, PCCHOLESKY);
+            PCFactorSetMatSolverType(pc, MATSOLVERCHOLMOD);
+            break;
+        case 3:
+            PCSetType(pc, PCLU);
+            PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);
+            break;
+        case 4:
+            PCSetType(pc, PCLU);
+            PCFactorSetMatSolverType(pc, MATSOLVERCUSPARSE);
+            break;
+        case 5:
+            PCSetType(pc, PCLU);
+            PCFactorSetMatSolverType(pc, MATSOLVERSTRUMPACK);
+            break;
+        case 6:
+            // TODO
+            PCSetType(pc, PCHYPRE);
+            PCHYPRESetType(pc, "boomeramg");
+            // PCFactorSetMatSolverType(pc, MATSOLVERCUSPARSE);
+            break;
+        default:
+            // TODO
+            break;
+        }
+
+        PCFactorSetUpMatSolverType(pc); /* call MatGetFactor() to create F */
+        PCFactorGetMatrix(pc, &F);
+
+        if (SOLVER_INDEX == 3)
+        {
+            MatMumpsSetIcntl(F, 7, 2);
+            /* threshold for row pivot detection */
+            MatMumpsSetIcntl(F, 24, 1);
+            MatMumpsSetCntl(F, 3, 1.e-6);
+        }
+        if (SOLVER_INDEX == 1)
+        {
+            MatSuperluSetILUDropTol(F, 1.e-8);
+        }
+        if (SOLVER_INDEX == 5)
+        {
+            /* Set the fill-reducing reordering.                              */
+            MatSTRUMPACKSetReordering(F, MAT_STRUMPACK_METIS);
+            /* Since this is a simple discretization, the diagonal is always  */
+            /* nonzero, and there is no need for the extra MC64 permutation.  */
+            MatSTRUMPACKSetColPerm(F, PETSC_FALSE);
+            /* The compression tolerance used when doing low-rank compression */
+            /* in the preconditioner. This is problem specific!               */
+            MatSTRUMPACKSetHSSRelTol(F, 1.e-3);
+            /* Set minimum matrix size for HSS compression to 15 in order to  */
+            /* demonstrate preconditioner on small problems. For performance  */
+            /* a value of say 500 is better.                                  */
+            MatSTRUMPACKSetHSSMinSepSize(F, 500);
+            /* You can further limit the fill in the preconditioner by        */
+            /* setting a maximum rank                                         */
+            MatSTRUMPACKSetHSSMaxRank(F, 100);
+            /* Set the size of the diagonal blocks (the leafs) in the HSS     */
+            /* approximation. The default value should be better for real     */
+            /* problems. This is mostly for illustration on a small problem.  */
+            //           MatSTRUMPACKSetHSSLeafSize(F, 4);
+        }
+        return;
     }
 
     void LinearSolverPETSC::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
-        // copy b to device
-        //        PetscCall(VecCreateSeqCUDAWithArrays(PETSC_COMM_SELF, 1, b.rows() * b.cols(), b.data(), NULL, &b_petsc));
-        //
-        //        PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
-        //        PetscCall(KSPSetOperators(ksp, A_petsc, A_petsc));
-        //        PetscCall(KSPSetTolerances(ksp, PETSC_DEFAULT, 1.e-50, PETSC_DEFAULT, PETSC_DEFAULT));
-        //
-        //        KSPSetType(ksp, KSPPREONLY);
-        //        PetscCall(KSPGetPC(ksp, &pc));
-        //        PCSetType(pc, PCLU);
-        //        PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);
-        //
-        //        PCFactorSetUpMatSolverType(pc); /* call MatGetFactor() to create F */
-        //        PCFactorGetMatrix(pc, &F);
-        //        MatMumpsSetCntl(F, 3, 1.e-6);
-        //
-        //        PetscCall(KSPSetFromOptions(ksp));
-        //        KSPSetUp(ksp);
-        //        PetscCall(KSPSolve(ksp, b_petsc, x_petsc));
-        VecCreateSeqCUDAWithArrays(PETSC_COMM_SELF, 1, b.rows() * b.cols(), b.data(), NULL, &b_petsc);
+        if (GPU_vec)
+            VecCreateSeqCUDAWithArrays(PETSC_COMM_WORLD, 1, b.rows() * b.cols(), b.data(), NULL, &b_petsc);
+        else
+            VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, b.rows() * b.cols(), b.data(), &b_petsc);
 
-        KSPCreate(PETSC_COMM_SELF, &ksp);
-        KSPSetOperators(ksp, A_petsc, A_petsc);
-        KSPSetTolerances(ksp, PETSC_DEFAULT, 1.e-50, PETSC_DEFAULT, PETSC_DEFAULT);
-        //
-        KSPSetType(ksp, KSPPREONLY);
-        KSPGetPC(ksp, &pc);
-        PCSetType(pc, PCLU);
-        PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);
-        //
-        PCFactorSetUpMatSolverType(pc); /* call MatGetFactor() to create F */
-        PCFactorGetMatrix(pc, &F);
-        MatMumpsSetCntl(F, 3, 1.e-6);
-        //
-        KSPSetFromOptions(ksp);
-        KSPSetUp(ksp);
+        // KSPSetFromOptions(ksp);
+        // KSPSetUp(ksp);
         KSPSolve(ksp, b_petsc, x_petsc);
 
         x.resize(b.rows() * b.cols(), 1);
+
         int pidx = 0;
         for (int i = 0; i < b.rows() * b.cols(); ++i)
         {
@@ -109,16 +178,12 @@ namespace polysolve
 
     LinearSolverPETSC::~LinearSolverPETSC()
     {
-        //        PetscCall(KSPDestroy(&ksp));
-        //        PetscCall(MatDestroy(&A_petsc));
-        //        PetscCall(VecDestroy(&b_petsc));
-        //        PetscCall(VecDestroy(&x_petsc));
-        //        PetscCall(PetscFinalize());
         KSPDestroy(&ksp);
         MatDestroy(&A_petsc);
         VecDestroy(&b_petsc);
         VecDestroy(&x_petsc);
-        PetscFinalize();
+        // PetscFinalize();
+        //  MISSING: SET A EXTERNAL FINALIZE
     }
 
 } // namespace polysolve

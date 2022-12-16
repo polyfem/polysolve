@@ -37,12 +37,12 @@ void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
     fin.close();
     A.setFromTriplets(triple.begin(), triple.end());
 };
-
-TEST_CASE("PETSC-STRUMPACK", "[solver]")
+#ifdef POLYSOLVE_WITH_PETSC
+TEST_CASE("PETSC-DEFAULTWITHCUDA", "[solver]")
 {
     const std::string path = POLYSOLVE_DATA_DIR;
     Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/crystm03.mtx");
+    const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
     auto solver = LinearSolver::create("PETSC_Solver", "");
@@ -53,13 +53,14 @@ TEST_CASE("PETSC-STRUMPACK", "[solver]")
     x.setZero();
 
     solver->analyzePattern(A, A.rows());
-    solver->factorize(A, 0, 5);
+    solver->factorize(A, 1, 99);
     solver->solve(b, x);
 
     // std::cout<<"Solver error: "<<x<<std::endl;
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
+#endif
 
 TEST_CASE("amgcl_crystm03_cg", "[solver]")
 {

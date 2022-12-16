@@ -50,6 +50,8 @@ TEST_CASE("all", "[solver]")
     {
         if (s == "Eigen::DGMRES")
             continue;
+        if (s == "PETSC_Solver")
+            continue;
 #ifdef WIN32
         if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
             continue;
@@ -126,6 +128,8 @@ TEST_CASE("pre_factor", "[solver]")
     for (const auto &s : solvers)
     {
         if (s == "Eigen::DGMRES")
+            continue;
+        if (s == "PETSC_Solver")
             continue;
 #ifdef WIN32
         if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
@@ -854,5 +858,29 @@ TEST_CASE("cusolverdn_5cubes", "[solver]")
         const double err = (A * x - b).norm();
         REQUIRE(err < 1e-8);
     }
+}
+#endif
+
+#ifdef POLYSOLVE_WITH_PETSC
+TEST_CASE("PETSC-DEFAULT", "[solver]")
+{
+    const std::string path = POLYSOLVE_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    auto solver = LinearSolver::create("PETSC_Solver", "");
+
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyzePattern(A, A.rows());
+    solver->factorize(A, 1, 99);
+    solver->solve(b, x);
+
+    const double err = (A * x - b).norm();
+    REQUIRE(err < 1e-8);
 }
 #endif

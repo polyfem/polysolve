@@ -47,11 +47,11 @@ option(POLYSOLVE_WITH_UMFPACK "Enable UmfPack library" ON)
 option(POLYSOLVE_WITH_SUPERLU "Enable SuperLU library" ON)
 option(POLYSOLVE_WITH_MKL "Enable MKL library" ON)
 
-option(POLYSOLVE_WITH_CUSOLVER "Enable cuSOLVER library" ON)
+option(POLYSOLVE_WITH_CUSOLVER "Enable cuSOLVER library" OFF)
 
-option(POLYSOLVE_WITH_CUDA "Enable CUDA" ON)
-option(POLYSOLVE_WITH_PETSC "Enable PETSC" ON)
-option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" ON)
+option(POLYSOLVE_WITH_CUDA "Enable CUDA" OFF)
+option(POLYSOLVE_WITH_PETSC "Enable PETSC" OFF)
+option(POLYSOLVE_WITH_PARDISO "Enable Pardiso library" OFF)
 option(POLYSOLVE_WITH_HYPRE "Enable hypre" OFF)
 option(HYPRE_WITH_MPI "Enable hypre MPI" OFF)
 option(POLYSOLVE_WITH_AMGCL "Use AMGCL" ON)
@@ -288,20 +288,18 @@ endif()
 
 # ###############################################################################
 
-# PETSC solvers
+# PETSC solvers (REQUIRES MPI)
 if(POLYSOLVE_WITH_PETSC)
-    # include(PETSC PETSc)
     find_package(MPI)
 
-    # TODO: CHECK IF PETSC IS AVAILABLE
-    # if(TARGET PETSC::PETSc)
-    target_link_libraries(polysolve PUBLIC -lpetsc MPI::MPI_CXX)
-    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_PETSC)
-    message(STATUS "PETSc found!")
-
-    # else()
-    # message(WARNING "PETSc not found, solver will not be available.")
-    # endif()
+    # TODO: CHECK IF PETSC IS PRESENT BEFOREHAND
+    if(MPI_FOUND)
+        target_link_libraries(polysolve PUBLIC -lpetsc MPI::MPI_CXX)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_PETSC)
+        message(STATUS "PETSc found!")
+    else()
+        message(FATAL_ERROR "PETSc requires MPI!")
+    endif()
 endif()
 
 # ###############################################################################

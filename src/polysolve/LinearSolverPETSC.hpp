@@ -41,7 +41,7 @@ namespace polysolve
         // Analyze sparsity pattern (sparse)
         virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
 
-        // Factorize system matrix for PETSC(AIJ_CUSPARSE: TRUE OR FALSE)
+        // Factorize system matrix for PETSC (MATRIX TYPE AIJ_CUSPARSE: TRUE OR FALSE FOR ONLY SEQAIJ)
         /*SOLVER INDEX
         0 = PARDISO
         1 = SUPERLU_DIST

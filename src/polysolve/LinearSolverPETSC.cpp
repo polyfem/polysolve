@@ -60,18 +60,22 @@ namespace polysolve
         if (AIJ_CUSPARSE)
             MatConvert(A_petsc, MATAIJCUSPARSE, MAT_INPLACE_MATRIX, &A_petsc);
 #endif
-        // AS EIGEN IS COLUMN MAJOR WE DO A TRANSPOSE
-        MatTranspose(A_petsc, MAT_INPLACE_MATRIX, &A_petsc);
+
+        // IF EIGEN MATRIX IS ROW MAJOR WE DO A TRANSPOSE
+        // MatTranspose(A_petsc, MAT_INPLACE_MATRIX, &A_petsc);
 
         MatCreateVecs(A_petsc, &x_petsc, NULL);
 
         KSPCreate(PETSC_COMM_WORLD, &ksp);
         KSPSetOperators(ksp, A_petsc, A_petsc);
-        KSPSetTolerances(ksp, PETSC_DEFAULT, 1e-50, PETSC_DEFAULT, PETSC_DEFAULT);
         if (SOLVER_INDEX == 5)
+        {
             KSPSetType(ksp, KSPGMRES);
+            KSPSetTolerances(ksp, PETSC_DEFAULT, 1e-50, PETSC_DEFAULT, PETSC_DEFAULT);
+        }
         else
             KSPSetType(ksp, KSPPREONLY);
+
         KSPGetPC(ksp, &pc);
 
         switch (SOLVER_INDEX)
@@ -101,19 +105,19 @@ namespace polysolve
             PCFactorSetMatSolverType(pc, MATSOLVERSTRUMPACK);
             break;
         case 6:
-            // TODO
+            // TODO : FIX HYPRE PARAMETERS
             PCSetType(pc, PCHYPRE);
             PCHYPRESetType(pc, "boomeramg");
-            // PCFactorSetMatSolverType(pc, MATSOLVERCUSPARSE);
             break;
         default:
-            // TODO
-            break;
+            PCSetType(pc, PCLU);
+            PCFactorSetMatSolverType(pc, MATSOLVERPETSC);
         }
 
         PCFactorSetUpMatSolverType(pc); /* call MatGetFactor() to create F */
         PCFactorGetMatrix(pc, &F);
 
+        /*Parameters obtained from https://petsc.org/release/src/ksp/ksp/tutorials/ex52.c.html*/
         if (SOLVER_INDEX == 3)
         {
             MatMumpsSetIcntl(F, 7, 2);
@@ -134,7 +138,7 @@ namespace polysolve
             MatSTRUMPACKSetColPerm(F, PETSC_FALSE);
             /* The compression tolerance used when doing low-rank compression */
             /* in the preconditioner. This is problem specific!               */
-            MatSTRUMPACKSetHSSRelTol(F, 1.e-3);
+            // MatSTRUMPACKSetHSSRelTol(F, 1.e-3);
             /* Set minimum matrix size for HSS compression to 15 in order to  */
             /* demonstrate preconditioner on small problems. For performance  */
             /* a value of say 500 is better.                                  */
@@ -157,6 +161,7 @@ namespace polysolve
         else
             VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, b.rows() * b.cols(), b.data(), &b_petsc);
 
+        /*USEFUL FOR VARIABLE TEST CASES*/
         // KSPSetFromOptions(ksp);
         // KSPSetUp(ksp);
         KSPSolve(ksp, b_petsc, x_petsc);
@@ -183,6 +188,7 @@ namespace polysolve
         VecDestroy(&b_petsc);
         VecDestroy(&x_petsc);
         // PetscFinalize();
+        // TODO: FIX THIS FOR POLYFEM
         //  MISSING: SET A EXTERNAL FINALIZE
     }
 

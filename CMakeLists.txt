@@ -44,7 +44,8 @@ option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"  
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                      ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                      ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
-option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
+option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          OFF)
+option(POLYSOLVE_WITH_ACCELERATE    "Enable ACCELERATE library"                   ON)
 option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                    OFF)
 
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
@@ -159,6 +160,11 @@ endif()
 if(POLYSOLVE_WITH_MKL)
     # include(eigen) will add mkl for us
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_MKL)
+endif()
+
+# ACCELERATE library
+if(POLYSOLVE_WITH_ACCELERATE)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_ACCELERATE)
 endif()
 
 # Pardiso solver

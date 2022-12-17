@@ -17,6 +17,9 @@
 #ifdef POLYSOLVE_WITH_MKL
 #include <Eigen/PardisoSupport>
 #endif
+#ifdef POLYSOLVE_WITH_ACCELERATE
+#include <Eigen/AccelerateSupport>
+#endif
 #ifdef POLYSOLVE_WITH_PARDISO
 #include <polysolve/LinearSolverPardiso.hpp>
 #endif
@@ -215,6 +218,20 @@ namespace polysolve
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU, "Eigen::PardisoLU");
 #endif
+#ifdef POLYSOLVE_WITH_ACCELERATE
+        }
+        else if (solver == "Eigen::AccelerateLLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(AccelerateLLT, "Eigen::AccelerateLLT");
+        }
+        else if (solver == "Eigen::AccelerateLDLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(AccelerateLDLT, "Eigen::AccelerateLDLT");
+        }
+        else if (solver == "Eigen::AccelerateQR")
+        {
+            RETURN_DIRECT_SOLVER_PTR(AccelerateQR, "Eigen::AccelerateQR");
+#endif
 #ifdef POLYSOLVE_WITH_PARDISO
         }
         else if (solver == "Pardiso")
@@ -299,6 +316,11 @@ namespace polysolve
             "Eigen::PardisoLLT",
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
+#endif
+#ifdef POLYSOLVE_WITH_ACCELERATE
+            "Eigen::AccelerateLLT",
+            "Eigen::AccelerateLDLT",
+            "Eigen::AccelerateQR",
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",

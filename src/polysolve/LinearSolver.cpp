@@ -331,55 +331,56 @@ namespace polysolve
     // List available solvers
     std::vector<std::string> LinearSolver::availableSolvers()
     {
-        return {{"Eigen::SimplicialLDLT",
-                 "Eigen::SparseLU",
+        return {{
+            "Eigen::SimplicialLDLT",
+            "Eigen::SparseLU",
 #ifdef POLYSOLVE_WITH_CHOLMOD
-                 "Eigen::CholmodSupernodalLLT",
+            "Eigen::CholmodSupernodalLLT",
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
-                 "Eigen::UmfPackLU",
+            "Eigen::UmfPackLU",
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
-                 "Eigen::SuperLU",
+            "Eigen::SuperLU",
 #endif
 #ifdef POLYSOLVE_WITH_MKL
-                 "Eigen::PardisoLLT",
-                 "Eigen::PardisoLDLT",
-                 "Eigen::PardisoLU",
+            "Eigen::PardisoLLT",
+            "Eigen::PardisoLDLT",
+            "Eigen::PardisoLU",
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
-                 "Pardiso",
+            "Pardiso",
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
-                 "cuSolverDN",
+            "cuSolverDN",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
-                 "Hypre",
+            "Hypre",
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
-                 "AMGCL",
+            "AMGCL",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX
-                 "Eigen::LeastSquaresConjugateGradient",
-                 "Eigen::DGMRES",
+            "Eigen::LeastSquaresConjugateGradient",
+            "Eigen::DGMRES",
 #endif
 #endif
-                 "Eigen::ConjugateGradient",
-                 "Eigen::BiCGSTAB",
-                 "Eigen::GMRES",
-                 "Eigen::MINRES",
-                 "Eigen::PartialPivLU",
-                 "Eigen::FullPivLU",
-                 "Eigen::HouseholderQR",
-                 "Eigen::ColPivHouseholderQR",
-                 "Eigen::FullPivHouseholderQR",
-                 "Eigen::CompleteOrthogonalDecomposition",
-                 "Eigen::LLT",
-                 "Eigen::LDLT"
-                 // "Eigen::BDCSVD",
-                 // "Eigen::JacobiSVD"
-                 }};
+            "Eigen::ConjugateGradient",
+            "Eigen::BiCGSTAB",
+            "Eigen::GMRES",
+            "Eigen::MINRES",
+            "Eigen::PartialPivLU",
+            "Eigen::FullPivLU",
+            "Eigen::HouseholderQR",
+            "Eigen::ColPivHouseholderQR",
+            "Eigen::FullPivHouseholderQR",
+            "Eigen::CompleteOrthogonalDecomposition",
+            "Eigen::LLT",
+            "Eigen::LDLT"
+            // "Eigen::BDCSVD",
+            // "Eigen::JacobiSVD"
+        }};
     }
 
     std::string LinearSolver::defaultSolver()

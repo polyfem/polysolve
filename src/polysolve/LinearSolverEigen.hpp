@@ -85,7 +85,7 @@ namespace polysolve
     {
     protected:
         // Solver class
-        std::shared_ptr<DenseSolver> m_Solver = nullptr;
+        DenseSolver m_Solver;
 
         // Name of the solver
         std::string m_Name;

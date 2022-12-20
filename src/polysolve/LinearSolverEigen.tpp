@@ -132,7 +132,7 @@ void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const StiffnessMa
 template <typename DenseSolver>
 void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const Eigen::MatrixXd &A)
 {
-    m_Solver = std::make_shared<DenseSolver>(A);
+    m_Solver.compute(A);
 }
 
 // Solve the linear system
@@ -140,5 +140,5 @@ template <typename DenseSolver>
 void polysolve::LinearSolverEigenDense<DenseSolver>::solve(
     const Ref<const VectorXd> b, Ref<VectorXd> x)
 {
-    x = m_Solver->solve(b);
+    x = m_Solver.solve(b);
 }

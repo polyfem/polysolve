@@ -110,3 +110,35 @@ void polysolve::LinearSolverEigenIterative<SparseSolver>::solve(
     assert(x.size() == b.size());
     x = m_Solver.solveWithGuess(b, x);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Dense solvers
+////////////////////////////////////////////////////////////////////////////////
+
+// Get info on the last solve step
+template <typename DenseSolver>
+void polysolve::LinearSolverEigenDense<DenseSolver>::getInfo(json &params) const
+{
+    params["solver_info"] = "Success";
+}
+
+template <typename DenseSolver>
+void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const StiffnessMatrix &A)
+{
+    factorize(Eigen::MatrixXd(A));
+}
+
+// Factorize system matrix
+template <typename DenseSolver>
+void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const Eigen::MatrixXd &A)
+{
+    m_Solver.compute(A);
+}
+
+// Solve the linear system
+template <typename DenseSolver>
+void polysolve::LinearSolverEigenDense<DenseSolver>::solve(
+    const Ref<const VectorXd> b, Ref<VectorXd> x)
+{
+    x = m_Solver.solve(b);
+}

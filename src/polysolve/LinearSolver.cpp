@@ -122,6 +122,13 @@ namespace polysolve
             polysolve::StiffnessMatrix>>>(Name);                     \
     } while (0)
 
+#define RETURN_DIRECT_DENSE_SOLVER_PTR(EigenSolver, Name)           \
+    do                                                              \
+    {                                                               \
+        return std::make_unique<LinearSolverEigenDense<EigenSolver< \
+            Eigen::MatrixXd>>>(Name);                               \
+    } while (0)
+
     ////////////////////////////////////////////////////////////////////////////////
 
     namespace
@@ -275,6 +282,47 @@ namespace polysolve
         {
             return std::make_unique<SaddlePointSolver>();
         }
+        /////DENSE Eigen
+        else if (solver.empty() || solver == "Eigen::PartialPivLU")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(PartialPivLU, "Eigen::PartialPivLU");
+        }
+        else if (solver.empty() || solver == "Eigen::FullPivLU")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(FullPivLU, "Eigen::FullPivLU");
+        }
+        else if (solver.empty() || solver == "Eigen::HouseholderQR")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(HouseholderQR, "Eigen::HouseholderQR");
+        }
+        else if (solver.empty() || solver == "Eigen::ColPivHouseholderQR")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(ColPivHouseholderQR, "Eigen::ColPivHouseholderQR");
+        }
+        else if (solver.empty() || solver == "Eigen::FullPivHouseholderQR")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(FullPivHouseholderQR, "Eigen::FullPivHouseholderQR");
+        }
+        else if (solver.empty() || solver == "Eigen::CompleteOrthogonalDecomposition")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(CompleteOrthogonalDecomposition, "Eigen::CompleteOrthogonalDecomposition");
+        }
+        else if (solver.empty() || solver == "Eigen::LLT")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(LLT, "Eigen::LLT");
+        }
+        else if (solver.empty() || solver == "Eigen::LDLT")
+        {
+            RETURN_DIRECT_DENSE_SOLVER_PTR(LDLT, "Eigen::LDLT");
+        }
+        // else if (solver.empty() || solver == "Eigen::BDCSVD")
+        // {
+        //     RETURN_DIRECT_DENSE_SOLVER_PTR(BDCSVD, "Eigen::BDCSVD");
+        // }
+        // else if (solver.empty() || solver == "Eigen::JacobiSVD")
+        // {
+        //     RETURN_DIRECT_DENSE_SOLVER_PTR(JacobiSVD, "Eigen::JacobiSVD");
+        // }
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }
 
@@ -322,6 +370,16 @@ namespace polysolve
             "Eigen::BiCGSTAB",
             "Eigen::GMRES",
             "Eigen::MINRES",
+            "Eigen::PartialPivLU",
+            "Eigen::FullPivLU",
+            "Eigen::HouseholderQR",
+            "Eigen::ColPivHouseholderQR",
+            "Eigen::FullPivHouseholderQR",
+            "Eigen::CompleteOrthogonalDecomposition",
+            "Eigen::LLT",
+            "Eigen::LDLT"
+            // "Eigen::BDCSVD",
+            // "Eigen::JacobiSVD"
         }};
     }
 

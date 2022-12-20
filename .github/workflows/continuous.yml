@@ -73,7 +73,7 @@ jobs:
   ####################
 
   MacOS:
-    name: ${{ matrix.name }} (${{ matrix.config }})
+    name: ${{ matrix.name }} (${{ matrix.config }}, ${{ matrix.accelerate }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -101,7 +101,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-${{ matrix.config }}--${{ matrix.sp }}-cache
+          key: ${{ runner.os }}-${{ matrix.config }}-${{ matrix.accelerate }}--${{ matrix.sp }}-cache
 
       - name: Prepare ccache
         run: |
@@ -109,7 +109,7 @@ jobs:
           ccache -V && ccache --show-stats && ccache --zero-stats
 
       - name: Configure MKL
-        if: runner.accelerate == 'MKL'
+        if: matrix.accelerate == 'MKL'
         run: |
           mkdir -p build
           cd build
@@ -118,7 +118,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
 
       - name: Configure Accelerate
-        if: runner.accelerate == 'Accelerate'
+        if: matrix.accelerate == 'Accelerate'
         run: |
           mkdir -p build
           cd build

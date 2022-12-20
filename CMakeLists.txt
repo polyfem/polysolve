@@ -45,6 +45,7 @@ option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                    
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                      ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
+option(POLYSOLVE_WITH_ACCELERATE    "Enable ACCELERATE library"                   OFF)
 option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                    OFF)
 
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
@@ -96,6 +97,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 ################################################################################
 # PolySolve Library
 ################################################################################
+
+if(POLYSOLVE_WITH_ACCELERATE)
+    if(POLYSOLVE_WITH_MKL)
+        set(POLYSOLVE_WITH_MKL OFF CACHE INTERNAL "" FORCE)
+        set(EIGEN_WITH_MKL OFF CACHE INTERNAL "" FORCE)
+        set(SUITE_SPARSE_WITH_MKL OFF CACHE INTERNAL "" FORCE)
+
+        message(WARNING "MKL not compatible with accelerate, disabling it.")
+    endif()
+endif()
 
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve)
@@ -159,6 +170,11 @@ endif()
 if(POLYSOLVE_WITH_MKL)
     # include(eigen) will add mkl for us
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_MKL)
+endif()
+
+# ACCELERATE library
+if(POLYSOLVE_WITH_ACCELERATE)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_ACCELERATE)
 endif()
 
 # Pardiso solver

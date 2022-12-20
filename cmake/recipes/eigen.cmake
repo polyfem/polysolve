@@ -26,8 +26,7 @@ else()
     FetchContent_Declare(
         eigen
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-        GIT_TAG tags/3.3.7
-        GIT_SHALLOW TRUE
+        GIT_TAG dbf7ae6f9b8406d1a2a905b2e14c8b5bdcf569b2
     )
     FetchContent_GetProperties(eigen)
     if(NOT eigen_POPULATED)

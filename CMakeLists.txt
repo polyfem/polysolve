@@ -100,7 +100,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(POLYSOLVE_WITH_ACCELERATE)
     if(POLYSOLVE_WITH_MKL)
-        set(POLYSOLVE_WITH_MKL    OFF CACHE INTERNAL "" FORCE)
+        set(POLYSOLVE_WITH_MKL OFF CACHE INTERNAL "" FORCE)
+        set(EIGEN_WITH_MKL OFF CACHE INTERNAL "" FORCE)
+        set(SUITE_SPARSE_WITH_MKL OFF CACHE INTERNAL "" FORCE)
+
         message(WARNING "MKL not compatible with accelerate, disabling it.")
     endif()
 endif()

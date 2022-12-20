@@ -98,6 +98,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # PolySolve Library
 ################################################################################
 
+if(POLYSOLVE_WITH_ACCELERATE)
+    if(POLYSOLVE_WITH_MKL)
+        set(POLYSOLVE_WITH_MKL    OFF CACHE INTERNAL "" FORCE)
+        message(WARNING "MKL not compatible with accelerate, disabling it.")
+    endif()
+endif()
+
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve)
 add_library(polysolve::polysolve ALIAS polysolve)

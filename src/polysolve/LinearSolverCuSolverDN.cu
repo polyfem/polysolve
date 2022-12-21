@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_CUSOLVER
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolverCuSolverDN.cuh>
+#include "LinearSolverCuSolverDN.cuh"
 #include <fstream>
 #include <string>
 #include <iostream>

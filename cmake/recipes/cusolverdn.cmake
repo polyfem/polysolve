@@ -17,18 +17,18 @@ if(CMAKE_CUDA_COMPILER)
         set(CUDA_SEPARABLE_COMPILATION ON)
         set(CUDA_PROPAGATE_HOST_FLAGS OFF)
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -use_fast_math --expt-relaxed-constexpr  -gencode arch=compute_86,code=sm_86")
-   
+
         target_compile_options(polysolve PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:
-            
+
         --generate-line-info
         --use_fast_math
         --relocatable-device-code=true
-          
+
         --ptxas-options=-v
         --maxrregcount=7
         --compiler-options
         -fPIC # https://stackoverflow.com/questions/5311515/gcc-fpic-option
-            
+
         >
 
         )

@@ -232,7 +232,11 @@ namespace polysolve
         }
         else if (solver == "cuSolverDN")
         {
-            return std::make_unique<LinearSolverCuSolverDN>();
+            return std::make_unique<LinearSolverCuSolverDN<double>>();
+        }
+        else if (solver == "cuSolverDN_float")
+        {
+            return std::make_unique<LinearSolverCuSolverDN<float>>();
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }

@@ -357,6 +357,7 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
             "cuSolverDN",
+            "cuSolverDN_float",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

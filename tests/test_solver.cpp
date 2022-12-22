@@ -610,18 +610,21 @@ TEST_CASE("cusolverdn_dense", "[solver]")
 
     auto solver = LinearSolver::create("cuSolverDN", "");
     // solver->setParameters(params);
-    Eigen::VectorXd b(A.rows());
-    b.setRandom();
-    Eigen::VectorXd x(b.size());
-    x.setZero();
+    for (int i = 0; i < 5; ++i)
+    {
+        Eigen::VectorXd b(A.rows());
+        b.setRandom();
+        Eigen::VectorXd x(b.size());
+        x.setZero();
 
-    solver->analyzePattern_dense(A, A.rows());
-    solver->factorize_dense(A);
-    solver->solve(b, x);
+        solver->analyzePattern_dense(A, A.rows());
+        solver->factorize_dense(A);
+        solver->solve(b, x);
 
-    // std::cout<<"Solver error: "<<x<<std::endl;
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-8);
+        // std::cout<<"Solver error: "<<x<<std::endl;
+        const double err = (A * x - b).norm();
+        REQUIRE(err < 1e-8);
+    }
 }
 
 TEST_CASE("cusolverdn_dense_float", "[solver]")
@@ -638,18 +641,22 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
 
     auto solver = LinearSolver::create("cuSolverDN_float", "");
     // solver->setParameters(params);
-    Eigen::VectorXd b(A.rows());
-    b.setRandom();
-    Eigen::VectorXd x(b.size());
-    x.setZero();
 
-    solver->analyzePattern_dense(A, A.rows());
-    solver->factorize_dense(A);
-    solver->solve(b, x);
+    for (int i = 0; i < 5; ++i)
+    {
+        Eigen::VectorXd b(A.rows());
+        b.setRandom();
+        Eigen::VectorXd x(b.size());
+        x.setZero();
 
-    // std::cout<<"Solver error: "<<x<<std::endl;
-    const double err = (A * x - b).norm();
-    REQUIRE(err < 1e-6);
+        solver->analyzePattern_dense(A, A.rows());
+        solver->factorize_dense(A);
+        solver->solve(b, x);
+
+        // std::cout<<"Solver error: "<<x<<std::endl;
+        const double err = (A * x - b).norm();
+        REQUIRE(err < 1e-6);
+    }
 }
 
 TEST_CASE("cusolverdn_5cubes", "[solver]")

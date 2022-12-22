@@ -57,7 +57,9 @@ namespace polysolve
         cudaStream_t stream;
 
         // device copies
+        bool d_A_alloc = false;
         T *d_A;
+        bool d_b_alloc = false;
         T *d_b;
         int64_t *d_Ipiv;
 

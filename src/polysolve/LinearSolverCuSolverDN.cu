@@ -122,14 +122,20 @@ namespace polysolve
         numrows = (int)A.rows();
 
         // copy A to device
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(T) * A.size()));
+        if (!d_A_alloc)
+        {
+            gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_A), sizeof(T) * A.size()));
+        }
         gpuErrchk(cudaMemcpy(d_A, (const void *)convert<T>(A).data(), sizeof(T) * A.size(), cudaMemcpyHostToDevice));
 
         cusolverDnXgetrf_bufferSize(cuHandle, cuParams, numrows, numrows, cuda_type<T>(), d_A, numrows, cuda_type<T>(), &d_lwork, &h_lwork);
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(T) * d_lwork));
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(T) * h_lwork));
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int)));
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows));
+        if (!d_A_alloc)
+        {
+            gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_work), sizeof(T) * d_lwork));
+            gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&h_work), sizeof(T) * h_lwork));
+            gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_info), sizeof(int)));
+            gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_Ipiv), sizeof(int64_t) * numrows));
+        }
         int info = 0;
 
         // factorize
@@ -142,13 +148,16 @@ namespace polysolve
         }
 
         gpuErrchk(cudaMemcpyAsync(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream));
+
+        d_A_alloc = true;
     }
 
     template <typename T>
     void LinearSolverCuSolverDN<T>::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
         // copy b to device
-        gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_b), sizeof(T) * b.size()));
+        if (!d_b_alloc)
+            gpuErrchk(cudaMalloc(reinterpret_cast<void **>(&d_b), sizeof(T) * b.size()));
         gpuErrchk(cudaMemcpy(d_b, (const void *)convert_vec<T>(b).data(), sizeof(T) * b.size(), cudaMemcpyHostToDevice));
 
         // solve
@@ -166,6 +175,8 @@ namespace polysolve
         Eigen::Matrix<T, Eigen::Dynamic, 1> x_tmp(x.size());
         gpuErrchk(cudaMemcpy(x_tmp.data(), d_b, sizeof(T) * x.size(), cudaMemcpyDeviceToHost));
         x = convert_back<T>(x_tmp);
+
+        d_b_alloc = true;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -173,15 +184,23 @@ namespace polysolve
     template <typename T>
     LinearSolverCuSolverDN<T>::~LinearSolverCuSolverDN()
     {
-        gpuErrchk(cudaFree(d_A));
-        gpuErrchk(cudaFree(d_b));
-        gpuErrchk(cudaFree(d_work));
-        gpuErrchk(cudaFree(d_Ipiv));
-        gpuErrchk(cudaFree(d_info));
+        if (d_A_alloc)
+        {
+            gpuErrchk(cudaFree(d_A));
+
+            gpuErrchk(cudaFree(d_work));
+            gpuErrchk(cudaFree(h_work));
+            gpuErrchk(cudaFree(d_Ipiv));
+            gpuErrchk(cudaFree(d_info));
+        }
 
         cusolverDnDestroyParams(cuParams);
         cusolverDnDestroy(cuHandle);
         cudaStreamDestroy(stream);
+
+        if (d_b_alloc)
+            gpuErrchk(cudaFree(d_b));
+
         cudaDeviceReset();
     }
 

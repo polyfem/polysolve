@@ -165,7 +165,6 @@ namespace polysolve
         // copy result to x
         Eigen::Matrix<T, Eigen::Dynamic, 1> x_tmp(x.size());
         gpuErrchk(cudaMemcpy(x_tmp.data(), d_b, sizeof(T) * x.size(), cudaMemcpyDeviceToHost));
-        std::cout << x_tmp << std::endl;
         x = convert_back<T>(x_tmp);
     }
 

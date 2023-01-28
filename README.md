@@ -45,27 +45,27 @@ Polysolve uses a json file to provide parameters to the individual solvers. The 
 {
     "Eigen::LeastSquaresConjugateGradient": {
         "max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "Eigen::DGMRES": {
         "max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "Eigen::ConjugateGradient": {
         "max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "Eigen::BiCGSTAB": {
         "max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "Eigen::GMRES": {
         "max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "Eigen::MINRES": {
         "max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "Pardiso": {
         "mtype": -1
@@ -73,7 +73,7 @@ Polysolve uses a json file to provide parameters to the individual solvers. The 
     "Hypre": {
         "max_iter": 1000,
         "pre_max_iter": 1000,
-        "tolerance": 1e-6
+        "tolerance": 1e-10
     },
     "AMGCL": {
         "precond": {

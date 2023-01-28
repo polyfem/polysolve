@@ -1,7 +1,7 @@
-################################################################################
+# ###############################################################################
 # See comments and discussions here:
 # http://stackoverflow.com/questions/5088460/flags-to-enable-thorough-and-verbose-g-warnings
-################################################################################
+# ###############################################################################
 
 if(TARGET polysolve::warnings)
 	return()
@@ -13,7 +13,7 @@ set(POLYSOLVE_WARNING_FLAGS
 	-pedantic
 
 	# -Wconversion
-	#-Wunsafe-loop-optimizations # broken with C++11 loops
+	# -Wunsafe-loop-optimizations # broken with C++11 loops
 	-Wunused
 
 	-Wno-long-long
@@ -43,11 +43,11 @@ set(POLYSOLVE_WARNING_FLAGS
 	-Wunused-but-set-variable
 	-Wno-unused-parameter
 
-	#-Weffc++
+	# -Weffc++
 	-Wno-old-style-cast
-	# -Wno-sign-conversion
-	#-Wsign-conversion
 
+	# -Wno-sign-conversion
+	# -Wsign-conversion
 	-Wshadow
 
 	-Wstrict-null-sentinel
@@ -62,8 +62,10 @@ set(POLYSOLVE_WARNING_FLAGS
 
 	-Wcast-align
 	-Wdisabled-optimization
-	#-Winline # produces warning on default implicit destructor
+
+	# -Winline # produces warning on default implicit destructor
 	-Winvalid-pch
+
 	# -Wmissing-include-dirs
 	-Wpacked
 	-Wno-padded
@@ -74,8 +76,8 @@ set(POLYSOLVE_WARNING_FLAGS
 	-Wlogical-op
 	-Wnoexcept
 	-Woverloaded-virtual
-	# -Wundef
 
+	# -Wundef
 	-Wnon-virtual-dtor
 	-Wdelete-non-virtual-dtor
 	-Werror=non-virtual-dtor
@@ -83,62 +85,61 @@ set(POLYSOLVE_WARNING_FLAGS
 
 	-Wno-sign-compare
 
-	###########
+	# ##########
 	# GCC 6.1 #
-	###########
-
+	# ##########
 	-Wnull-dereference
 	-fdelete-null-pointer-checks
 	-Wduplicated-cond
 	-Wmisleading-indentation
 
-	#-Weverything
+	# -Weverything
 
-	###########################
+	# ##########################
 	# Enabled by -Weverything #
-	###########################
+	# ##########################
 
-	#-Wdocumentation
-	#-Wdocumentation-unknown-command
-	#-Wfloat-equal
-	#-Wcovered-switch-default
+	# -Wdocumentation
+	# -Wdocumentation-unknown-command
+	# -Wfloat-equal
+	# -Wcovered-switch-default
 
-	#-Wglobal-constructors
-	#-Wexit-time-destructors
-	#-Wmissing-variable-declarations
-	#-Wextra-semi
-	#-Wweak-vtables
-	#-Wno-source-uses-openmp
-	#-Wdeprecated
-	#-Wnewline-eof
-	#-Wmissing-prototypes
+	# -Wglobal-constructors
+	# -Wexit-time-destructors
+	# -Wmissing-variable-declarations
+	# -Wextra-semi
+	# -Wweak-vtables
+	# -Wno-source-uses-openmp
+	# -Wdeprecated
+	# -Wnewline-eof
+	# -Wmissing-prototypes
 
-	#-Wno-c++98-compat
-	#-Wno-c++98-compat-pedantic
+	# -Wno-c++98-compat
+	# -Wno-c++98-compat-pedantic
 
-	###########################
+	# ##########################
 	# Need to check if those are still valid today
-	###########################
+	# ##########################
 
-	#-Wimplicit-atomic-properties
-	#-Wmissing-declarations
-	#-Wmissing-prototypes
-	#-Wstrict-selector-match
-	#-Wundeclared-selector
-	#-Wunreachable-code
+	# -Wimplicit-atomic-properties
+	# -Wmissing-declarations
+	# -Wmissing-prototypes
+	# -Wstrict-selector-match
+	# -Wundeclared-selector
+	# -Wunreachable-code
 
 	# Not a warning, but enable link-time-optimization
 	# TODO: Check out modern CMake version of setting this flag
 	# https://cmake.org/cmake/help/latest/module/CheckIPOSupported.html
-	#-flto
+	# -flto
 
 	# Gives meaningful stack traces
 	-fno-omit-frame-pointer
 	-fno-optimize-sibling-calls
 
-	#####################
+	# ####################
 	# Disabled warnings #
-	#####################
+	# ####################
 	-Wno-missing-noreturn
 	-Wno-shadow
 	-Wno-switch-enum
@@ -162,9 +163,11 @@ add_library(polysolve::warnings ALIAS polysolve_warnings)
 
 foreach(FLAG IN ITEMS ${POLYSOLVE_WARNING_FLAGS})
 	string(REPLACE "=" "-" FLAG_VAR "${FLAG}")
+
 	if(NOT DEFINED IS_SUPPORTED_${FLAG_VAR})
 		check_cxx_compiler_flag("${FLAG}" IS_SUPPORTED_${FLAG_VAR})
 	endif()
+
 	if(IS_SUPPORTED_${FLAG_VAR})
 		target_compile_options(polysolve_warnings INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
 	endif()

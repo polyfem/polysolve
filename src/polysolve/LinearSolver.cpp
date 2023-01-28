@@ -25,9 +25,15 @@
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
+#ifdef POLYSOLVE_WITH_CUDA
+#include <polysolve/LinearSolverAMGCL_cuda.hpp>
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include <polysolve/LinearSolverCuSolverDN.cuh>
+#endif
+#ifdef POLYSOLVE_WITH_PETSC
+#include <polysolve/LinearSolverPETSC.hpp>
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
 
@@ -234,6 +240,12 @@ namespace polysolve
         {
             return std::make_unique<LinearSolverCuSolverDN>();
 #endif
+#ifdef POLYSOLVE_WITH_PETSC
+        }
+        else if (solver == "PETSC_Solver")
+        {
+            return std::make_unique<LinearSolverPETSC>();
+#endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
@@ -245,7 +257,14 @@ namespace polysolve
         else if (solver == "AMGCL")
         {
             return std::make_unique<LinearSolverAMGCL>();
+#ifdef POLYSOLVE_WITH_CUDA
+        }
+        else if (solver == "AMGCL_cuda")
+        {
+            return std::make_unique<LinearSolverAMGCL_cuda>();
 #endif
+#endif
+
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -354,11 +373,17 @@ namespace polysolve
 #ifdef POLYSOLVE_WITH_CUSOLVER
             "cuSolverDN",
 #endif
+#ifdef POLYSOLVE_WITH_PETSC
+            "PETSC_Solver",
+#endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+#ifdef POLYSOLVE_WITH_CUDA
+            "AMGCL_cuda",
+#endif
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

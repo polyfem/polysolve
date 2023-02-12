@@ -38,27 +38,33 @@ project(PolySolve
         DESCRIPTION "Easy-to-use wrapper for linear solver"
         LANGUAGES CXX)
 
-# Polysolve options
-option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"   OFF)
-# Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                      ON)
-option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                      ON)
-option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                      ON)
-option(POLYSOLVE_WITH_MKL           "Enable MKL library"                          ON)
-option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                    OFF)
+if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND APPLE)
+    set(POLYSOLVE_NOT_ON_APPLE_SILICON FALSE)
+else()
+    set(POLYSOLVE_NOT_ON_APPLE_SILICON TRUE)
+endif()
 
-option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
-option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)
-option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                   ON)
-option(POLYSOLVE_WITH_SPECTRA       "Enable computing spectrum"                   ON)
+# Polysolve options
+option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
+# Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
+option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
+option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
+option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_NOT_ON_APPLE_SILICON})
+option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                           OFF)
+
+option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                            OFF)
+option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
+option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
+option(POLYSOLVE_WITH_SPECTRA       "Enable computing spectrum"                          ON)
 # Sanitizer options
-option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                           OFF)
-option(POLYSOLVE_SANITIZE_MEMORY    "Sanitize Memory"                            OFF)
-option(POLYSOLVE_SANITIZE_THREAD    "Sanitize Thread"                            OFF)
-option(POLYSOLVE_SANITIZE_UNDEFINED "Sanitize Undefined"                         OFF)
+option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                                  OFF)
+option(POLYSOLVE_SANITIZE_MEMORY    "Sanitize Memory"                                   OFF)
+option(POLYSOLVE_SANITIZE_THREAD    "Sanitize Thread"                                   OFF)
+option(POLYSOLVE_SANITIZE_UNDEFINED "Sanitize Undefined"                                OFF)
 # Misc.
-option(POLYSOLVE_LARGE_INDEX        "Build for large indices"                    OFF)
-option(POLYSOLVE_WITH_TESTS         "Build unit-tests" ${POLYSOLVE_TOPLEVEL_PROJECT})
+option(POLYSOLVE_LARGE_INDEX        "Build for large indices"                           OFF)
+option(POLYSOLVE_WITH_TESTS         "Build unit-tests"        ${POLYSOLVE_TOPLEVEL_PROJECT})
 
 include(CMakeDependentOption)
 cmake_dependent_option(SUITE_SPARSE_WITH_MKL "Build SuiteSparse using MKL" ON "POLYSOLVE_WITH_MKL" OFF)

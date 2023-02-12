@@ -1,8 +1,6 @@
-![Build](https://github.com/polyfem/polysolve/workflows/Build/badge.svg)
-
-
-
 # PolySolve
+
+![Build](https://github.com/polyfem/polysolve/workflows/Build/badge.svg)
 
 This library contains a cross-platform Eigen wrapper for many different external linear solvers including (but not limited to):
 
@@ -168,3 +166,13 @@ For a more details and options refer to the [AMGCL documentation](https://amgcl.
 | 6     | complex and symmetric                   |
 | 11    | real and nonsymmetric                   |
 | 13    | complex and nonsymmetric                |
+
+## Troubleshooting
+
+### Compilation error: `use of undeclared identifier 'SuiteSparse_config'`
+
+This error is cause by having a more recent version of SuiteSparse (`≥ v7.0.0`) installed on your system than the version we download and build. We use [@sergiud's fork of SuiteSparse](https://github.com/sergiud/SuiteSparse) which includes CMake support. However, the fork is not up to date with the latest version of SuiteSparse (currently `v5.13.0` while the [official release](https://github.com/DrTimothyAldenDavis/SuiteSparse) is at version `v7.0.1`). Version `v7.0.0` changed the `SuiteSparse_config.h` header and no longer includes the necessary struct definitions.
+
+#### Solution
+
+For now, if you can, please downgrade (`< v7.0.0`) or uninstall your system version of SuiteSparse. In the meantime, we will work with the SuiteSparse developers to resolve this issue.

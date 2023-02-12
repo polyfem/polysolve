@@ -46,6 +46,8 @@ set_property (CACHE WITH_LICENSE PROPERTY STRINGS "Minimal;GPL;LGPL")
 
 option(SUITE_SPARSE_WITH_MKL "Build SuiteSparse using MKL" ON)
 
+message(STATUS "SuiteSparse with MKL is ${SUITE_SPARSE_WITH_MKL}")
+
 if(SUITE_SPARSE_WITH_MKL)
     include(mkl)
     if(NOT TARGET blas)

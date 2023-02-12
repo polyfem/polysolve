@@ -171,7 +171,7 @@ For a more details and options refer to the [AMGCL documentation](https://amgcl.
 
 ### Compilation error: `use of undeclared identifier 'SuiteSparse_config'`
 
-This error is cause by having a more recent version of SuiteSparse (`≥ v7.0.0`) installed on your system than the version we download and build. We use [@sergiud's fork of SuiteSparse](https://github.com/sergiud/SuiteSparse) which includes CMake support. However, the fork is not up to date with the latest version of SuiteSparse (currently `v5.13.0` while the [official release](https://github.com/DrTimothyAldenDavis/SuiteSparse) is at version `v7.0.1`). Version `v7.0.0` changed the `SuiteSparse_config.h` header and no longer includes the necessary struct definitions.
+This error is cause by having a more recent version of SuiteSparse (`≥ v7.0.0`) installed on your system than the version we download and build. We use [@sergiud's fork of SuiteSparse](https://github.com/sergiud/SuiteSparse) which includes CMake support. However, the fork is not up to date with the latest version of SuiteSparse (currently `v5.12.0` while the [official release](https://github.com/DrTimothyAldenDavis/SuiteSparse) is at version `v7.0.1`). Version `v7.0.0` changed the `SuiteSparse_config.h` header and no longer includes the necessary struct definitions.
 
 #### Solution
 

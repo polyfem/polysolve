@@ -125,12 +125,12 @@ void polysolve::LinearSolverEigenDense<DenseSolver>::getInfo(json &params) const
 template <typename DenseSolver>
 void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const StiffnessMatrix &A)
 {
-    factorize(Eigen::MatrixXd(A));
+    factorize_dense(Eigen::MatrixXd(A));
 }
 
 // Factorize system matrix
 template <typename DenseSolver>
-void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const Eigen::MatrixXd &A)
+void polysolve::LinearSolverEigenDense<DenseSolver>::factorize_dense(const Eigen::MatrixXd &A)
 {
     m_Solver.compute(A);
 }

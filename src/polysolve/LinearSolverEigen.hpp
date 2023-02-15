@@ -105,7 +105,7 @@ namespace polysolve
         virtual void factorize(const StiffnessMatrix &K) override;
 
         // Factorize system matrix
-        virtual void factorize(const Eigen::MatrixXd &K) override;
+        virtual void factorize_dense(const Eigen::MatrixXd &K) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;

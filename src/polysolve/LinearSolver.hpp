@@ -9,9 +9,9 @@ using json = nlohmann::json;
 #include <memory>
 
 #define POLYSOLVE_DELETE_MOVE_COPY(Base) \
-    Base(Base &&) = delete;                    \
-    Base &operator=(Base &&) = delete;         \
-    Base(const Base &) = delete;               \
+    Base(Base &&) = delete;              \
+    Base &operator=(Base &&) = delete;   \
+    Base(const Base &) = delete;         \
     Base &operator=(const Base &) = delete;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -30,8 +30,8 @@ namespace polysolve
     typedef Eigen::SparseMatrix<double, Eigen::ColMajor> StiffnessMatrix;
 #endif
     /**
- * @brief      Base class for linear solver.
- */
+     * @brief      Base class for linear solver.
+     */
     class LinearSolver
     {
 
@@ -86,10 +86,10 @@ namespace polysolve
         virtual void factorize(const StiffnessMatrix &A) {}
 
         // Analyze sparsity pattern of a dense matrix
-        virtual void analyzePattern(const Eigen::MatrixXd &A, const int precond_num) {}
+        virtual void analyzePattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}
 
         // Factorize system matrix of a dense matrix
-        virtual void factorize(const Eigen::MatrixXd &A) {}
+        virtual void factorize_dense(const Eigen::MatrixXd &A) {}
 
         //
         // @brief         { Solve the linear system Ax = b }

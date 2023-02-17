@@ -193,6 +193,18 @@ namespace polysolve
         else if (solver == "Eigen::CholmodSupernodalLLT")
         {
             RETURN_DIRECT_SOLVER_PTR(CholmodSupernodalLLT, "Eigen::CholmodSupernodalLLT");
+        }
+        else if (solver == "Eigen::CholmodDecomposition")
+        {
+            RETURN_DIRECT_SOLVER_PTR(CholmodDecomposition, "Eigen::CholmodDecomposition");
+        }
+        else if (solver == "Eigen::CholmodSimplicialLLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(CholmodSimplicialLLT, "Eigen::CholmodSimplicialLLT");
+        }
+        else if (solver == "Eigen::CholmodSimplicialLDLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(CholmodSimplicialLDLT, "Eigen::CholmodSimplicialLDLT");
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -340,6 +352,9 @@ namespace polysolve
             "Eigen::SparseLU",
 #ifdef POLYSOLVE_WITH_CHOLMOD
             "Eigen::CholmodSupernodalLLT",
+            "Eigen::CholmodDecomposition",
+            "Eigen::CholmodSimplicialLLT",
+            "Eigen::CholmodSimplicialLDLT",
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
             "Eigen::UmfPackLU",

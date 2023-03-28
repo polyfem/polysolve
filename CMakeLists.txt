@@ -187,7 +187,7 @@ if(POLYSOLVE_WITH_CUDA)
             BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
     endif()
 
-    target_link_libraries(polysolve PUBLIC -lcudart ${CUDA_cusparse_LIBRARY})
+    target_link_libraries(polysolve PUBLIC -lcudart -lcusparse)
 endif()
 
 # Hypre (GNU Lesser General Public License)

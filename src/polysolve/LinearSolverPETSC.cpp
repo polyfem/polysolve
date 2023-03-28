@@ -104,11 +104,11 @@ namespace polysolve
             PCSetType(pc, PCLU);
             PCFactorSetMatSolverType(pc, MATSOLVERSTRUMPACK);
             break;
-        case 6:
+            //        case 6:
             // TODO : FIX HYPRE PARAMETERS
-            PCSetType(pc, PCHYPRE);
-            PCHYPRESetType(pc, "boomeramg");
-            break;
+            //            PCSetType(pc, PCHYPRE);
+            //            PCHYPRESetType(pc, "boomeramg");
+            //            break;
         default:
             PCSetType(pc, PCLU);
             PCFactorSetMatSolverType(pc, MATSOLVERPETSC);

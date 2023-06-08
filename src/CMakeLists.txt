@@ -16,8 +16,12 @@ set(SOURCES
     polysolve/LinearSolverPardiso.hpp
     polysolve/SaddlePointSolver.cpp
     polysolve/SaddlePointSolver.hpp
+    polysolve/LinearSolverAMGCL_cuda.cu
+    polysolve/LinearSolverAMGCL_cuda.hpp
 )
 
 polysolve_prepend_current_path(SOURCES)
 polysolve_set_source_group(${SOURCES})
+
+
 target_sources(polysolve PRIVATE ${SOURCES})

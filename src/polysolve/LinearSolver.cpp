@@ -25,6 +25,9 @@
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/LinearSolverAMGCL.hpp>
+#ifdef POLYSOLVE_WITH_CUDA
+#include <polysolve/LinearSolverAMGCL_cuda.hpp>
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include <polysolve/LinearSolverCuSolverDN.cuh>
@@ -261,7 +264,12 @@ namespace polysolve
         else if (solver == "AMGCL")
         {
             return std::make_unique<LinearSolverAMGCL>();
+        }
+        else if (solver == "AMGCL_cuda")
+        {
+           return std::make_unique<LinearSolverAMGCL_cuda>();
 #endif
+
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -379,6 +387,7 @@ namespace polysolve
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+            "AMGCL_cuda",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

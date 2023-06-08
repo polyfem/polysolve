@@ -24,6 +24,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
     include(${CMAKE_CURRENT_SOURCE_DIR}/PolySolveOptions.cmake)
 endif()
 
+
 ################################################################################
 # CMake Policies
 ################################################################################
@@ -47,16 +48,19 @@ endif()
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 # Polysolve options for enabling/disabling optional libraries
+
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_NOT_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                           OFF)
-
+option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                           OFF)
+option(POLYSOLVE_WITH_CUDA          "Enable CUDA"                                        ON)
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                            OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
 option(POLYSOLVE_WITH_SPECTRA       "Enable computing spectrum"                          ON)
+
 # Sanitizer options
 option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                                  OFF)
 option(POLYSOLVE_SANITIZE_MEMORY    "Sanitize Memory"                                   OFF)
@@ -76,6 +80,10 @@ if(POLYSOLVE_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 14)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
 
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
@@ -92,6 +100,7 @@ include(polysolve_use_colors)
 # IPC Toolkit utils
 include(polysolve_prepend_current_path)
 include(polysolve_set_source_group)
+include(polysolve_target_link_system_libraries)
 
 # Sort projects inside the solution
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -143,11 +152,54 @@ endif()
 include(eigen)
 target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
 
+# CUDA
+if(POLYSOLVE_WITH_CUDA)
+    include(CheckLanguage)
+    check_language(CUDA)
+    set(CMAKE_CUDA_ARCHITECTURES "61")
+    find_package(CUDAToolkit)    
+    if(CUDAToolkit_FOUND)
+        message(STATUS "Found CUDATooklkit")
+        set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
+        enable_language(CUDA)
+        target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_CUDA)        
+    else()
+        message(FATAL_ERROR "No CUDA support found!")
+    endif()
+  # We need to explicitly state that we need all CUDA files in the particle
+  # library to be built with -dc as the member functions could be called by
+  # other libraries and executables.
+  set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+  # Nvidia RTX8000 -> compute_75
+  # Nvidia V100 -> compute_70
+  # Nvidia 1080/1080Ti -> compute_61
+  # Nvidia 3080Ti -> compute_86
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 70 75 86)
+    endif()
+    set_target_properties(polysolve PROPERTIES CUDA_ARCHITECTURES "70;75;86")
+
+    if(APPLE)
+        # We need to add the path to the driver (libcuda.dylib) as an rpath,
+        # so that the static cuda runtime can find it at runtime.
+        set_property(TARGET polysolve
+                    PROPERTY
+                    BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+    endif()
+    polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cudart)
+    polysolve_target_link_system_libraries(polysolve PRIVATE CUDA::cusparse)
+endif()
+
+
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
     target_link_libraries(polysolve PUBLIC HYPRE::HYPRE)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_HYPRE)
+    if(HYPRE_WITH_MPI)
+        target_compile_definitions(polysolve PUBLIC HYPRE_WITH_MPI)
+    endif()
 endif()
 
 # Json (MIT)
@@ -249,4 +301,11 @@ if(POLYSOLVE_WITH_TESTS)
     include("${catch2_SOURCE_DIR}/contrib/Catch.cmake")
 
     add_subdirectory(tests)
+    
+    # Cuda test
+    if(POLYSOLVE_WITH_CUDA)
+        add_subdirectory(cudatest)
+    endif()
 endif()
+
+

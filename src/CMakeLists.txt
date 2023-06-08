@@ -6,6 +6,8 @@ set(SOURCES
     polysolve/LinearSolver.hpp
     polysolve/LinearSolverAMGCL.cpp
     polysolve/LinearSolverAMGCL.hpp
+    polysolve/LinearSolverCuSolverDN.cu
+    polysolve/LinearSolverCuSolverDN.cuh
     polysolve/LinearSolverEigen.hpp
     polysolve/LinearSolverEigen.tpp
     polysolve/LinearSolverHypre.cpp

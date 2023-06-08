@@ -23,8 +23,8 @@ message(STATUS "Third-party: creating targets 'SuiteSparse::SuiteSparse'")
 include(FetchContent)
 FetchContent_Declare(
     suitesparse
-    GIT_REPOSITORY https://github.com/sergiud/SuiteSparse.git
-    GIT_TAG 5.12.0-cmake.3
+    URL https://github.com/sergiud/SuiteSparse/archive/refs/tags/5.12.0-cmake.3.zip
+    URL_HASH MD5=73a6fbfc949d43f37c2c8749662fb35e
 )
 
 FetchContent_GetProperties(suitesparse)
@@ -45,6 +45,8 @@ set (WITH_LICENSE "GPL" CACHE STRING "Software license the binary distribution s
 set_property (CACHE WITH_LICENSE PROPERTY STRINGS "Minimal;GPL;LGPL")
 
 option(SUITE_SPARSE_WITH_MKL "Build SuiteSparse using MKL" ON)
+
+message(STATUS "SuiteSparse with MKL is ${SUITE_SPARSE_WITH_MKL}")
 
 if(SUITE_SPARSE_WITH_MKL)
     include(mkl)

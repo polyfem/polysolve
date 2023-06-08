@@ -7,7 +7,7 @@ if(TARGET polysolve::warnings)
 	return()
 endif()
 
-set(POLYSOLVE_FLAGS
+set(POLYSOLVE_WARNING_FLAGS
 	-Wall
 	-Wextra
 	-pedantic
@@ -152,7 +152,7 @@ set(POLYSOLVE_FLAGS
 
 # Flags above don't make sense for MSVC
 if(MSVC)
-	set(POLYSOLVE_FLAGS)
+	set(POLYSOLVE_WARNING_FLAGS)
 endif()
 
 include(CheckCXXCompilerFlag)
@@ -160,12 +160,12 @@ include(CheckCXXCompilerFlag)
 add_library(polysolve_warnings INTERFACE)
 add_library(polysolve::warnings ALIAS polysolve_warnings)
 
-foreach(FLAG IN ITEMS ${MY_FLAGS})
+foreach(FLAG IN ITEMS ${POLYSOLVE_WARNING_FLAGS})
 	string(REPLACE "=" "-" FLAG_VAR "${FLAG}")
 	if(NOT DEFINED IS_SUPPORTED_${FLAG_VAR})
 		check_cxx_compiler_flag("${FLAG}" IS_SUPPORTED_${FLAG_VAR})
 	endif()
 	if(IS_SUPPORTED_${FLAG_VAR})
-		target_compile_options(polysolve_warnings INTERFACE ${FLAG})
+		target_compile_options(polysolve_warnings INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
 	endif()
 endforeach()

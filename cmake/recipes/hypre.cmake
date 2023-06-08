@@ -16,6 +16,7 @@ set(HYPRE_SHARED       OFF CACHE INTERNAL "" FORCE)
 find_package(MPI)
 if(NOT MPI_C_FOUND OR NOT MPI_CXX_FOUND)
     SET(HYPRE_SEQUENTIAL ON)
+    message(WARNING "MPI disabled for Hypre")
 endif(NOT MPI_C_FOUND OR NOT MPI_CXX_FOUND)
 
 

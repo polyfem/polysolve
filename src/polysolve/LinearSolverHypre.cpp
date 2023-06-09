@@ -200,7 +200,7 @@ namespace polysolve
 #ifdef HYPRE_WITH_MPI
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, rhs.size() - 1, &x);
 #else
-        HYPRE_IJVectorCreate(0, 0, rhs.size() - 1, &b);
+        HYPRE_IJVectorCreate(0, 0, rhs.size() - 1, &x);
 #endif
         HYPRE_IJVectorSetObjectType(x, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(x);

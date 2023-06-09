@@ -21,6 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        sp: [on, off]
         config: [Debug, Release]
         include:
           - os: macos-latest
@@ -37,17 +38,18 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt-get install \
+          sudo apt -o Acquire::Retries=3 install \
           libblas-dev \
           libglu1-mesa-dev \
           xorg-dev \
+          mpi \
           ccache
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
 
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ccache
+          brew install ccache open-mpi
           echo 'CACHE_PATH=~/Library/Caches/ccache' >> "$GITHUB_ENV"
 
       - name: Cache Build

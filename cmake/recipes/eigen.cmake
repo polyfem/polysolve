@@ -27,8 +27,7 @@ else()
         FetchContent_Declare(
             eigen
             GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-            GIT_TAG master
-            GIT_SHALLOW TRUE
+            GIT_TAG 969c31eefcdfaab11da763bea3f7502086673ab0
         )
     else()
         FetchContent_Declare(

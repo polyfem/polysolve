@@ -5,6 +5,9 @@
 
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
+#ifdef POLYSOLVE_WITH_ACCELERATE
+#include <Eigen/AccelerateSupport>
+#endif
 #ifdef POLYSOLVE_WITH_CHOLMOD
 #include <Eigen/CholmodSupport>
 #endif
@@ -188,6 +191,16 @@ namespace polysolve
         else if (solver == "Eigen::SparseLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SparseLU, "Eigen::SparseLU");
+#ifdef POLYSOLVE_WITH_ACCELERATE
+        }
+        else if (solver == "Eigen::AccelerateLLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(AccelerateLLT, "Eigen::AccelerateLLT");
+        }
+        else if (solver == "Eigen::AccelerateLDLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(AccelerateLDLT, "Eigen::AccelerateLDLT");
+#endif
 #ifdef POLYSOLVE_WITH_CHOLMOD
         }
         else if (solver == "Eigen::CholmodSupernodalLLT")
@@ -350,6 +363,10 @@ namespace polysolve
         return {{
             "Eigen::SimplicialLDLT",
             "Eigen::SparseLU",
+#ifdef POLYSOLVE_WITH_ACCELERATE
+            "Eigen::AccelerateLLT",
+            "Eigen::AccelerateLDLT",
+#endif
 #ifdef POLYSOLVE_WITH_CHOLMOD
             "Eigen::CholmodSupernodalLLT",
             "Eigen::CholmodDecomposition",

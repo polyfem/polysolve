@@ -40,13 +40,16 @@ project(PolySolve
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND APPLE)
     set(POLYSOLVE_NOT_ON_APPLE_SILICON FALSE)
+    set(POLYSOLVE_ON_APPLE_SILICON TRUE)
 else()
     set(POLYSOLVE_NOT_ON_APPLE_SILICON TRUE)
+    set(POLYSOLVE_ON_APPLE_SILICON FALSE)
 endif()
 
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 # Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
@@ -156,6 +159,11 @@ endif()
 # Json (MIT)
 include(json)
 target_link_libraries(polysolve PUBLIC nlohmann_json::nlohmann_json)
+
+# Accelerate solvers
+if(POLYSOLVE_WITH_ACCELERATE)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_ACCELERATE)
+endif()
 
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)

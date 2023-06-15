@@ -23,12 +23,21 @@ else()
     message(STATUS "Third-party: creating target 'Eigen3::Eigen'")
 
     include(FetchContent)
-    FetchContent_Declare(
-        eigen
-        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-    )
+    if(POLYSOLVE_WITH_ACCELERATE)
+        FetchContent_Declare(
+            eigen
+            GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+            GIT_TAG master
+            GIT_SHALLOW TRUE
+        )
+    else()
+        FetchContent_Declare(
+            eigen
+            GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+            GIT_TAG tags/3.3.7
+            GIT_SHALLOW TRUE
+        )
+    endif()
     FetchContent_GetProperties(eigen)
     if(NOT eigen_POPULATED)
         FetchContent_Populate(eigen)

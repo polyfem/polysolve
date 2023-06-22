@@ -29,6 +29,7 @@ include(CPM)
         NAME sympiler
         GITHUB_REPOSITORY ryansynk/sympiler
         GIT_TAG 51bffd948f902b4606b8a8173a933ad9b54e29bf
+        OPTIONS "SYMPILER_BLAS_BACKEND MKL"
     )
 endif()
 

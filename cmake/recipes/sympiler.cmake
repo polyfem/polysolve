@@ -24,6 +24,7 @@ include(CPM)
         OPTIONS "SYMPILER_BLAS_BACKEND Apple"
     )
 else()
+include(mkl)
 include(CPM)
     CPMAddPackage(
         NAME sympiler

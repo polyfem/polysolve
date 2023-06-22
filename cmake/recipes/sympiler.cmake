@@ -24,6 +24,7 @@ include(CPM)
         OPTIONS "SYMPILER_BLAS_BACKEND Apple"
     )
 else()
+include(CPM)
     CPMAddPackage(
         NAME sympiler
         GITHUB_REPOSITORY ryansynk/sympiler

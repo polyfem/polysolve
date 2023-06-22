@@ -16,16 +16,19 @@ namespace polysolve
     private:
         POLYSOLVE_DELETE_MOVE_COPY(LinearSolverSympiler)
 
+    protected:
+        void setSolverMode(int _solver_mode);
+
     public:
         //////////////////////
         // Public interface //
         //////////////////////
 
         // Set solver parameters
-        // virtual void setParameters(const json &params) override;
+        virtual void setParameters(const json &params) override;
 
-        // Retrieve memory information from Sympiler 
-        // virtual void getInfo(json &params) const override;
+        // Retrieve status (success/failure) of factorization
+        virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
         virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
@@ -42,6 +45,13 @@ namespace polysolve
     private:
         sym_lib::parsy::SolverSettings *solver_ = nullptr;
         sym_lib::parsy::CSC *A_csc_ = new sym_lib::parsy::CSC;
+
+    protected:
+        ////////////////////
+        // Sympiler stuff //
+        ////////////////////
+        int solver_mode = 0; //0 is normal solve, 1 is row/col addition
+        int factorize_status;
 
     };
 } // namespace polysolve

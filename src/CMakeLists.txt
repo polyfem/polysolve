@@ -12,6 +12,8 @@ set(SOURCES
     polysolve/LinearSolverEigen.tpp
     polysolve/LinearSolverHypre.cpp
     polysolve/LinearSolverHypre.hpp
+    polysolve/LinearSolverSympiler.hpp
+    polysolve/LinearSolverSympiler.cpp
     polysolve/LinearSolverPardiso.cpp
     polysolve/LinearSolverPardiso.hpp
     polysolve/SaddlePointSolver.cpp

@@ -5,6 +5,9 @@
 
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
+#ifdef POLYSOLVE_WITH_SYMPILER
+#include <polysolve/LinearSolverSympiler.hpp>
+#endif
 #ifdef POLYSOLVE_WITH_ACCELERATE
 #include <Eigen/AccelerateSupport>
 #endif
@@ -191,6 +194,12 @@ namespace polysolve
         else if (solver == "Eigen::SparseLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SparseLU, "Eigen::SparseLU");
+#ifdef POLYSOLVE_WITH_SYMPILER
+        }
+        else if (solver == "Sympiler")
+        {
+            return std::make_unique<LinearSolverSympiler>();
+#endif
 #ifdef POLYSOLVE_WITH_ACCELERATE
         }
         else if (solver == "Eigen::AccelerateLLT")
@@ -363,6 +372,9 @@ namespace polysolve
         return {{
             "Eigen::SimplicialLDLT",
             "Eigen::SparseLU",
+#ifdef POLYSOLVE_WITH_SYMPILER
+            "Sympiler",
+#endif
 #ifdef POLYSOLVE_WITH_ACCELERATE
             "Eigen::AccelerateLLT",
             "Eigen::AccelerateLDLT",

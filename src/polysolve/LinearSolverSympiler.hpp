@@ -10,7 +10,7 @@ namespace polysolve
     public:
         LinearSolverSympiler()
             : m_solver(nullptr), m_A_csc(std::make_unique<sym_lib::parsy::CSC>()) {}
-        ~LinearSolverSympiler() = default;
+        virtual ~LinearSolverSympiler() = default;
 
     private:
         POLYSOLVE_DELETE_MOVE_COPY(LinearSolverSympiler)

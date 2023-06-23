@@ -24,7 +24,11 @@ else()
 endif()
 
 if(SYMPILER_BLAS_BACKEND STREQUAL "MKL")
+    message("INCLUDING MKL")
     include(mkl)
+    if(NOT TARGET MKL::MKL)
+        add_library(MKL::MKL ALIAS mkl::mkl)
+    endif()
 endif()
 
 include(CPM)
@@ -32,9 +36,9 @@ CPMAddPackage(
     NAME sympiler
     GITHUB_REPOSITORY ryansynk/sympiler
     GIT_TAG 51bffd948f902b4606b8a8173a933ad9b54e29bf
+    OPTIONS "SYMPILER_BLAS_BACKEND MKL"
 )
 
-add_library(sympiler INTERFACE)
 add_library(sympiler::sym_sparse_blas ALIAS sym_sparse_blas)
 
 include(GNUInstallDirs)

@@ -35,7 +35,7 @@ include(CPM)
 CPMAddPackage(
     NAME sympiler
     GITHUB_REPOSITORY ryansynk/sympiler
-    GIT_TAG 51bffd948f902b4606b8a8173a933ad9b54e29bf
+    GIT_TAG 2fe1ef1d72b551acedd848d64b51fa5e90251804
     OPTIONS "SYMPILER_BLAS_BACKEND MKL"
 )
 

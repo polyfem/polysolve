@@ -15,24 +15,24 @@ endif()
 
 message(STATUS "Third-party (external): creating target 'sympiler::sym_sparse_blas'")
 
-if(APPLE)
-include(CPM)
-    CPMAddPackage(
-        NAME sympiler
-        GITHUB_REPOSITORY ryansynk/sympiler
-        GIT_TAG 51bffd948f902b4606b8a8173a933ad9b54e29bf
-        OPTIONS "SYMPILER_BLAS_BACKEND Apple"
-    )
+if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm64" OR "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm64")
+    # apple M1
+    set(SYMPILER_BLAS_BACKEND "Apple" CACHE STRING "BLAS implementation for SYMPILER to use")
 else()
-include(mkl)
-include(CPM)
-    CPMAddPackage(
-        NAME sympiler
-        GITHUB_REPOSITORY ryansynk/sympiler
-        GIT_TAG 51bffd948f902b4606b8a8173a933ad9b54e29bf
-        OPTIONS "SYMPILER_BLAS_BACKEND MKL"
-    )
+    # windows, linux, apple intel
+    set(SYMPILER_BLAS_BACKEND "MKL" CACHE STRING "BLAS implementation for SYMPILER to use")
 endif()
+
+if(SYMPILER_BLAS_BACKEND STREQUAL "MKL")
+    include(mkl)
+endif()
+
+include(CPM)
+CPMAddPackage(
+    NAME sympiler
+    GITHUB_REPOSITORY ryansynk/sympiler
+    GIT_TAG 51bffd948f902b4606b8a8173a933ad9b54e29bf
+)
 
 add_library(sympiler INTERFACE)
 add_library(sympiler::sym_sparse_blas ALIAS sym_sparse_blas)

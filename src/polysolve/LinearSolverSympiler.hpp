@@ -2,15 +2,14 @@
 
 #include <polysolve/LinearSolver.hpp>
 #include <sympiler/parsy/cholesky_solver.h>
-#include <Eigen/Sparse>
-#include <Eigen/Core>
 
 namespace polysolve
 {
     class LinearSolverSympiler : public LinearSolver
     {
     public:
-        LinearSolverSympiler() = default;
+        LinearSolverSympiler()
+            : m_solver(nullptr), m_A_csc(std::make_unique<sym_lib::parsy::CSC>()) {}
         ~LinearSolverSympiler() = default;
 
     private:
@@ -18,6 +17,7 @@ namespace polysolve
 
     protected:
         void setSolverMode(int _solver_mode);
+        void updateCSC();
 
     public:
         //////////////////////
@@ -43,16 +43,16 @@ namespace polysolve
         virtual std::string name() const override { return "Sympiler"; }
 
     private:
-        sym_lib::parsy::SolverSettings *solver_ = nullptr;
-        sym_lib::parsy::CSC *A_csc_ = new sym_lib::parsy::CSC;
+        std::unique_ptr<sym_lib::parsy::SolverSettings> m_solver;
+        std::unique_ptr<sym_lib::parsy::CSC> m_A_csc;
+        polysolve::StiffnessMatrix m_A_copy;
 
     protected:
         ////////////////////
         // Sympiler stuff //
         ////////////////////
-        int solver_mode = 0; //0 is normal solve, 1 is row/col addition
-        int factorize_status;
-
+        int solver_mode = 0; // 0 is normal solve, 1 is row/col addition
+        int factorize_status = -1;
     };
 } // namespace polysolve
 

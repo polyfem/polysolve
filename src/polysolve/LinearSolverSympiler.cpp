@@ -1,7 +1,6 @@
 #ifdef POLYSOLVE_WITH_SYMPILER
 
 #include <polysolve/LinearSolverSympiler.hpp>
-#include <Eigen/Sparse>
 #include <Eigen/Core>
 
 namespace polysolve
@@ -9,6 +8,19 @@ namespace polysolve
     void LinearSolverSympiler::setSolverMode(int _solver_mode)
     {
         solver_mode = _solver_mode;
+    }
+
+    void LinearSolverSympiler::updateCSC()
+    {
+        m_A_csc->nzmax = m_A_copy.nonZeros();
+        m_A_csc->ncol = m_A_csc->nrow = m_A_copy.rows();
+        m_A_csc->p = m_A_copy.outerIndexPtr();
+        m_A_csc->i = m_A_copy.innerIndexPtr();
+
+        m_A_csc->x = m_A_copy.valuePtr();
+        m_A_csc->stype = -1;
+        m_A_csc->packed = 1;
+        m_A_csc->nz = nullptr;
     }
 
     void LinearSolverSympiler::setParameters(const json &params)
@@ -36,44 +48,28 @@ namespace polysolve
 
     void LinearSolverSympiler::analyzePattern(const StiffnessMatrix &A, const int precond_num)
     {
-        StiffnessMatrix A_copy = StiffnessMatrix(A);
-
-        A_csc_->nzmax = A_copy.nonZeros();
-        A_csc_->ncol = A_csc_->nrow = A_copy.rows();
-        A_csc_->p = A_copy.outerIndexPtr();
-        A_csc_->i = A_copy.innerIndexPtr();
-
-        A_csc_->x = A_copy.valuePtr();
-        A_csc_->stype = -1;
-        A_csc_->packed = 1;
-        A_csc_->nz = nullptr;
-
-        solver_ = new sym_lib::parsy::SolverSettings(A_csc_);
-        solver_->symbolic_analysis();
+        m_A_copy = StiffnessMatrix(A);
+        updateCSC();
+        m_solver = std::make_unique<sym_lib::parsy::SolverSettings>(m_A_csc.get());
+        m_solver->symbolic_analysis();
     }
 
     // Factorize system matrix
     void LinearSolverSympiler::factorize(const StiffnessMatrix &A)
     {
-        // This copy isn't always necessary if matrix doesn't change
-        StiffnessMatrix A_copy = StiffnessMatrix(A);
-
-        A_csc_->nzmax = A_copy.nonZeros();
-        A_csc_->ncol = A_csc_->nrow = A_copy.rows();
-        A_csc_->p = A_copy.outerIndexPtr();
-        A_csc_->i = A_copy.innerIndexPtr();
-
-        A_csc_->x = A_copy.valuePtr();
-        A_csc_->stype = -1;
-        A_csc_->packed = 1;
-        A_csc_->nz = nullptr;
-        factorize_status = solver_->numerical_factorization(A_csc_);
+        // Only copy when matrix changes
+        if (!m_A_copy.isApprox(A))
+        {
+            m_A_copy = StiffnessMatrix(A);
+            updateCSC();
+        }
+        factorize_status = m_solver->numerical_factorization(m_A_csc.get());
     }
 
     // Solve the linear system Ax = b
     void LinearSolverSympiler::solve(const Ref<const Eigen::VectorXd> b, Ref<Eigen::VectorXd> x)
     {
-        double *x_ptr = solver_->solve_only(b.data());
+        double *x_ptr = m_solver->solve_only(b.data());
         x = Eigen::Map<Eigen::VectorXd>(x_ptr, x.rows(), x.cols());
     }
 

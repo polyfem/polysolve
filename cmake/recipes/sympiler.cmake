@@ -36,7 +36,6 @@ CPMAddPackage(
     NAME sympiler
     GITHUB_REPOSITORY ryansynk/sympiler
     GIT_TAG 2fe1ef1d72b551acedd848d64b51fa5e90251804
-    OPTIONS "SYMPILER_BLAS_BACKEND MKL"
 )
 
 add_library(sympiler::sym_sparse_blas ALIAS sym_sparse_blas)

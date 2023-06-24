@@ -1,16 +1,15 @@
 #ifdef POLYSOLVE_WITH_SYMPILER
 
 #include <polysolve/LinearSolver.hpp>
-#include <sympiler/parsy/cholesky_solver.h>
 
 namespace polysolve
 {
+    class LinearSolverSympilerImpl;
     class LinearSolverSympiler : public LinearSolver
     {
     public:
-        LinearSolverSympiler()
-            : m_solver(nullptr), m_A_csc(std::make_unique<sym_lib::parsy::CSC>()) {}
-        virtual ~LinearSolverSympiler() = default;
+        LinearSolverSympiler();
+        ~LinearSolverSympiler();
 
     private:
         POLYSOLVE_DELETE_MOVE_COPY(LinearSolverSympiler)
@@ -43,9 +42,7 @@ namespace polysolve
         virtual std::string name() const override { return "Sympiler"; }
 
     private:
-        std::unique_ptr<sym_lib::parsy::SolverSettings> m_solver;
-        std::unique_ptr<sym_lib::parsy::CSC> m_A_csc;
-        polysolve::StiffnessMatrix m_A_copy;
+        std::unique_ptr<LinearSolverSympilerImpl> m_pImpl;
 
     protected:
         ////////////////////

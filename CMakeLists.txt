@@ -115,6 +115,14 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Generate position independent code by default
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Since MKL comes precompiled with /MD on Windows, we need to use the same MSVC runtime library flag
+# globally for the whole project (otherwise in Debug we will have a mismatch between /MD and /MDd).
+if(POLYSOLVE_WITH_MKL)
+    # Set MSVC runtime library globally for all targets
+    message(STATUS "Forcing /MD globally due MKL being enabled")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "Select the MSVC runtime library")
+endif()
+
 ################################################################################
 # PolySolve Library
 ################################################################################

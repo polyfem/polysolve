@@ -33,9 +33,6 @@ jobs:
         with:
           fetch-depth: 10
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
-
       - name: Dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -79,6 +76,10 @@ jobs:
 
       - name: Tests
         run: cd build; ctest --verbose --output-on-failure
+
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
 
   ####################
   # Windows

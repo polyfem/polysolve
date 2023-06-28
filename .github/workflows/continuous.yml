@@ -33,6 +33,9 @@ jobs:
         with:
           fetch-depth: 10
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+
       - name: Dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -56,7 +59,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-${{ matrix.config }}-cache
+          key: ${{ runner.os }}-${{ matrix.config }}-caceh
 
       - name: Prepare ccache
         run: |

@@ -24,6 +24,9 @@ if(POLYSOLVE_WITH_SANITIZERS)
 	add_sanitizers(unit_tests)
 endif()
 
+include(polyfem-data)
+target_link_libraries(unit_tests PRIVATE polyfem::data)
+
 ################################################################################
 # Register tests
 ################################################################################
@@ -35,23 +38,3 @@ endforeach()
 # Register tests
 set(PARSE_CATCH_TESTS_ADD_TO_CONFIGURE_DEPENDS ON)
 catch_discover_tests(unit_tests)
-
-################################################################################
-# Data
-################################################################################
-
-set(DATA_DIR "${CMAKE_SOURCE_DIR}/tests/data")
-include(ExternalProject)
-include(FetchContent)
-FetchContent_Declare(
-    data
-    SOURCE_DIR ${DATA_DIR}
-    GIT_REPOSITORY https://github.com/polyfem/polyfem-data
-    GIT_TAG 9c1bdd5bd02215e80bc1668547e5dbeb5484a527
-)
-FetchContent_GetProperties(data)
-if(NOT data_POPULATED)
-	FetchContent_Populate(data)
-endif()
-
-target_compile_definitions(unit_tests PUBLIC -DPOLYSOLVE_DATA_DIR=\"${DATA_DIR}\")

@@ -155,17 +155,10 @@ if(MSVC)
 	set(POLYSOLVE_WARNING_FLAGS)
 endif()
 
-include(CheckCXXCompilerFlag)
-
 add_library(polysolve_warnings INTERFACE)
 add_library(polysolve::warnings ALIAS polysolve_warnings)
 
-foreach(FLAG IN ITEMS ${POLYSOLVE_WARNING_FLAGS})
-	string(REPLACE "=" "-" FLAG_VAR "${FLAG}")
-	if(NOT DEFINED IS_SUPPORTED_${FLAG_VAR})
-		check_cxx_compiler_flag("${FLAG}" IS_SUPPORTED_${FLAG_VAR})
-	endif()
-	if(IS_SUPPORTED_${FLAG_VAR})
-		target_compile_options(polysolve_warnings INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
-	endif()
-endforeach()
+include(polysolve_filter_flags)
+polysolve_filter_flags(POLYSOLVE_WARNING_FLAGS)
+target_compile_options(polysolve_warnings INTERFACE ${POLYSOLVE_WARNING_FLAGS})
+

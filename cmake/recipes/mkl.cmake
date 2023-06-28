@@ -1,5 +1,5 @@
 #
-# Copyright 2020 Adobe. All rights reserved.
+# Copyright 2021 Adobe. All rights reserved.
 # This file is licensed to you under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License. You may obtain a copy
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -30,9 +30,6 @@ message(STATUS "MKL threading layer: ${MKL_THREADING}")
 # Linking options
 set(MKL_LINKING "static" CACHE STRING "Linking strategy to use with MKL (static, dynamic or sdl)")
 set(MKL_LINKING_CHOICES static dynamic sdl)
-if(WIN32 AND CMAKE_BUILD_TYPE MATCHES "Debug")
-    set(MKL_LINKING "dynamic" CACHE STRING "Linking strategy to use with MKL (static, dynamic or sdl)" FORCE)
-endif()
 set_property(CACHE MKL_LINKING PROPERTY STRINGS ${MKL_LINKINK_CHOICES})
 message(STATUS "MKL linking strategy: ${MKL_LINKING}")
 
@@ -76,11 +73,7 @@ endif()
 if(WIN32)
     set(MKL_PLATFORM win-64)
 elseif(APPLE)
-    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-        message(FATAL_ERROR "MKL is not supported on Apple Silicon macOS yet! Disable MKL by setting POLYSOLVE_WITH_MKL=OFF.")
-    else()
-        set(MKL_PLATFORM osx-64)
-    endif()
+    set(MKL_PLATFORM osx-64)
 elseif(UNIX)
     set(MKL_PLATFORM linux-64)
 endif()
@@ -156,14 +149,13 @@ else()
     set(MKL_REMOTES mkl-include mkl mkl-devel)
 endif()
 
-include(FetchContent)
+include(CPM)
 foreach(name IN ITEMS ${MKL_REMOTES})
-    FetchContent_Declare(
-        ${name}
+    CPMAddPackage(
+        NAME ${name}
         URL https://anaconda.org/intel/${name}/${MKL_VERSION}/download/${MKL_PLATFORM}/${${name}-${MKL_PLATFORM}-file}
         URL_MD5 ${${name}-${MKL_PLATFORM}-md5}
     )
-    FetchContent_MakeAvailable(${name})
 endforeach()
 
 ################################################################################
@@ -366,7 +358,11 @@ else()
     mkl_add_imported_library(core)
 
     # Interface library
-    mkl_add_imported_library(intel_${MKL_INTERFACE} NO_DLL)
+    if(WIN32)
+        mkl_add_imported_library(intel_${MKL_INTERFACE} NO_DLL)
+    else()
+        mkl_add_imported_library(intel_${MKL_INTERFACE})
+    endif()
 
     # Thread library
     if(MKL_THREADING STREQUAL sequential)
@@ -402,10 +398,6 @@ if(NOT MSVC)
     find_library(LIBM_LIBRARY m)
     mkl_assert_is_found(LIBM_LIBRARY)
     target_link_libraries(mkl::mkl INTERFACE ${LIBM_LIBRARY})
-endif()
-
-if(NOT MSVC)
-    target_link_libraries(mkl::mkl INTERFACE ${CMAKE_DL_LIBS})
 endif()
 
 # If using TBB, we need to specify the dependency

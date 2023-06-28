@@ -60,10 +60,8 @@ project(PolySolve
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND APPLE)
     set(POLYSOLVE_NOT_ON_APPLE_SILICON OFF)
-    set(POLYSOLVE_ON_APPLE_SILICON ON)
 else()
     set(POLYSOLVE_NOT_ON_APPLE_SILICON ON)
-    set(POLYSOLVE_ON_APPLE_SILICON OFF)
 endif()
 
 # Polysolve options
@@ -98,7 +96,7 @@ if(POLYSOLVE_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-if (MSVC)
+if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
@@ -137,12 +135,6 @@ target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 if(POLYSOLVE_LARGE_INDEX)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_LARGE_INDEX)
 endif()
-
-# No limit yay
-target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=0)
-
-# 8MB
-# target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=8388608)
 
 ################################################################################
 # Dependencies

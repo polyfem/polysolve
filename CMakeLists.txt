@@ -70,7 +70,7 @@ endif()
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
+option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate"                      ${APPLE})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
@@ -118,20 +118,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ################################################################################
-# Lock dependencies
-################################################################################
-
-if(POLYSOLVE_WITH_ACCELERATE)
-    include(CPM)
-    CPMDeclarePackage(
-        NAME eigen
-        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-        GIT_TAG 969c31eefcdfaab11da763bea3f7502086673ab0
-        DOWNLOAD_ONLY ON
-    )
-endif()
-
-################################################################################
 # PolySolve Library
 ################################################################################
 
@@ -161,6 +147,21 @@ target_compile_definitions(polysolve PUBLIC -DEIGEN_STACK_ALLOCATION_LIMIT=0)
 ################################################################################
 # Dependencies
 ################################################################################
+
+# Accelerate solver
+if(POLYSOLVE_WITH_ACCELERATE)
+    include(CPM)
+    CPMAddPackage(
+        NAME eigen
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG 969c31eefcdfaab11da763bea3f7502086673ab0
+        DOWNLOAD_ONLY ON
+    )
+    set(BLA_VENDOR Apple)
+    find_package(BLAS REQUIRED)
+    find_package(LAPACK REQUIRED)
+    target_link_libraries(polysolve PRIVATE BLAS::BLAS LAPACK::LAPACK)
+endif()
 
 # Extra warnings
 include(polysolve_warnings)
@@ -203,7 +204,8 @@ endif()
 
 # MKL library
 if(POLYSOLVE_WITH_MKL)
-    # include(eigen) will add mkl for us
+    include(mkl)
+    target_link_libraries(polysolve PUBLIC mkl::mkl)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_MKL)
 endif()
 

@@ -21,7 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        sp: [on, off]
         config: [Debug, Release]
         include:
           - os: macos-latest
@@ -57,7 +56,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-${{ matrix.config }}--${{ matrix.sp }}-cache
+          key: ${{ runner.os }}-${{ matrix.config }}-cache
 
       - name: Prepare ccache
         run: |

@@ -120,10 +120,12 @@ foreach(name IN ITEMS cholmod SuiteSparse::CHOLMOD)
 endforeach()
 
 # Ensure that cholmod is linked as a shared library due to LGPL licensing
-get_target_property(target_type cholmod TYPE)
-if(NOT ${target_type} STREQUAL "SHARED_LIBRARY")
-    message(FATAL_ERROR "SuiteSparse error: 'cholmod' should be SHARED_LIBRARY, but is ${target_type}.")
-endif ()
+if(WITH_LICENSE STREQUAL LGPL)
+    get_target_property(target_type cholmod TYPE)
+    if(NOT ${target_type} STREQUAL "SHARED_LIBRARY")
+        message(FATAL_ERROR "SuiteSparse error: 'cholmod' should be SHARED_LIBRARY, but is ${target_type}.")
+    endif()
+endif()
 
 # Set folders for MSVC
 foreach(name IN ITEMS

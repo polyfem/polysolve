@@ -65,7 +65,7 @@ function(onetbb_import_target)
     CPMAddPackage(
         NAME tbb
         GITHUB_REPOSITORY oneapi-src/oneTBB
-        GIT_TAG v2021.9.0
+        GIT_TAG v2021.6.0
     )
 
     pop_variable(BUILD_SHARED_LIBS)

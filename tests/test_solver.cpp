@@ -179,7 +179,7 @@ TEST_CASE("pre_factor", "[solver]")
             REQUIRE(err < 1e-8);
         }
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        std::cout << s << ": " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+        std::cout << s << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     }
 }
 

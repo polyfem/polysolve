@@ -93,9 +93,10 @@ function(suitesparse_import_target)
     set(HAVE_BLAS_NO_UNDERSCORE ON)
     set(HAVE_BLAS_UNDERSCORE OFF)
 
-    # SuiteSparse is composed of multiple libraries
-    # Build all intermediate libraries in static
-    push_variable(BUILD_SHARED_LIBS ON)
+    # SuiteSparse is composed of multiple libraries. If LGPL is enabled, we need to build shared libraries to comply with the license. If GPL is enabled, it is the user's responsibility to comply with the license by release the parts of their code that depends on SuiteSparse under GPL.
+    if(WITH_LGPL)
+        push_variable(BUILD_SHARED_LIBS ON)
+    endif()
     include(CPM)
     CPMAddPackage(
         NAME suitesparse
@@ -103,7 +104,9 @@ function(suitesparse_import_target)
         GIT_TAG 0ba07264225518a487a0a9a8e675f6e36c96a68a
         EXCLUDE_FROM_ALL ON
     )
-    pop_variable(BUILD_SHARED_LIBS)
+    if(WITH_LGPL)
+        pop_variable(BUILD_SHARED_LIBS)
+    endif()
 endfunction()
 
 suitesparse_import_target()

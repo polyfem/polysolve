@@ -8,10 +8,10 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
 # OF ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
-#
+
 #---------------------------------------------------------------------------------------------------
 # WARNING: By default, the GPL module Cholmod/Supernodal is enabled. This leads to a 2x speedup
-# compared to simplicial mode. This is optional and can be disabled by setting WITH_GPL to OFF.
+# compared to simplicial mode. This is optional and can be disabled by setting WITH_LICENSE to LGPL.
 #---------------------------------------------------------------------------------------------------
 
 if(TARGET SuiteSparse::CHOLMOD)

@@ -13,17 +13,11 @@ set(HYPRE_USING_FEI    OFF CACHE INTERNAL "" FORCE)
 set(HYPRE_USING_OPENMP OFF CACHE INTERNAL "" FORCE)
 set(HYPRE_SHARED       OFF CACHE INTERNAL "" FORCE)
 
-
-
-include(FetchContent)
-FetchContent_Declare(
-    hypre
-    GIT_REPOSITORY https://github.com/hypre-space/hypre.git
+include(CPM)
+CPMAddPackage(
+    NAME hypre
+    GITHUB_REPOSITORY hypre-space/hypre
     GIT_TAG v2.28.0
-    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR src
 )
-
-FetchContent_MakeAvailable(hypre)
-
-add_subdirectory("${hypre_SOURCE_DIR}/src")
 file(REMOVE "${hypre_SOURCE_DIR}/src/utilities/version")

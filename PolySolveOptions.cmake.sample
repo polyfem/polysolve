@@ -14,24 +14,12 @@
 # Generates a `compile_commands.json` that can be used for autocompletion
 # set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Enable/Disable output of compile commands during generation.")
 
-# Use ccache to speed up compilation of repeated builds
-# find_program(CCACHE_PROGRAM ccache)
-# if(CCACHE_PROGRAM)
-#     message(STATUS "Enabling Ccache support")
-#     set(CMAKE_C_COMPILER_LAUNCHER   ${CCACHE_PROGRAM} CACHE STRING "")
-#     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM} CACHE STRING "")
-# endif()
-
 # Use a specific C/C++ compiler, e.g. llvm-clang on macOS (so we can use clangd)
 # set(CMAKE_C_COMPILER   "/usr/local/opt/llvm/bin/clang"   CACHE STRING "C compiler")
 # set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++" CACHE STRING "C++ compiler")
 
 # Set deployment platform for macOS
 # set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE STRING "macOS deployment target")
-
-# Always add colored output (e.g. when using Ninja)
-# list(APPEND CMAKE_CXX_FLAGS -fdiagnostics-color=always) # GCC
-# list(APPEND CMAKE_CXX_FLAGS -fcolor-diagnostics) # Clang
 
 ################################################################################
 # PolySolve Options
@@ -45,23 +33,10 @@
 # option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                     OFF)
 # option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)
 # option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                   ON)
-# option(POLYSOLVE_WITH_SPECTRA       "Enable computing spectrum"                   ON)
+# option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                      ON)
 
 # Options for third-party libraries
 # option(EIGEN_WITH_MKL "Use Eigen with MKL" ON)
 # set(MKL_INTERFACE "lp64" CACHE STRING "Interface layer to use with MKL (lp64 or ilp64)")
 # set(MKL_LINKING "static" CACHE STRING "Linking strategy to use with MKL (static, dynamic or sdl)")
 # set(MKL_THREADING "tbb" CACHE STRING "Threading layer to use with MKL (sequential, tbb or openmp)")
-
-################################################################################
-# FetchContent Options
-################################################################################
-
-# option(FETCHCONTENT_FULLY_DISCONNECTED   "Disables all attempts to download or update content and assumes source dirs already exist")
-# option(FETCHCONTENT_UPDATES_DISCONNECTED "Enables UPDATE_DISCONNECTED behavior for all content population")
-# option(FETCHCONTENT_QUIET                "Enables QUIET option for all content population" ON)
-# set(FETCHCONTENT_BASE_DIR "${CMAKE_BINARY_DIR}/_deps" CACHE PATH "Directory under which to collect all populated content")
-
-################################################################################
-# Development Locations for Third Party Libraries
-################################################################################

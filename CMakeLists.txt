@@ -60,15 +60,17 @@ project(PolySolve
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND APPLE)
     set(POLYSOLVE_NOT_ON_APPLE_SILICON OFF)
+    set(POLYSOLVE_ON_APPLE_SILICON ON)
 else()
     set(POLYSOLVE_NOT_ON_APPLE_SILICON ON)
+    set(POLYSOLVE_ON_APPLE_SILICON ON)
 endif()
 
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate"                      ${APPLE})
+option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)

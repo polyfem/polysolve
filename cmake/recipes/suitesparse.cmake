@@ -106,7 +106,7 @@ function(suitesparse_import_target)
         GIT_TAG 0ba07264225518a487a0a9a8e675f6e36c96a68a
         EXCLUDE_FROM_ALL ON
     )
-    if(WITH_LGPL)
+    if(WITH_LICENSE STREQUAL LGPL)
         pop_variable(BUILD_SHARED_LIBS)
     endif()
 endfunction()

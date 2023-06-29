@@ -89,6 +89,9 @@ option(POLYSOLVE_SANITIZE_UNDEFINED "Sanitize Undefined"                        
 option(POLYSOLVE_LARGE_INDEX        "Build for large indices"                           OFF)
 option(POLYSOLVE_WITH_TESTS         "Build unit-tests"        ${POLYSOLVE_TOPLEVEL_PROJECT})
 
+include(CMakeDependentOption)
+cmake_dependent_option(EIGEN_WITH_MKL "Use Eigen with MKL" ON "POLYSOLVE_WITH_MKL" OFF)
+
 # Set default minimum C++ standard
 if(POLYSOLVE_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_STANDARD 14)

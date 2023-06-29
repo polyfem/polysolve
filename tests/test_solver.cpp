@@ -6,6 +6,7 @@
 #include <fstream>
 #include <vector>
 #include <ctime>
+#include <chrono>
 #include <polysolve/LinearSolverAMGCL.hpp>
 //////////////////////////////////////////////////////////////////////////
 
@@ -131,6 +132,7 @@ TEST_CASE("pre_factor", "[solver]")
         if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
             continue;
 #endif
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         auto solver = LinearSolver::create(s, "");
         solver->analyzePattern(A, A.rows());
 
@@ -176,6 +178,8 @@ TEST_CASE("pre_factor", "[solver]")
             INFO("solver: " + s);
             REQUIRE(err < 1e-8);
         }
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        std::cout << s << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     }
 }
 

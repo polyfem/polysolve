@@ -2,6 +2,7 @@ build*
 bin*
 3rdparty*
 tests/data
+/data
 .vscode
 *.code-workspace
 PolySolveOptions.cmake

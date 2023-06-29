@@ -6,6 +6,7 @@
 #include <fstream>
 #include <vector>
 #include <ctime>
+#include <chrono>
 #include <polysolve/LinearSolverAMGCL.hpp>
 //////////////////////////////////////////////////////////////////////////
 
@@ -39,12 +40,16 @@ void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
 };
 TEST_CASE("all", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
     auto solvers = LinearSolver::availableSolvers();
+    for (const auto &s : solvers)
+    {
+        std::cout << s << std::endl;
+    }
 
     for (const auto &s : solvers)
     {
@@ -78,7 +83,7 @@ TEST_CASE("all", "[solver]")
 
 TEST_CASE("eigen_params", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -116,7 +121,7 @@ TEST_CASE("eigen_params", "[solver]")
 
 TEST_CASE("pre_factor", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -131,6 +136,7 @@ TEST_CASE("pre_factor", "[solver]")
         if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
             continue;
 #endif
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         auto solver = LinearSolver::create(s, "");
         solver->analyzePattern(A, A.rows());
 
@@ -176,13 +182,15 @@ TEST_CASE("pre_factor", "[solver]")
             INFO("solver: " + s);
             REQUIRE(err < 1e-8);
         }
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        std::cout << s << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     }
 }
 
 #ifdef POLYSOLVE_WITH_HYPRE
 TEST_CASE("hypre", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -207,7 +215,7 @@ TEST_CASE("hypre", "[solver]")
 
 TEST_CASE("hypre_initial_guess", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -250,7 +258,7 @@ TEST_CASE("hypre_initial_guess", "[solver]")
 #ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_initial_guess", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -297,7 +305,7 @@ TEST_CASE("saddle_point_test", "[solver]")
     return;
 #endif
 #endif
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     bool ok = loadMarket(A, path + "/A0.mat");
     REQUIRE(ok);
@@ -321,7 +329,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
 #ifndef NDEBUG
     return;
 #endif
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -375,7 +383,7 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
 #ifndef NDEBUG
     return;
 #endif
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     std::string MatrixName = "gr_30_30.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
@@ -443,7 +451,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
     return;
 #endif
     std::cout << "Polysolve AMGCL Solver" << std::endl;
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
@@ -509,7 +517,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     return;
 #endif
     std::cout << "Polysolve AMGCL Solver" << std::endl;
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
@@ -575,7 +583,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
 #ifdef POLYSOLVE_WITH_CUSOLVER
 TEST_CASE("cusolverdn", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
@@ -598,7 +606,7 @@ TEST_CASE("cusolverdn", "[solver]")
 
 TEST_CASE("cusolverdn_dense", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
 
     Eigen::MatrixXd A(4, 4);
     for (int i = 0; i < 4; i++)
@@ -629,7 +637,7 @@ TEST_CASE("cusolverdn_dense", "[solver]")
 
 TEST_CASE("cusolverdn_dense_float", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
 
     Eigen::MatrixXd A(4, 4);
     for (int i = 0; i < 4; i++)
@@ -661,7 +669,7 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
 
 TEST_CASE("cusolverdn_5cubes", "[solver]")
 {
-    const std::string path = POLYSOLVE_DATA_DIR;
+    const std::string path = POLYFEM_DATA_DIR;
     auto solver = LinearSolver::create("cuSolverDN", "");
 
     // std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");

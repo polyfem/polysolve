@@ -9,19 +9,26 @@
 # OF ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 #
-
-# Catch2 BSL 1.0 optional
 if(TARGET Catch2::Catch2)
     return()
 endif()
 
 message(STATUS "Third-party: creating target 'Catch2::Catch2'")
 
-include(FetchContent)
-FetchContent_Declare(
-    catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v2.13.6
-    GIT_SHALLOW TRUE
+option(CATCH_CONFIG_CPP17_STRING_VIEW "Enable support for std::string_view" ON)
+option(CATCH_INSTALL_DOCS "Install documentation alongside library" OFF)
+option(CATCH_INSTALL_EXTRAS "Install extras alongside library" OFF)
+
+include(CPM)
+CPMAddPackage(
+    NAME catch2
+    GITHUB_REPOSITORY catchorg/Catch2
+    GIT_TAG v2.13.9
 )
-FetchContent_MakeAvailable(catch2)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
+    # See https://github.com/catchorg/Catch2/issues/2654
+    target_compile_options(Catch2 PUBLIC -Wno-parentheses)
+endif()
+
+set_target_properties(Catch2 PROPERTIES FOLDER third_party)

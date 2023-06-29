@@ -93,8 +93,10 @@ function(suitesparse_import_target)
     set(HAVE_BLAS_NO_UNDERSCORE ON)
     set(HAVE_BLAS_UNDERSCORE OFF)
 
-    # SuiteSparse is composed of multiple libraries. If LGPL is enabled, we need to build shared libraries to comply with the license. If GPL is enabled, it is the user's responsibility to comply with the license by release the parts of their code that depends on SuiteSparse under GPL.
-    if(WITH_LGPL)
+    # SuiteSparse is composed of multiple libraries. If LGPL is enabled, we need to build shared
+    # libraries to comply with the license. If GPL is enabled, it is the user's responsibility to
+    # comply with the license by release the parts of their code that depends on SuiteSparse under GPL.
+    if(WITH_LICENSE STREQUAL LGPL)
         push_variable(BUILD_SHARED_LIBS ON)
     endif()
     include(CPM)

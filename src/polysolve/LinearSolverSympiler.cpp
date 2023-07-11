@@ -36,6 +36,7 @@ public:
         m_pImpl->m_A_csc->x = m_pImpl->m_A_copy.valuePtr();
         m_pImpl->m_A_csc->stype = -1;
         m_pImpl->m_A_csc->packed = 1;
+        m_pImpl->m_A_csc->sorted = 1;
         m_pImpl->m_A_csc->nz = nullptr;
     }
 

@@ -19,7 +19,6 @@ if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm64" OR "${CMAKE_OSX_ARCHITECTURES}" M
     # Use Accelerate on macOS M1
     set(BLA_VENDOR Apple)
     find_package(BLAS REQUIRED)
-else()
 elseif(POLYSOLVE_WITH_MKL)
     # Use MKL if enabled
     include(mkl)

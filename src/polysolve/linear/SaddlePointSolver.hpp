@@ -9,7 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     class SaddlePointSolver : public Solver
@@ -72,4 +72,4 @@ namespace polysolve
         int num_iterations_;
     };
 
-} // namespace polysolve
+} // namespace polysolve::linear

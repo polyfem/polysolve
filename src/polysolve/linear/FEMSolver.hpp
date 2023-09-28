@@ -11,7 +11,7 @@ using json = nlohmann::json;
 #include <memory>
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     ///
@@ -49,4 +49,4 @@ namespace polysolve
     void dirichlet_solve_prefactorized(Solver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
                                        const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u);
 
-} // namespace polysolve
+} // namespace polysolve::linear

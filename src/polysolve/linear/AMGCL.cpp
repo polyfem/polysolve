@@ -7,7 +7,7 @@
 #include <boost/property_tree/json_parser.hpp>
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     namespace
@@ -304,6 +304,6 @@ namespace polysolve
 
     template class AMGCL_Block<2>;
     template class AMGCL_Block<3>;
-} // namespace polysolve
+} // namespace polysolve::linear
 
 #endif

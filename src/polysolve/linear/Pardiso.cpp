@@ -23,7 +23,7 @@ extern "C"
 #endif
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
     // #define PLOTS_PARDISO
 
@@ -433,6 +433,6 @@ namespace polysolve
 #endif
     }
 
-} // namespace polysolve
+} // namespace polysolve::linear
 
 #endif

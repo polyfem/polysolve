@@ -19,7 +19,7 @@
 // https://github.com/LLNL/hypre/blob/v2.14.0/docs/HYPRE_usr_manual.pdf
 //
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     class HypreSolver : public Solver
@@ -72,6 +72,6 @@ namespace polysolve
         HYPRE_ParCSRMatrix parcsr_A;
     };
 
-} // namespace polysolve
+} // namespace polysolve::linear
 
 #endif

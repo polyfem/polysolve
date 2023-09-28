@@ -4,7 +4,7 @@
 
 set(test_sources
 	main.cpp
-	test_solver.cpp
+	test_linear_solver.cpp
 )
 add_executable(unit_tests ${test_sources})
 

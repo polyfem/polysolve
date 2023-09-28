@@ -15,7 +15,7 @@
 // https://docs.nvidia.com/cuda/cusolver/index.html#cuSolverDN-function-reference
 //
 
-namespace polysolve
+namespace polysolve::linear
 {
     template <typename T>
     class CuSolverDN : public Solver
@@ -73,6 +73,6 @@ namespace polysolve
         int numrows;
     };
 
-} // namespace polysolve
+} // namespace polysolve::linear
 
 #endif

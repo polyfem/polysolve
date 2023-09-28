@@ -44,7 +44,7 @@
 // column-major matrix, the solver will actually solve A^T x = b.
 //
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     template <int BLOCK_SIZE>
@@ -162,6 +162,6 @@ namespace polysolve
         AMGCL_Block<3> block3_solver_;
     };
 
-} // namespace polysolve
+} // namespace polysolve::linear
 
 #endif

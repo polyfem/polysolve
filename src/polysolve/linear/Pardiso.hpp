@@ -16,7 +16,7 @@
 // - OMP_NUM_THREADS: number of threads
 // - PARDISO_LIC_PATH: path to the folder containing the license file
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     class Pardiso : public Solver
@@ -117,6 +117,6 @@ namespace polysolve
         int numUniqueElements;
     };
 
-} // namespace polysolve
+} // namespace polysolve::linear
 
 #endif

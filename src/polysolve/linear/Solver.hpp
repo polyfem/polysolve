@@ -22,7 +22,7 @@ using json = nlohmann::json;
 // - [ ] Document the json parameters for each
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
 #ifdef POLYSOLVE_LARGE_INDEX
     typedef Eigen::SparseMatrix<double, Eigen::ColMajor, std::ptrdiff_t> StiffnessMatrix;
@@ -111,4 +111,4 @@ namespace polysolve
         virtual std::string name() const { return ""; }
     };
 
-} // namespace polysolve
+} // namespace polysolve::linear

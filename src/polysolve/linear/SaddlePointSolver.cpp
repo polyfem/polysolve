@@ -4,7 +4,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
     namespace
     {
@@ -292,4 +292,4 @@ namespace polysolve
     {
     }
 
-} // namespace polysolve
+} // namespace polysolve::linear

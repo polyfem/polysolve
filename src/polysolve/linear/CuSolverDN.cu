@@ -12,7 +12,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     namespace
@@ -204,7 +204,7 @@ namespace polysolve
         cudaDeviceReset();
     }
 
-} // namespace polysolve
+} // namespace polysolve::linear
 
 template polysolve::CuSolverDN<double>::CuSolverDN();
 template polysolve::CuSolverDN<float>::CuSolverDN();

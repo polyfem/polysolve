@@ -36,7 +36,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace polysolve
+namespace polysolve::linear
 {
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -122,7 +122,7 @@ namespace polysolve
     do                                                   \
     {                                                    \
         return std::make_unique<EigenDirect<EigenSolver< \
-            polysolve::StiffnessMatrix>>>(Name);         \
+            polysolve::linear::StiffnessMatrix>>>(Name); \
     } while (0)
 
 #define RETURN_DIRECT_DENSE_SOLVER_PTR(EigenSolver, Name)     \
@@ -459,4 +459,4 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-} // namespace polysolve
+} // namespace polysolve::linear

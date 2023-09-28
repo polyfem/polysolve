@@ -5,7 +5,7 @@ set(SOURCES
 	BFGS.hpp
 	GradientDescent.hpp
 	Solver.hpp
-	Solver.tpp
+	Solver.cpp
 	BoxConstraints.hpp
 	SparseNewton.hpp
 	SparseNewton.tpp

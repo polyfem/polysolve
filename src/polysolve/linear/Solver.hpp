@@ -2,10 +2,6 @@
 
 #include <polysolve/types.hpp>
 
-////////////////////////////////////////////////////////////////////////////////
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
-
 #include <memory>
 
 #define POLYSOLVE_DELETE_MOVE_COPY(Base) \

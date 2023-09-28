@@ -2,7 +2,7 @@
 
 #include "LineSearch.hpp"
 
-#include <polyfem/utils/Timer.hpp>
+// #include <polyfem/utils/Timer.hpp>
 
 #include <cfenv>
 
@@ -33,7 +33,7 @@ namespace polysolve::nonlinear::line_search
 
             double old_energy, step_size;
             {
-                POLYFEM_SCOPED_TIMER("LS begin");
+                POLYSOLVE_SCOPED_TIMER("LS begin");
 
                 this->cur_iter = 0;
 
@@ -54,7 +54,7 @@ namespace polysolve::nonlinear::line_search
             // ----------------------------
 
             {
-                POLYFEM_SCOPED_TIMER("LS compute finite energy step size", this->checking_for_nan_inf_time);
+                POLYSOLVE_SCOPED_TIMER("LS compute finite energy step size", this->checking_for_nan_inf_time);
                 step_size = this->compute_nan_free_step_size(x, delta_x, objFunc, step_size, 0.5);
                 if (std::isnan(step_size))
                     return std::nan("");
@@ -67,13 +67,13 @@ namespace polysolve::nonlinear::line_search
             // -----------------------------
 
             {
-                POLYFEM_SCOPED_TIMER("Line Search Begin - CCD broad-phase", this->broad_phase_ccd_time);
+                POLYSOLVE_SCOPED_TIMER("Line Search Begin - CCD broad-phase", this->broad_phase_ccd_time);
                 TVector new_x = x + step_size * delta_x;
                 objFunc.line_search_begin(x, new_x);
             }
 
             {
-                POLYFEM_SCOPED_TIMER("CCD narrow-phase", this->ccd_time);
+                POLYSOLVE_SCOPED_TIMER("CCD narrow-phase", this->ccd_time);
                 logger().trace("Performing narrow-phase CCD");
                 step_size = this->compute_collision_free_step_size(x, delta_x, objFunc, step_size);
                 if (std::isnan(step_size))
@@ -87,7 +87,7 @@ namespace polysolve::nonlinear::line_search
             // ----------------------
 
             {
-                POLYFEM_SCOPED_TIMER("energy min in LS", this->classical_line_search_time);
+                POLYSOLVE_SCOPED_TIMER("energy min in LS", this->classical_line_search_time);
                 step_size = compute_descent_step_size(x, delta_x, objFunc, old_energy, step_size);
                 if (std::isnan(step_size))
                 {
@@ -104,7 +104,7 @@ namespace polysolve::nonlinear::line_search
             // 					// -------------
 
             // 					{
-            // 						POLYFEM_SCOPED_TIMER("safeguard in LS");
+            // 						POLYSOLVE_SCOPED_TIMER("safeguard in LS");
             // 						step_size = this->compute_debug_collision_free_step_size(x, delta_x, objFunc, step_size, 0.5);
             // 					}
 
@@ -112,7 +112,7 @@ namespace polysolve::nonlinear::line_search
             // #endif
 
             {
-                POLYFEM_SCOPED_TIMER("LS end");
+                POLYSOLVE_SCOPED_TIMER("LS end");
                 objFunc.line_search_end();
             }
 
@@ -150,7 +150,7 @@ namespace polysolve::nonlinear::line_search
 
                 try
                 {
-                    POLYFEM_SCOPED_TIMER("solution changed - constraint set update in LS", this->constraint_set_update_time);
+                    POLYSOLVE_SCOPED_TIMER("solution changed - constraint set update in LS", this->constraint_set_update_time);
                     objFunc.solution_changed(new_x);
                 }
                 catch (const std::runtime_error &e)

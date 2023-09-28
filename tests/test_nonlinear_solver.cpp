@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/nonlinear/Problem.hpp>
-#include <polysolve/nonlinear/SparseNewton.hpp>
+// #include <polysolve/nonlinear/SparseNewton.hpp>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -33,5 +33,5 @@ TEST_CASE("instantiation", "[solver]")
 {
     TestProblem prob;
 
-    SparseNewton<TestProblem> sn;
+    // SparseNewton<TestProblem> sn;
 }

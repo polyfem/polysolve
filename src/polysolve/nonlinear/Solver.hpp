@@ -3,13 +3,12 @@
 // Line search methods
 #include "line_search/LineSearch.hpp"
 
-#include <polyfem/utils/Logger.hpp>
-#include <polyfem/utils/Timer.hpp>
-
 #include <cppoptlib/solver/isolver.h>
 
 namespace polysolve::nonlinear
 {
+    class Logger;
+
     enum class ErrorCode
     {
         NAN_ENCOUNTERED = -10,
@@ -17,19 +16,22 @@ namespace polysolve::nonlinear
         SUCCESS = 0,
     };
 
-    template <typename ProblemType /*, int Ord*/>
-    class Solver : public ISolver<ProblemType, /*Ord=*/-1>
+    class Solver : public cppoptlib::ISolver<Problem, /*Ord=*/-1>
     {
     public:
-        using Superclass = ISolver<ProblemType, /*Ord=*/-1>;
+        using Superclass = ISolver<Problem, /*Ord=*/-1>;
         using typename Superclass::Scalar;
         using typename Superclass::TCriteria;
         using typename Superclass::TVector;
 
         /// @brief Construct a new Nonlinear Solver object
-        /// @param solver_params JSON of solver parameters (see input spec.)
-        /// @param dt time step size (use 1 if not time-dependent)
-        Solver(const polyfem::json &solver_params, const double dt, const double characteristic_length);
+        /// @param solver_params JSON of solver parameters
+        /// @param dt time step size (use 1 if not time-dependent) TODO
+        /// @param logger
+        Solver(const json &solver_params,
+               const double dt,
+               const double characteristic_length,
+               const std::shared_ptr<Logger> &logger);
 
         virtual double compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const;
 
@@ -37,11 +39,11 @@ namespace polysolve::nonlinear
 
         void set_line_search(const std::string &line_search_name);
 
-        void minimize(ProblemType &objFunc, TVector &x) override;
+        void minimize(Problem &objFunc, TVector &x) override;
 
-        double line_search(const TVector &x, const TVector &delta_x, ProblemType &objFunc);
+        double line_search(const TVector &x, const TVector &delta_x, Problem &objFunc);
 
-        const polyfem::json &get_info() const { return solver_info; }
+        const json &get_info() const { return solver_info; }
 
         ErrorCode error_code() const { return m_error_code; }
 
@@ -50,9 +52,9 @@ namespace polysolve::nonlinear
 
         bool converged() const
         {
-            return this->m_status == Status::XDeltaTolerance
-                   || this->m_status == Status::FDeltaTolerance
-                   || this->m_status == Status::GradNormTolerance;
+            return this->m_status == cppoptlib::Status::XDeltaTolerance
+                   || this->m_status == cppoptlib::Status::FDeltaTolerance
+                   || this->m_status == cppoptlib::Status::GradNormTolerance;
         }
 
         size_t max_iterations() const { return this->m_stop.iterations; }
@@ -77,7 +79,7 @@ namespace polysolve::nonlinear
         virtual void reset(const int ndof);
 
         // Compute the search/update direction
-        virtual bool compute_update_direction(ProblemType &objFunc, const TVector &x_vec, const TVector &grad, TVector &direction) = 0;
+        virtual bool compute_update_direction(Problem &objFunc, const TVector &x_vec, const TVector &grad, TVector &direction) = 0;
 
         virtual int default_descent_strategy() = 0;
         virtual void increase_descent_strategy() = 0;
@@ -85,7 +87,7 @@ namespace polysolve::nonlinear
         virtual std::string descent_strategy_name(int descent_strategy) const = 0;
         virtual std::string descent_strategy_name() const { return descent_strategy_name(descent_strategy); };
 
-        std::shared_ptr<polyfem::solver::line_search::LineSearch<ProblemType>> m_line_search;
+        std::shared_ptr<line_search::LineSearch> m_line_search;
 
         int descent_strategy; // 0, newton, 1 spd, 2 gradiant
 
@@ -97,7 +99,7 @@ namespace polysolve::nonlinear
         void reset_times();
         void log_times();
 
-        polyfem::json solver_info;
+        json solver_info;
 
         double total_time;
         double grad_time;
@@ -109,10 +111,10 @@ namespace polysolve::nonlinear
 
         ErrorCode m_error_code;
 
+        std::shared_ptr<Logger> m_logger;
+
         // ====================================================================
         //                                 END
         // ====================================================================
     };
 } // namespace polysolve::nonlinear
-
-#include "Solver.tpp"

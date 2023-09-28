@@ -3,9 +3,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "Solver.hpp"
 
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
-
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <memory>

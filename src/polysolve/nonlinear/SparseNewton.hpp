@@ -1,12 +1,8 @@
 #pragma once
 
-#include <polyfem/Common.hpp>
-#include "NonlinearSolver.hpp"
-#include <polysolve/LinearSolver.hpp>
-#include <polyfem/utils/MatrixUtils.hpp>
+#include "Solver.hpp"
 
-#include <polyfem/utils/Logger.hpp>
-#include <polyfem/utils/Timer.hpp>
+#include <polysolve/linear/Solver.hpp>
 
 namespace polysolve::nonlinear
 {

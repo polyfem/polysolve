@@ -104,7 +104,7 @@ namespace polysolve::nonlinear
     void SparseNewton<ProblemType>::assemble_hessian(
         ProblemType &objFunc, const TVector &x, polyfem::StiffnessMatrix &hessian)
     {
-        POLYFEM_SCOPED_TIMER("assembly time", this->assembly_time);
+        POLYSOLVE_SCOPED_TIMER("assembly time", this->assembly_time);
 
         if (this->descent_strategy == 1)
             objFunc.set_project_to_psd(true);
@@ -127,7 +127,7 @@ namespace polysolve::nonlinear
     bool SparseNewton<ProblemType>::solve_linear_system(
         const polyfem::StiffnessMatrix &hessian, const TVector &grad, TVector &direction)
     {
-        POLYFEM_SCOPED_TIMER("linear solve", this->inverting_time);
+        POLYSOLVE_SCOPED_TIMER("linear solve", this->inverting_time);
         // TODO: get the correct size
         linear_solver->analyzePattern(hessian, hessian.rows());
 

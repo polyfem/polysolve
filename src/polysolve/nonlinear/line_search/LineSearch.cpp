@@ -1,53 +1,54 @@
 #pragma once
 
 #include "LineSearch.hpp"
-#include "ArmijoLineSearch.hpp"
-#include "BacktrackingLineSearch.hpp"
-#include "CppOptArmijoLineSearch.hpp"
-#include "MoreThuenteLineSearch.hpp"
+// #include "ArmijoLineSearch.hpp"
+// #include "BacktrackingLineSearch.hpp"
+// #include "CppOptArmijoLineSearch.hpp"
+// #include "MoreThuenteLineSearch.hpp"
 
 #include <fstream>
 
 namespace polysolve::nonlinear::line_search
 {
-    template <typename ProblemType>
-    std::shared_ptr<LineSearch<ProblemType>> LineSearch<ProblemType>::construct_line_search(const std::string &name)
+    std::shared_ptr<LineSearch> LineSearch::construct_line_search(const std::string &name)
     {
-        if (name == "armijo" || name == "Armijo")
-        {
-            return std::make_shared<ArmijoLineSearch<ProblemType>>();
-        }
-        else if (name == "armijo_alt" || name == "ArmijoAlt")
-        {
-            return std::make_shared<CppOptArmijoLineSearch<ProblemType>>();
-        }
-        else if (name == "bisection" || name == "Bisection")
-        {
-            logger().warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
-            return std::make_shared<BacktrackingLineSearch<ProblemType>>();
-        }
-        else if (name == "backtracking" || name == "Backtracking")
-        {
-            return std::make_shared<BacktrackingLineSearch<ProblemType>>();
-        }
-        else if (name == "more_thuente" || name == "MoreThuente")
-        {
-            return std::make_shared<MoreThuenteLineSearch<ProblemType>>();
-        }
-        else if (name == "none")
-        {
-            return nullptr;
-        }
-        else
-        {
-            const std::string msg = fmt::format("Unknown line search {}!", name);
-            logger().error(msg);
-            throw std::invalid_argument(msg);
-        }
+        return nullptr;
+        // todo
+        //  if (name == "armijo" || name == "Armijo")
+        //  {
+        //      return std::make_shared<ArmijoLineSearch<ProblemType>>();
+        //  }
+        //  else if (name == "armijo_alt" || name == "ArmijoAlt")
+        //  {
+        //      return std::make_shared<CppOptArmijoLineSearch<ProblemType>>();
+        //  }
+        //  else if (name == "bisection" || name == "Bisection")
+        //  {
+        //      logger().warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
+        //      return std::make_shared<BacktrackingLineSearch<ProblemType>>();
+        //  }
+        //  else if (name == "backtracking" || name == "Backtracking")
+        //  {
+        //      return std::make_shared<BacktrackingLineSearch<ProblemType>>();
+        //  }
+        //  else if (name == "more_thuente" || name == "MoreThuente")
+        //  {
+        //      return std::make_shared<MoreThuenteLineSearch<ProblemType>>();
+        //  }
+        //  else if (name == "none")
+        //  {
+        //      return nullptr;
+        //  }
+        //  else
+        //  {
+        //      const std::string msg = fmt::format("Unknown line search {}!", name);
+        //      logger().error(msg);
+        //      throw std::invalid_argument(msg);
+        //  }
     }
 
     template <typename ProblemType>
-    void LineSearch<ProblemType>::save_sampled_values(
+    void LineSearch::save_sampled_values(
         const std::string &filename,
         const typename ProblemType::TVector &x,
         const typename ProblemType::TVector &delta_x,
@@ -83,7 +84,7 @@ namespace polysolve::nonlinear::line_search
     }
 
     template <typename ProblemType>
-    double LineSearch<ProblemType>::compute_nan_free_step_size(
+    double LineSearch::compute_nan_free_step_size(
         const TVector &x,
         const TVector &delta_x,
         ProblemType &objFunc,
@@ -125,7 +126,7 @@ namespace polysolve::nonlinear::line_search
     }
 
     template <typename ProblemType>
-    double LineSearch<ProblemType>::compute_collision_free_step_size(
+    double LineSearch::compute_collision_free_step_size(
         const TVector &x,
         const TVector &delta_x,
         ProblemType &objFunc,
@@ -170,7 +171,7 @@ namespace polysolve::nonlinear::line_search
 
     // #ifndef NDEBUG
     // 			template <typename ProblemType>
-    // 			double LineSearch<ProblemType>::compute_debug_collision_free_step_size(
+    // 			double LineSearch::compute_debug_collision_free_step_size(
     // 				const TVector &x,
     // 				const TVector &delta_x,
     // 				ProblemType &objFunc,
@@ -181,7 +182,7 @@ namespace polysolve::nonlinear::line_search
 
     // 				TVector new_x = x + step_size * delta_x;
     // 				{
-    // 					POLYFEM_SCOPED_TIMER("constraint set update in LS", this->constraint_set_update_time);
+    // 					POLYSOLVE_SCOPED_TIMER("constraint set update in LS", this->constraint_set_update_time);
     // 					objFunc.solution_changed(new_x);
     // 				}
 
@@ -192,7 +193,7 @@ namespace polysolve::nonlinear::line_search
     // 					step_size *= rate;
     // 					new_x = x + step_size * delta_x;
     // 					{
-    // 						POLYFEM_SCOPED_TIMER("constraint set update in LS", this->constraint_set_update_time);
+    // 						POLYSOLVE_SCOPED_TIMER("constraint set update in LS", this->constraint_set_update_time);
     // 						objFunc.solution_changed(new_x);
     // 					}
     // 				}

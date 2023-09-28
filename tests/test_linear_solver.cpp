@@ -1,4 +1,5 @@
 //////////////////////////////////////////////////////////////////////////
+#include <polysolve/types.hpp>
 #include <polysolve/linear/FEMSolver.hpp>
 #include <polysolve/linear/AMGCL.hpp>
 
@@ -11,6 +12,7 @@
 #include <chrono>
 //////////////////////////////////////////////////////////////////////////
 
+using namespace polysolve;
 using namespace polysolve::linear;
 
 void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)

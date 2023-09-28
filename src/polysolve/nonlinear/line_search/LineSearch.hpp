@@ -1,13 +1,14 @@
 #pragma once
 
+#include <polysolve/nonlinear/Problem.hpp>
+
 namespace polysolve::nonlinear::line_search
 {
-    template <typename ProblemType>
     class LineSearch
     {
     public:
-        using Scalar = typename ProblemType::Scalar;
-        using TVector = typename ProblemType::TVector;
+        using Scalar = typename Problem::Scalar;
+        using TVector = typename Problem::TVector;
 
         LineSearch() {}
         virtual ~LineSearch() = default;
@@ -15,14 +16,14 @@ namespace polysolve::nonlinear::line_search
         virtual double line_search(
             const TVector &x,
             const TVector &grad,
-            ProblemType &objFunc) = 0;
+            Problem &objFunc) = 0;
 
-        static std::shared_ptr<LineSearch<ProblemType>> construct_line_search(const std::string &name);
+        static std::shared_ptr<LineSearch> construct_line_search(const std::string &name);
 
         static void save_sampled_values(const std::string &filename,
                                         const TVector &x,
                                         const TVector &grad,
-                                        ProblemType &objFunc,
+                                        Problem &objFunc,
                                         const double starting_step_size = 1e-1,
                                         const int num_samples = 1000);
 
@@ -55,23 +56,21 @@ namespace polysolve::nonlinear::line_search
         double compute_nan_free_step_size(
             const TVector &x,
             const TVector &delta_x,
-            ProblemType &objFunc,
+            Problem &objFunc,
             const double starting_step_size, const double rate);
 
         double compute_collision_free_step_size(
             const TVector &x,
             const TVector &delta_x,
-            ProblemType &objFunc,
+            Problem &objFunc,
             const double starting_step_size);
         // #ifndef NDEBUG
         // 				double compute_debug_collision_free_step_size(
-        // 					const typename ProblemType::TVector &x,
-        // 					const typename ProblemType::TVector &delta_x,
-        // 					ProblemType &objFunc,
+        // 					const typename Problem::TVector &x,
+        // 					const typename Problem::TVector &delta_x,
+        // 					Problem &objFunc,
         // 					const double starting_step_size,
         // 					const double rate);
         // #endif
     };
 } // namespace polysolve::nonlinear::line_search
-
-#include "LineSearch.tpp"

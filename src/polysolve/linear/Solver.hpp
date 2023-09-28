@@ -1,11 +1,11 @@
 #pragma once
 
+#include <polysolve/types.hpp>
+
 ////////////////////////////////////////////////////////////////////////////////
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
 #include <memory>
 
 #define POLYSOLVE_DELETE_MOVE_COPY(Base) \
@@ -24,11 +24,6 @@ using json = nlohmann::json;
 
 namespace polysolve::linear
 {
-#ifdef POLYSOLVE_LARGE_INDEX
-    typedef Eigen::SparseMatrix<double, Eigen::ColMajor, std::ptrdiff_t> StiffnessMatrix;
-#else
-    typedef Eigen::SparseMatrix<double, Eigen::ColMajor> StiffnessMatrix;
-#endif
     /**
      * @brief      Base class for linear solver.
      */

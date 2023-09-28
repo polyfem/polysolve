@@ -137,6 +137,7 @@ add_library(polysolve)
 add_library(polysolve::polysolve ALIAS polysolve)
 
 add_subdirectory(src/polysolve/linear)
+add_subdirectory(src/polysolve/nonlinear)
 
 # Public include directory for Polysolve
 target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
@@ -152,6 +153,11 @@ endif()
 ################################################################################
 # Dependencies
 ################################################################################
+
+
+# CppNumericalSolvers
+include(cppoptlib)
+target_link_libraries(polysolve PUBLIC cppoptlib)
 
 # Accelerate solver
 if(POLYSOLVE_WITH_ACCELERATE)

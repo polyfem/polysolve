@@ -1,5 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
-#include <polysolve/FEMSolver.hpp>
+#include <polysolve/linear/FEMSolver.hpp>
+#include <polysolve/linear/LinearSolverAMGCL.hpp>
+
 #include <catch2/catch.hpp>
 #include <iostream>
 #include <unsupported/Eigen/SparseExtra>
@@ -7,7 +9,6 @@
 #include <vector>
 #include <ctime>
 #include <chrono>
-#include <polysolve/LinearSolverAMGCL.hpp>
 //////////////////////////////////////////////////////////////////////////
 
 using namespace polysolve;

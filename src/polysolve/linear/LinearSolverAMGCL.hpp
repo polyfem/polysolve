@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolver.hpp>
+#include "LinearSolver.hpp"
 
 #include <Eigen/Core>
 #include <amgcl/backend/builtin.hpp>
@@ -119,9 +119,9 @@ namespace polysolve
         virtual void getInfo(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override 
+        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override
         {
-            if (block_size_==2)
+            if (block_size_ == 2)
             {
                 block2_solver_.analyzePattern(A, precond_num);
                 return;
@@ -131,7 +131,7 @@ namespace polysolve
                 block3_solver_.analyzePattern(A, precond_num);
                 return;
             }
-            precond_num_ = precond_num; 
+            precond_num_ = precond_num;
         }
 
         // Factorize system matrix

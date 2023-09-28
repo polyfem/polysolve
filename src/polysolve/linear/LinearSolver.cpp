@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolver.hpp>
-#include <polysolve/LinearSolverEigen.hpp>
-#include <polysolve/SaddlePointSolver.hpp>
+#include "LinearSolver.hpp"
+#include "LinearSolverEigen.hpp"
+#include "SaddlePointSolver.hpp"
 
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
@@ -21,16 +21,16 @@
 #include <Eigen/PardisoSupport>
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
-#include <polysolve/LinearSolverPardiso.hpp>
+#include "LinearSolverPardiso.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
-#include <polysolve/LinearSolverHypre.hpp>
+#include "LinearSolverHypre.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
-#include <polysolve/LinearSolverAMGCL.hpp>
+#include "LinearSolverAMGCL.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
-#include <polysolve/LinearSolverCuSolverDN.cuh>
+#include "LinearSolverCuSolverDN.cuh"
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
 
@@ -82,7 +82,7 @@ namespace polysolve
 
 #else
 
-// Magic macro because C++ has no introspection
+    // Magic macro because C++ has no introspection
 #define ENUMERATE_PRECOND(HelperFunctor, SolverType, DefaultPrecond, precond)                        \
     do                                                                                               \
     {                                                                                                \

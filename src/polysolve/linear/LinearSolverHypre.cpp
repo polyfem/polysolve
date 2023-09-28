@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolverHypre.hpp>
+#include "LinearSolverHypre.hpp"
 
 #include <HYPRE_krylov.h>
 #include <HYPRE_utilities.h>

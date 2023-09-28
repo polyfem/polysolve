@@ -136,7 +136,7 @@ endif()
 add_library(polysolve)
 add_library(polysolve::polysolve ALIAS polysolve)
 
-add_subdirectory(src/polysolve)
+add_subdirectory(src/polysolve/linear)
 
 # Public include directory for Polysolve
 target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)

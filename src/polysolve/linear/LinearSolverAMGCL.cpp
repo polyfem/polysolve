@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolverAMGCL.hpp>
+#include "LinearSolverAMGCL.hpp"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>

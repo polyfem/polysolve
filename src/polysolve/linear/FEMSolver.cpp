@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/FEMSolver.hpp>
+#include "FEMSolver.hpp"
 
 #ifdef POLYSOLVE_WITH_SPECTRA
 #include <MatOp/SparseSymMatProd.h>
@@ -163,7 +163,7 @@ Eigen::Vector4d polysolve::dirichlet_solve(
 
     // std::cout << A << std::endl;
 
-    //remove zero cols
+    // remove zero cols
     if (remove_zero_cols)
     {
         std::vector<bool> zero_col(A.cols(), true);
@@ -309,7 +309,7 @@ void polysolve::prefactorize(
 
     solver.analyzePattern(A, precond_num);
     solver.factorize(A);
-    
+
     if (!save_path.empty())
     {
         Eigen::saveMarket(A, save_path);

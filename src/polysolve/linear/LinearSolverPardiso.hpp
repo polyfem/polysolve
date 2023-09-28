@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolver.hpp>
+#include "LinearSolver.hpp"
 #include <vector>
 #include <Eigen/Core>
 #include <Eigen/Sparse>

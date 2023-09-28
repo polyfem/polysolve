@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_CUSOLVER
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolver.hpp>
+#include "LinearSolver.hpp"
 
 #include <cuda_runtime.h>
 #include <cusolverDn.h>

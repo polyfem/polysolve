@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolver.hpp>
+#include "LinearSolver.hpp"
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>

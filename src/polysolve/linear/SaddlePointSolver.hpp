@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include <polysolve/LinearSolver.hpp>
+#include "LinearSolver.hpp"
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>

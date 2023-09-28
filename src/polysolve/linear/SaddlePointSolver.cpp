@@ -1,4 +1,4 @@
-#include <polysolve/SaddlePointSolver.hpp>
+#include "SaddlePointSolver.hpp"
 
 #include <unsupported/Eigen/SparseExtra>
 
@@ -182,33 +182,33 @@ namespace polysolve
             yu[i].setZero();
             yp[i].setZero();
 
-            //1
-            // iters{i}.yu = gmres(As, iters{i}.Rms, iter_gmrs, eps_gm, outer_iter_gmrs);
+            // 1
+            //  iters{i}.yu = gmres(As, iters{i}.Rms, iter_gmrs, eps_gm, outer_iter_gmrs);
             asymmetric_solver->analyzePattern(As, As.rows());
             asymmetric_solver->factorize(As);
             assert(currentRms.size() == yu[i].size());
             asymmetric_solver->solve(currentRms, yu[i]);
 
-            //2
-            //Rcst = iters{i}.Rcs - Bs' * iters{i}.yu;
+            // 2
+            // Rcst = iters{i}.Rcs - Bs' * iters{i}.yu;
             Rcst = currentRcs - BsT * yu[i];
 
-            //3
-            //iters{i}.yp = bicgstab(Ss, Rcst, eps_cg, 10000);
+            // 3
+            // iters{i}.yp = bicgstab(Ss, Rcst, eps_cg, 10000);
             assert(Rcst.size() == yp[i].size());
             symmetric_solver->solve(Rcst, yp[i]);
 
-            //4
-            //Rmst = iters{i}.Rms - Bs*iters{i}.yp;
+            // 4
+            // Rmst = iters{i}.Rms - Bs*iters{i}.yp;
             Rmst = currentRms - Bs * yp[i];
 
-            //5
-            // iters{i}.yu = gmres(As, Rmst, iter_gmrs, eps_gm, outer_iter_gmrs);
+            // 5
+            //  iters{i}.yu = gmres(As, Rmst, iter_gmrs, eps_gm, outer_iter_gmrs);
             assert(Rmst.size() == yu[i].size());
             yu[i].setZero();
             asymmetric_solver->solve(Rmst, yu[i]);
 
-            //update
+            // update
             Rmu.emplace_back(As * yu[i]);
             Rmp.emplace_back(Bs * yp[i]);
             Rcu.emplace_back(BsT * yu[i]);
@@ -259,7 +259,7 @@ namespace polysolve
             alphau = alpha.topRows(i + 1);
             alphap = alpha.bottomRows(i + 1);
 
-            //TODO stopping condition!
+            // TODO stopping condition!
             compute_solution(i + 1, alphau, alphap, yu, yp, Wm, Wc, result);
             final_res_norm_ = (Ain_ * result - rhs).norm();
 

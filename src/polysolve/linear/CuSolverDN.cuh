@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_CUSOLVER
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
@@ -18,15 +18,15 @@
 namespace polysolve
 {
     template <typename T>
-    class LinearSolverCuSolverDN : public LinearSolver
+    class CuSolverDN : public Solver
     {
 
     public:
-        LinearSolverCuSolverDN();
-        ~LinearSolverCuSolverDN();
+        CuSolverDN();
+        ~CuSolverDN();
 
     private:
-        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverCuSolverDN)
+        POLYSOLVE_DELETE_MOVE_COPY(CuSolverDN)
 
     public:
         //////////////////////

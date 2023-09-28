@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolverPardiso.hpp"
+#include "Pardiso.hpp"
 #include <thread>
 #ifdef POLYSOLVE_WITH_MKL
 #include <mkl_pardiso.h>
@@ -29,20 +29,20 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverPardiso::LinearSolverPardiso()
+    Pardiso::Pardiso()
         : mtype(-1)
     {
         setType(11);
     }
 
-    void LinearSolverPardiso::setType(int _mtype)
+    void Pardiso::setType(int _mtype)
     {
         mtype = _mtype;
         init();
     }
 
     // Set solver parameters
-    void LinearSolverPardiso::setParameters(const json &params)
+    void Pardiso::setParameters(const json &params)
     {
         if (params.contains("Pardiso"))
         {
@@ -53,7 +53,7 @@ namespace polysolve
         }
     }
 
-    void LinearSolverPardiso::getInfo(json &params) const
+    void Pardiso::getInfo(json &params) const
     {
         params["mem_symbolic_peak"] = iparm[14];
         params["mem_symbolic_perm"] = iparm[15];
@@ -64,7 +64,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverPardiso::init()
+    void Pardiso::init()
     {
         if (mtype == -1)
         {
@@ -200,7 +200,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverPardiso::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+    void Pardiso::analyzePattern(const StiffnessMatrix &A, const int precond_num)
     {
         if (mtype == -1)
         {
@@ -260,7 +260,7 @@ namespace polysolve
 
     // -----------------------------------------------------------------------------
 
-    void LinearSolverPardiso::factorize(const StiffnessMatrix &A)
+    void Pardiso::factorize(const StiffnessMatrix &A)
     {
         if (mtype == -1)
         {
@@ -294,7 +294,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverPardiso::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
+    void Pardiso::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
         if (mtype == -1)
         {
@@ -399,7 +399,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverPardiso::freeNumericalFactorizationMemory()
+    void Pardiso::freeNumericalFactorizationMemory()
     {
         phase = 0; // Release internal memory
 #ifdef POLYSOLVE_WITH_MKL
@@ -413,7 +413,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverPardiso::~LinearSolverPardiso()
+    Pardiso::~Pardiso()
     {
         if (mtype == -1)
         {

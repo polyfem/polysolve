@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolverAMGCL.hpp"
+#include "AMGCL.hpp"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -94,7 +94,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverAMGCL::LinearSolverAMGCL()
+    AMGCL::AMGCL()
     {
         params_ = default_params();
         // NOTE: usolver and psolver parameters are only used if the
@@ -103,7 +103,7 @@ namespace polysolve
     }
 
     // Set solver parameters
-    void LinearSolverAMGCL::setParameters(const json &params)
+    void AMGCL::setParameters(const json &params)
     {
         if (params.contains("AMGCL"))
         {
@@ -127,7 +127,7 @@ namespace polysolve
         }
     }
 
-    void LinearSolverAMGCL::getInfo(json &params) const
+    void AMGCL::getInfo(json &params) const
     {
         if (block_size_ == 2)
         {
@@ -145,7 +145,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverAMGCL::factorize(const StiffnessMatrix &Ain)
+    void AMGCL::factorize(const StiffnessMatrix &Ain)
     {
         if (block_size_ == 2)
         {
@@ -187,7 +187,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverAMGCL::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
+    void AMGCL::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
         if (block_size_ == 2)
         {
@@ -213,12 +213,12 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverAMGCL::~LinearSolverAMGCL()
+    AMGCL::~AMGCL()
     {
     }
 
     template <int BLOCK_SIZE>
-    LinearSolverAMGCL_Block<BLOCK_SIZE>::LinearSolverAMGCL_Block()
+    AMGCL_Block<BLOCK_SIZE>::AMGCL_Block()
     {
         params_ = default_params();
 
@@ -228,13 +228,13 @@ namespace polysolve
     }
 
     template <int BLOCK_SIZE>
-    void LinearSolverAMGCL_Block<BLOCK_SIZE>::setParameters(const json &params)
+    void AMGCL_Block<BLOCK_SIZE>::setParameters(const json &params)
     {
         set_params(params, params_);
     }
 
     template <int BLOCK_SIZE>
-    void LinearSolverAMGCL_Block<BLOCK_SIZE>::getInfo(json &params) const
+    void AMGCL_Block<BLOCK_SIZE>::getInfo(json &params) const
     {
         params["num_iterations"] = iterations_;
         params["final_res_norm"] = residual_error_;
@@ -243,7 +243,7 @@ namespace polysolve
     ////////////////////////////////////////////////////////////////////////////////
 
     template <int BLOCK_SIZE>
-    void LinearSolverAMGCL_Block<BLOCK_SIZE>::factorize(const StiffnessMatrix &Ain)
+    void AMGCL_Block<BLOCK_SIZE>::factorize(const StiffnessMatrix &Ain)
     {
         assert(precond_num_ > 0);
 
@@ -279,7 +279,7 @@ namespace polysolve
     ////////////////////////////////////////////////////////////////////////////////
 
     template <int BLOCK_SIZE>
-    void LinearSolverAMGCL_Block<BLOCK_SIZE>::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
+    void AMGCL_Block<BLOCK_SIZE>::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
         assert(result.size() == rhs.size());
         std::vector<double> _rhs(rhs.data(), rhs.data() + rhs.size());
@@ -298,12 +298,12 @@ namespace polysolve
     }
 
     template <int BLOCK_SIZE>
-    LinearSolverAMGCL_Block<BLOCK_SIZE>::~LinearSolverAMGCL_Block()
+    AMGCL_Block<BLOCK_SIZE>::~AMGCL_Block()
     {
     }
 
-    template class LinearSolverAMGCL_Block<2>;
-    template class LinearSolverAMGCL_Block<3>;
+    template class AMGCL_Block<2>;
+    template class AMGCL_Block<3>;
 } // namespace polysolve
 
 #endif

@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -35,18 +35,18 @@ namespace polysolve
     /// @param[in]     dirichlet_nodes  { List of ids of Dirichlet nodes }
     /// @param[in,out] x                { Unknown vector }
     ///
-    Eigen::Vector4d dirichlet_solve(LinearSolver &solver, StiffnessMatrix &A,
+    Eigen::Vector4d dirichlet_solve(Solver &solver, StiffnessMatrix &A,
                                     Eigen::VectorXd &b, const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &x,
                                     const int precond_num,
                                     const std::string &save_path = "", bool compute_spectrum = false,
                                     const bool remove_zero_cols = false,
                                     const bool skip_last_cols = false);
 
-    void prefactorize(LinearSolver &solver, StiffnessMatrix &A,
+    void prefactorize(Solver &solver, StiffnessMatrix &A,
                       const std::vector<int> &dirichlet_nodes, const int precond_num,
                       const std::string &save_path = "");
 
-    void dirichlet_solve_prefactorized(LinearSolver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
+    void dirichlet_solve_prefactorized(Solver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
                                        const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u);
 
 } // namespace polysolve

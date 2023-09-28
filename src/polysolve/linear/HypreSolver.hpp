@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>
@@ -22,15 +22,15 @@
 namespace polysolve
 {
 
-    class LinearSolverHypre : public LinearSolver
+    class HypreSolver : public Solver
     {
 
     public:
-        LinearSolverHypre();
-        ~LinearSolverHypre();
+        HypreSolver();
+        ~HypreSolver();
 
     private:
-        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverHypre)
+        POLYSOLVE_DELETE_MOVE_COPY(HypreSolver)
 
     public:
         //////////////////////

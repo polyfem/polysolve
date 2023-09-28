@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <vector>
@@ -12,7 +12,7 @@
 namespace polysolve
 {
 
-    class SaddlePointSolver : public LinearSolver
+    class SaddlePointSolver : public Solver
     {
 
     public:

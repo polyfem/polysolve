@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_PARDISO
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 #include <vector>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
@@ -19,15 +19,15 @@
 namespace polysolve
 {
 
-    class LinearSolverPardiso : public LinearSolver
+    class Pardiso : public Solver
     {
 
     public:
-        LinearSolverPardiso();
-        ~LinearSolverPardiso();
+        Pardiso();
+        ~Pardiso();
 
     private:
-        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverPardiso)
+        POLYSOLVE_DELETE_MOVE_COPY(Pardiso)
 
     protected:
         void setType(int _mtype);

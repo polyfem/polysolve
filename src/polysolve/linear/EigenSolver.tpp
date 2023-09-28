@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolverEigen.hpp"
+#include "EigenSolver.hpp"
 #include <iostream>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -11,7 +11,7 @@
 
 // Get info on the last solve step
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::getInfo(json &params) const
+void polysolve::EigenDirect<SparseSolver>::getInfo(json &params) const
 {
     switch (m_Solver.info())
     {
@@ -34,25 +34,25 @@ void polysolve::LinearSolverEigenDirect<SparseSolver>::getInfo(json &params) con
 
 // Analyze sparsity pattern
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+void polysolve::EigenDirect<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
 {
     m_Solver.analyzePattern(A);
 }
 
 // Factorize system matrix
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
+void polysolve::EigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
 {
     m_Solver.factorize(A);
     if (m_Solver.info() == Eigen::NumericalIssue)
     {
-        throw std::runtime_error("[LinearSolverEigenDirect] NumericalIssue encountered.");
+        throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
     }
 }
 
 // Solve the linear system
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenDirect<SparseSolver>::solve(
+void polysolve::EigenDirect<SparseSolver>::solve(
     const Ref<const VectorXd> b, Ref<VectorXd> x)
 {
     x = m_Solver.solve(b);
@@ -64,7 +64,7 @@ void polysolve::LinearSolverEigenDirect<SparseSolver>::solve(
 
 // Set solver parameters
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::setParameters(const json &params)
+void polysolve::EigenIterative<SparseSolver>::setParameters(const json &params)
 {
     const std::string solver_name = name();
     if (params.contains(solver_name))
@@ -82,7 +82,7 @@ void polysolve::LinearSolverEigenIterative<SparseSolver>::setParameters(const js
 
 // Get info on the last solve step
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::getInfo(json &params) const
+void polysolve::EigenIterative<SparseSolver>::getInfo(json &params) const
 {
     params["solver_iter"] = m_Solver.iterations();
     params["solver_error"] = m_Solver.error();
@@ -90,21 +90,21 @@ void polysolve::LinearSolverEigenIterative<SparseSolver>::getInfo(json &params) 
 
 // Analyze sparsity pattern
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+void polysolve::EigenIterative<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
 {
     m_Solver.analyzePattern(A);
 }
 
 // Factorize system matrix
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
+void polysolve::EigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
 {
     m_Solver.factorize(A);
 }
 
 // Solve the linear system
 template <typename SparseSolver>
-void polysolve::LinearSolverEigenIterative<SparseSolver>::solve(
+void polysolve::EigenIterative<SparseSolver>::solve(
     const Ref<const VectorXd> b, Ref<VectorXd> x)
 {
     assert(x.size() == b.size());
@@ -117,27 +117,27 @@ void polysolve::LinearSolverEigenIterative<SparseSolver>::solve(
 
 // Get info on the last solve step
 template <typename DenseSolver>
-void polysolve::LinearSolverEigenDense<DenseSolver>::getInfo(json &params) const
+void polysolve::EigenDenseSolver<DenseSolver>::getInfo(json &params) const
 {
     params["solver_info"] = "Success";
 }
 
 template <typename DenseSolver>
-void polysolve::LinearSolverEigenDense<DenseSolver>::factorize(const StiffnessMatrix &A)
+void polysolve::EigenDenseSolver<DenseSolver>::factorize(const StiffnessMatrix &A)
 {
     factorize_dense(Eigen::MatrixXd(A));
 }
 
 // Factorize system matrix
 template <typename DenseSolver>
-void polysolve::LinearSolverEigenDense<DenseSolver>::factorize_dense(const Eigen::MatrixXd &A)
+void polysolve::EigenDenseSolver<DenseSolver>::factorize_dense(const Eigen::MatrixXd &A)
 {
     m_Solver.compute(A);
 }
 
 // Solve the linear system
 template <typename DenseSolver>
-void polysolve::LinearSolverEigenDense<DenseSolver>::solve(
+void polysolve::EigenDenseSolver<DenseSolver>::solve(
     const Ref<const VectorXd> b, Ref<VectorXd> x)
 {
     x = m_Solver.solve(b);

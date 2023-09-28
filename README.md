@@ -14,7 +14,7 @@ This library contains a cross-platform Eigen wrapper for many different external
 
 ```c++
 const std::string solver_name = "Hypre"
-auto solver = LinearSolver::create(solver_name, "");
+auto solver = Solver::create(solver_name, "");
 
 // Configuration parameters like iteration or accuracy for iterative solvers
 // solver->setParameters(params);
@@ -33,7 +33,7 @@ solver->factorize(A);
 solver->solve(b, x);
 ```
 
-You can use `LinearSolver::availableSolvers()` to obtain the list of available solvers.
+You can use `Solver::availableSolvers()` to obtain the list of available solvers.
 
 ## Parameters
 

@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_CUSOLVER
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolverCuSolverDN.cuh"
+#include "CuSolverDN.cuh"
 
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -91,13 +91,13 @@ namespace polysolve
     } // namespace
 
     template <typename T>
-    LinearSolverCuSolverDN<T>::LinearSolverCuSolverDN()
+    CuSolverDN<T>::CuSolverDN()
     {
         init();
     }
 
     template <typename T>
-    void LinearSolverCuSolverDN<T>::init()
+    void CuSolverDN<T>::init()
     {
         cusolverDnCreate(&cuHandle);
         cusolverDnCreateParams(&cuParams);
@@ -106,18 +106,18 @@ namespace polysolve
     }
 
     template <typename T>
-    void LinearSolverCuSolverDN<T>::getInfo(json &params) const
+    void CuSolverDN<T>::getInfo(json &params) const
     {
     }
 
     template <typename T>
-    void LinearSolverCuSolverDN<T>::factorize(const StiffnessMatrix &A)
+    void CuSolverDN<T>::factorize(const StiffnessMatrix &A)
     {
         factorize_dense(Eigen::MatrixXd(A));
     }
 
     template <typename T>
-    void LinearSolverCuSolverDN<T>::factorize_dense(const Eigen::MatrixXd &A)
+    void CuSolverDN<T>::factorize_dense(const Eigen::MatrixXd &A)
     {
         numrows = (int)A.rows();
 
@@ -153,7 +153,7 @@ namespace polysolve
     }
 
     template <typename T>
-    void LinearSolverCuSolverDN<T>::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
+    void CuSolverDN<T>::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
         // copy b to device
         if (!d_b_alloc)
@@ -182,7 +182,7 @@ namespace polysolve
     ////////////////////////////////////////////////////////////////////////////////
 
     template <typename T>
-    LinearSolverCuSolverDN<T>::~LinearSolverCuSolverDN()
+    CuSolverDN<T>::~CuSolverDN()
     {
         if (d_A_alloc)
         {
@@ -206,7 +206,7 @@ namespace polysolve
 
 } // namespace polysolve
 
-template polysolve::LinearSolverCuSolverDN<double>::LinearSolverCuSolverDN();
-template polysolve::LinearSolverCuSolverDN<float>::LinearSolverCuSolverDN();
+template polysolve::CuSolverDN<double>::CuSolverDN();
+template polysolve::CuSolverDN<float>::CuSolverDN();
 
 #endif

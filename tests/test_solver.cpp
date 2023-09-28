@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/linear/FEMSolver.hpp>
-#include <polysolve/linear/LinearSolverAMGCL.hpp>
+#include <polysolve/linear/AMGCL.hpp>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -46,7 +46,7 @@ TEST_CASE("all", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solvers = LinearSolver::availableSolvers();
+    auto solvers = Solver::availableSolvers();
     for (const auto &s : solvers)
     {
         std::cout << s << std::endl;
@@ -60,7 +60,7 @@ TEST_CASE("all", "[solver]")
         if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES")
             continue;
 #endif
-        auto solver = LinearSolver::create(s, "");
+        auto solver = Solver::create(s, "");
         json params;
         params[s]["tolerance"] = 1e-10;
         solver->setParameters(params);
@@ -89,13 +89,13 @@ TEST_CASE("eigen_params", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solvers = LinearSolver::availableSolvers();
+    auto solvers = Solver::availableSolvers();
 
     for (const auto &s : solvers)
     {
         if (s == "Eigen::ConjugateGradient" || s == "Eigen::BiCGSTAB" || s == "Eigen::GMRES" || s == "Eigen::MINRES" || s == "Eigen::LeastSquaresConjugateGradient" || s == "Eigen::DGMRES")
         {
-            auto solver = LinearSolver::create(s, "");
+            auto solver = Solver::create(s, "");
             json params;
             params[s]["max_iter"] = 1000;
             params[s]["tolerance"] = 1e-10;
@@ -127,7 +127,7 @@ TEST_CASE("pre_factor", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solvers = LinearSolver::availableSolvers();
+    auto solvers = Solver::availableSolvers();
 
     for (const auto &s : solvers)
     {
@@ -138,7 +138,7 @@ TEST_CASE("pre_factor", "[solver]")
             continue;
 #endif
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        auto solver = LinearSolver::create(s, "");
+        auto solver = Solver::create(s, "");
         solver->analyzePattern(A, A.rows());
 
         std::default_random_engine eng{42};
@@ -196,7 +196,7 @@ TEST_CASE("hypre", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solver = LinearSolver::create("Hypre", "");
+    auto solver = Solver::create("Hypre", "");
     // solver->setParameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
@@ -229,7 +229,7 @@ TEST_CASE("hypre_initial_guess", "[solver]")
     {
         json solver_info;
 
-        auto solver = LinearSolver::create("Hypre", "");
+        auto solver = Solver::create("Hypre", "");
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -240,7 +240,7 @@ TEST_CASE("hypre_initial_guess", "[solver]")
 
     {
         json solver_info;
-        auto solver = LinearSolver::create("Hypre", "");
+        auto solver = Solver::create("Hypre", "");
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -272,7 +272,7 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
     {
         json solver_info;
 
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -283,7 +283,7 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 
     {
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -315,7 +315,7 @@ TEST_CASE("saddle_point_test", "[solver]")
     ok = loadMarketVector(b, path + "/b0.mat");
     REQUIRE(ok);
 
-    auto solver = LinearSolver::create("SaddlePointSolver", "");
+    auto solver = Solver::create("SaddlePointSolver", "");
     solver->analyzePattern(A, 9934);
     solver->factorize(A);
     Eigen::VectorXd x(A.rows());
@@ -345,7 +345,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
     {
         json solver_info;
 
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         solver->setParameters(params);
@@ -361,7 +361,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
 
     {
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["block_size"] = 3;
@@ -400,7 +400,7 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
     {
         amgcl::profiler<> prof("gr_30_30_Scalar");
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         prof.tic("setup");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
@@ -421,7 +421,7 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
     {
         amgcl::profiler<> prof("gr_30_30_Block");
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         prof.tic("setup");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
@@ -466,7 +466,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
     {
         amgcl::profiler<> prof("crystm03_Block");
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         prof.tic("setup");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
@@ -488,7 +488,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
     {
         amgcl::profiler<> prof("crystm03_Scalar");
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         prof.tic("setup");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
@@ -534,7 +534,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     {
         amgcl::profiler<> prof("crystm03_Block");
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         prof.tic("setup");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
@@ -557,7 +557,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     {
         amgcl::profiler<> prof("crystm03_Scalar");
         json solver_info;
-        auto solver = LinearSolver::create("AMGCL", "");
+        auto solver = Solver::create("AMGCL", "");
         prof.tic("setup");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
@@ -589,7 +589,7 @@ TEST_CASE("cusolverdn", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solver = LinearSolver::create("cuSolverDN", "");
+    auto solver = Solver::create("cuSolverDN", "");
     // solver->setParameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
@@ -617,7 +617,7 @@ TEST_CASE("cusolverdn_dense", "[solver]")
     A(0, 1) = 1.0;
     A(3, 0) = 1.0;
 
-    auto solver = LinearSolver::create("cuSolverDN", "");
+    auto solver = Solver::create("cuSolverDN", "");
     // solver->setParameters(params);
     for (int i = 0; i < 5; ++i)
     {
@@ -648,7 +648,7 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
     A(0, 1) = 1.0;
     A(3, 0) = 1.0;
 
-    auto solver = LinearSolver::create("cuSolverDN_float", "");
+    auto solver = Solver::create("cuSolverDN_float", "");
     // solver->setParameters(params);
 
     for (int i = 0; i < 5; ++i)
@@ -671,7 +671,7 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
 TEST_CASE("cusolverdn_5cubes", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
-    auto solver = LinearSolver::create("cuSolverDN", "");
+    auto solver = Solver::create("cuSolverDN", "");
 
     // std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");
     // std::ofstream solve_times_file(path+"/solve_times_5cubes.txt");

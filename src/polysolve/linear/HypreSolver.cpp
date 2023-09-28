@@ -1,7 +1,7 @@
 #ifdef POLYSOLVE_WITH_HYPRE
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolverHypre.hpp"
+#include "HypreSolver.hpp"
 
 #include <HYPRE_krylov.h>
 #include <HYPRE_utilities.h>
@@ -12,7 +12,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverHypre::LinearSolverHypre()
+    HypreSolver::HypreSolver()
     {
         precond_num_ = 0;
 #ifdef HYPRE_WITH_MPI
@@ -35,7 +35,7 @@ namespace polysolve
     }
 
     // Set solver parameters
-    void LinearSolverHypre::setParameters(const json &params)
+    void HypreSolver::setParameters(const json &params)
     {
         if (params.contains("Hypre"))
         {
@@ -54,7 +54,7 @@ namespace polysolve
         }
     }
 
-    void LinearSolverHypre::getInfo(json &params) const
+    void HypreSolver::getInfo(json &params) const
     {
         params["num_iterations"] = num_iterations;
         params["final_res_norm"] = final_res_norm;
@@ -62,7 +62,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverHypre::factorize(const StiffnessMatrix &Ain)
+    void HypreSolver::factorize(const StiffnessMatrix &Ain)
     {
         assert(precond_num_ > 0);
 
@@ -183,7 +183,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void LinearSolverHypre::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
+    void HypreSolver::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
         HYPRE_IJVector b;
         HYPRE_ParVector par_b;
@@ -295,7 +295,7 @@ namespace polysolve
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    LinearSolverHypre::~LinearSolverHypre()
+    HypreSolver::~HypreSolver()
     {
         if (has_matrix_)
         {

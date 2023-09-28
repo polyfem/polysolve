@@ -165,8 +165,8 @@ namespace polysolve
         Eigen::VectorXd alphau;
         Eigen::VectorXd alphap;
 
-        auto asymmetric_solver = LinearSolver::create(asymmetric_solver_name_, "");
-        auto symmetric_solver = LinearSolver::create(symmetric_solver_name_, "");
+        auto asymmetric_solver = Solver::create(asymmetric_solver_name_, "");
+        auto symmetric_solver = Solver::create(symmetric_solver_name_, "");
         asymmetric_solver->setParameters(asymmetric_solver_params_);
         symmetric_solver->setParameters(symmetric_solver_params_);
 

@@ -32,7 +32,7 @@ namespace polysolve
     /**
      * @brief      Base class for linear solver.
      */
-    class LinearSolver
+    class Solver
     {
 
     public:
@@ -47,14 +47,14 @@ namespace polysolve
         //////////////////
 
         // Virtual destructor
-        virtual ~LinearSolver() = default;
+        virtual ~Solver() = default;
 
         // Static constructor
         //
         // @param[in]  solver   Solver type
         // @param[in]  precond  Preconditioner for iterative solvers
         //
-        static std::unique_ptr<LinearSolver> create(const std::string &solver, const std::string &precond);
+        static std::unique_ptr<Solver> create(const std::string &solver, const std::string &precond);
 
         // List available solvers
         static std::vector<std::string> availableSolvers();
@@ -66,7 +66,7 @@ namespace polysolve
 
     protected:
         // Default constructor
-        LinearSolver() = default;
+        Solver() = default;
 
     public:
         //////////////////////

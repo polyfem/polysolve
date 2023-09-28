@@ -1,7 +1,7 @@
 #pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve
@@ -10,7 +10,7 @@ namespace polysolve
     // -----------------------------------------------------------------------------
 
     template <typename SparseSolver>
-    class LinearSolverEigenDirect : public LinearSolver
+    class EigenDirect : public Solver
     {
     protected:
         // Solver class
@@ -24,7 +24,7 @@ namespace polysolve
         virtual std::string name() const override { return m_Name; }
 
         // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
-        LinearSolverEigenDirect(const std::string &name) { m_Name = name; }
+        EigenDirect(const std::string &name) { m_Name = name; }
 
     public:
         // Get info on the last solve step
@@ -43,7 +43,7 @@ namespace polysolve
     // -----------------------------------------------------------------------------
 
     template <typename SparseSolver>
-    class LinearSolverEigenIterative : public LinearSolver
+    class EigenIterative : public Solver
     {
     protected:
         // Solver class
@@ -57,7 +57,7 @@ namespace polysolve
         virtual std::string name() const override { return m_Name; }
 
         // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
-        LinearSolverEigenIterative(const std::string &name) { m_Name = name; }
+        EigenIterative(const std::string &name) { m_Name = name; }
 
     public:
         // Set solver parameters
@@ -81,7 +81,7 @@ namespace polysolve
     // -----------------------------------------------------------------------------
 
     template <typename DenseSolver>
-    class LinearSolverEigenDense : public LinearSolver
+    class EigenDenseSolver : public Solver
     {
     protected:
         // Solver class
@@ -95,7 +95,7 @@ namespace polysolve
         virtual std::string name() const override { return m_Name; }
 
         // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
-        LinearSolverEigenDense(const std::string &name) { m_Name = name; }
+        EigenDenseSolver(const std::string &name) { m_Name = name; }
 
     public:
         // Get info on the last solve step
@@ -117,4 +117,4 @@ namespace polysolve
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "LinearSolverEigen.tpp"
+#include "EigenSolver.tpp"

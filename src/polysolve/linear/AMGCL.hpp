@@ -3,7 +3,7 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
+#include "Solver.hpp"
 
 #include <Eigen/Core>
 #include <amgcl/backend/builtin.hpp>
@@ -48,15 +48,15 @@ namespace polysolve
 {
 
     template <int BLOCK_SIZE>
-    class LinearSolverAMGCL_Block : public LinearSolver
+    class AMGCL_Block : public Solver
     {
 
     public:
-        LinearSolverAMGCL_Block();
-        ~LinearSolverAMGCL_Block();
+        AMGCL_Block();
+        ~AMGCL_Block();
 
     private:
-        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverAMGCL_Block)
+        POLYSOLVE_DELETE_MOVE_COPY(AMGCL_Block)
 
     public:
         //////////////////////
@@ -97,15 +97,15 @@ namespace polysolve
         double residual_error_;
     };
 
-    class LinearSolverAMGCL : public LinearSolver
+    class AMGCL : public Solver
     {
 
     public:
-        LinearSolverAMGCL();
-        ~LinearSolverAMGCL();
+        AMGCL();
+        ~AMGCL();
 
     private:
-        POLYSOLVE_DELETE_MOVE_COPY(LinearSolverAMGCL)
+        POLYSOLVE_DELETE_MOVE_COPY(AMGCL)
 
     public:
         //////////////////////
@@ -158,8 +158,8 @@ namespace polysolve
         size_t iterations_;
         double residual_error_;
 
-        LinearSolverAMGCL_Block<2> block2_solver_;
-        LinearSolverAMGCL_Block<3> block3_solver_;
+        AMGCL_Block<2> block2_solver_;
+        AMGCL_Block<3> block3_solver_;
     };
 
 } // namespace polysolve

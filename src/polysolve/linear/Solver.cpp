@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
-#include "LinearSolver.hpp"
-#include "LinearSolverEigen.hpp"
+#include "Solver.hpp"
+#include "EigenSolver.hpp"
 #include "SaddlePointSolver.hpp"
 
 // -----------------------------------------------------------------------------
@@ -21,16 +21,16 @@
 #include <Eigen/PardisoSupport>
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
-#include "LinearSolverPardiso.hpp"
+#include "Pardiso.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
-#include "LinearSolverHypre.hpp"
+#include "HypreSolver.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
-#include "LinearSolverAMGCL.hpp"
+#include "AMGCL.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
-#include "LinearSolverCuSolverDN.cuh"
+#include "CuSolverDN.cuh"
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
 
@@ -118,18 +118,18 @@ namespace polysolve
 
     // -----------------------------------------------------------------------------
 
-#define RETURN_DIRECT_SOLVER_PTR(EigenSolver, Name)                  \
-    do                                                               \
-    {                                                                \
-        return std::make_unique<LinearSolverEigenDirect<EigenSolver< \
-            polysolve::StiffnessMatrix>>>(Name);                     \
+#define RETURN_DIRECT_SOLVER_PTR(EigenSolver, Name)      \
+    do                                                   \
+    {                                                    \
+        return std::make_unique<EigenDirect<EigenSolver< \
+            polysolve::StiffnessMatrix>>>(Name);         \
     } while (0)
 
-#define RETURN_DIRECT_DENSE_SOLVER_PTR(EigenSolver, Name)           \
-    do                                                              \
-    {                                                               \
-        return std::make_unique<LinearSolverEigenDense<EigenSolver< \
-            Eigen::MatrixXd>>>(Name);                               \
+#define RETURN_DIRECT_DENSE_SOLVER_PTR(EigenSolver, Name)     \
+    do                                                        \
+    {                                                         \
+        return std::make_unique<EigenDenseSolver<EigenSolver< \
+            Eigen::MatrixXd>>>(Name);                         \
     } while (0)
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -140,14 +140,14 @@ namespace polysolve
         template <template <class, class> class SparseSolver, typename Precond>
         struct MakeSolver
         {
-            typedef LinearSolverEigenIterative<SparseSolver<StiffnessMatrix, Precond>> type;
+            typedef EigenIterative<SparseSolver<StiffnessMatrix, Precond>> type;
         };
 
         template <template <class, int, class> class SparseSolver, typename Precond>
         struct MakeSolverSym
         {
-            typedef LinearSolverEigenIterative<SparseSolver<StiffnessMatrix,
-                                                            Eigen::Lower | Eigen::Upper, Precond>>
+            typedef EigenIterative<SparseSolver<StiffnessMatrix,
+                                                Eigen::Lower | Eigen::Upper, Precond>>
                 type;
         };
 
@@ -158,7 +158,7 @@ namespace polysolve
             typename DefaultPrecond = Eigen::DiagonalPreconditioner<double>>
         struct PrecondHelper
         {
-            static std::unique_ptr<LinearSolver> create(const std::string &arg, const std::string &name)
+            static std::unique_ptr<Solver> create(const std::string &arg, const std::string &name)
             {
                 ENUMERATE_PRECOND(MakeSolver, SolverType, DefaultPrecond, arg, name);
             }
@@ -169,7 +169,7 @@ namespace polysolve
             typename DefaultPrecond = Eigen::DiagonalPreconditioner<double>>
         struct PrecondHelperSym
         {
-            static std::unique_ptr<LinearSolver> create(const std::string &arg, const std::string &name)
+            static std::unique_ptr<Solver> create(const std::string &arg, const std::string &name)
             {
                 ENUMERATE_PRECOND(MakeSolverSym, SolverType, DefaultPrecond, arg, name);
             }
@@ -180,7 +180,7 @@ namespace polysolve
     ////////////////////////////////////////////////////////////////////////////////
 
     // Static constructor
-    std::unique_ptr<LinearSolver> LinearSolver::create(const std::string &solver, const std::string &precond)
+    std::unique_ptr<Solver> Solver::create(const std::string &solver, const std::string &precond)
     {
         using namespace Eigen;
 
@@ -251,29 +251,29 @@ namespace polysolve
         }
         else if (solver == "Pardiso")
         {
-            return std::make_unique<LinearSolverPardiso>();
+            return std::make_unique<Pardiso>();
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
         }
         else if (solver == "cuSolverDN")
         {
-            return std::make_unique<LinearSolverCuSolverDN<double>>();
+            return std::make_unique<CuSolverDN<double>>();
         }
         else if (solver == "cuSolverDN_float")
         {
-            return std::make_unique<LinearSolverCuSolverDN<float>>();
+            return std::make_unique<CuSolverDN<float>>();
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
         {
-            return std::make_unique<LinearSolverHypre>();
+            return std::make_unique<HypreSolver>();
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
         }
         else if (solver == "AMGCL")
         {
-            return std::make_unique<LinearSolverAMGCL>();
+            return std::make_unique<AMGCL>();
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
@@ -358,7 +358,7 @@ namespace polysolve
     ////////////////////////////////////////////////////////////////////////////////
 
     // List available solvers
-    std::vector<std::string> LinearSolver::availableSolvers()
+    std::vector<std::string> Solver::availableSolvers()
     {
         return {{
             "Eigen::SimplicialLDLT",
@@ -420,7 +420,7 @@ namespace polysolve
         }};
     }
 
-    std::string LinearSolver::defaultSolver()
+    std::string Solver::defaultSolver()
     {
         // return "Eigen::BiCGSTAB";
 #ifdef POLYSOLVE_WITH_PARDISO
@@ -437,7 +437,7 @@ namespace polysolve
     // -----------------------------------------------------------------------------
 
     // List available preconditioners
-    std::vector<std::string> LinearSolver::availablePrecond()
+    std::vector<std::string> Solver::availablePrecond()
     {
         return {{
             "Eigen::IdentityPreconditioner",
@@ -452,7 +452,7 @@ namespace polysolve
         }};
     }
 
-    std::string LinearSolver::defaultPrecond()
+    std::string Solver::defaultPrecond()
     {
         return "Eigen::DiagonalPreconditioner";
     }

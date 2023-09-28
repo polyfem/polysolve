@@ -96,7 +96,7 @@ namespace polysolve
 } // namespace polysolve
 
 Eigen::Vector4d polysolve::dirichlet_solve(
-    LinearSolver &solver, StiffnessMatrix &A, Eigen::VectorXd &f,
+    Solver &solver, StiffnessMatrix &A, Eigen::VectorXd &f,
     const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u,
     const int precond_num,
     const std::string &save_path,
@@ -268,7 +268,7 @@ Eigen::Vector4d polysolve::dirichlet_solve(
 }
 
 void polysolve::prefactorize(
-    LinearSolver &solver, StiffnessMatrix &A,
+    Solver &solver, StiffnessMatrix &A,
     const std::vector<int> &dirichlet_nodes, const int precond_num,
     const std::string &save_path)
 {
@@ -317,7 +317,7 @@ void polysolve::prefactorize(
 }
 
 void polysolve::dirichlet_solve_prefactorized(
-    LinearSolver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
+    Solver &solver, const StiffnessMatrix &A, Eigen::VectorXd &f,
     const std::vector<int> &dirichlet_nodes, Eigen::VectorXd &u)
 {
     // pre-factorized version of dirichlet_solve

@@ -1,33 +1,34 @@
 #pragma once
 
 #include "Solver.hpp"
+#include "Utils.hpp"
 
 #include <polysolve/linear/Solver.hpp>
 
 namespace polysolve::nonlinear
 {
-    template <typename ProblemType>
-    class SparseNewton : public NonlinearSolver<ProblemType>
+    class SparseNewton : public Solver
     {
     public:
-        using Superclass = NonlinearSolver<ProblemType>;
+        using Superclass = Solver;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        SparseNewton(const json &solver_params, const json &linear_solver_params, const double dt, const double characteristic_length);
+        SparseNewton(const json &solver_params,
+                     const json &linear_solver_params,
+                     const double dt, const double characteristic_length,
+                     spdlog::logger &logger);
 
         std::string name() const override { return "Newton"; }
 
     protected:
-        const double characteristic_length;
+        bool compute_update_direction(Problem &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
 
-        bool compute_update_direction(ProblemType &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
+        void assemble_hessian(Problem &objFunc, const TVector &x, polysolve::StiffnessMatrix &hessian);
+        bool solve_linear_system(const polysolve::StiffnessMatrix &hessian, const TVector &grad, TVector &direction);
+        bool check_direction(const polysolve::StiffnessMatrix &hessian, const TVector &grad, const TVector &direction);
 
-        void assemble_hessian(ProblemType &objFunc, const TVector &x, polyfem::StiffnessMatrix &hessian);
-        bool solve_linear_system(const polyfem::StiffnessMatrix &hessian, const TVector &grad, TVector &direction);
-        bool check_direction(const polyfem::StiffnessMatrix &hessian, const TVector &grad, const TVector &direction);
-
-        static bool has_hessian_nans(const polyfem::StiffnessMatrix &hessian);
+        static bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian);
 
         // ====================================================================
         //                        Solver parameters
@@ -50,14 +51,9 @@ namespace polysolve::nonlinear
         using Superclass::descent_strategy_name;
         std::string descent_strategy_name(int descent_strategy) const override;
 
-        spdlog::level::level_enum log_level() const
-        {
-            return this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug;
-        }
-
-        std::unique_ptr<polysolve::LinearSolver> linear_solver; ///< Linear solver used to solve the linear system
-        bool force_psd_projection = false;                      ///< Whether to force the Hessian to be positive semi-definite
-        double reg_weight = 0;                                  ///< Regularization Coefficients
+        std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
+        bool force_psd_projection = false;                        ///< Whether to force the Hessian to be positive semi-definite
+        double reg_weight = 0;                                    ///< Regularization Coefficients
 
         // ====================================================================
         //                            Solver info
@@ -67,11 +63,14 @@ namespace polysolve::nonlinear
 
         json internal_solver_info = json::array();
 
+        spdlog::level::level_enum log_level() const
+        {
+            return this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug;
+        }
+
         // ====================================================================
         //                                END
         // ====================================================================
     };
 
 } // namespace polysolve::nonlinear
-
-#include "SparseNewton.tpp"

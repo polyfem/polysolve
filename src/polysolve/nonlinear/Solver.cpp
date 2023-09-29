@@ -13,7 +13,7 @@ namespace polysolve::nonlinear
                    const double dt,
                    const double characteristic_length,
                    spdlog::logger &logger)
-        : dt(dt), m_logger(logger)
+        : dt(dt), m_logger(logger), characteristic_length(characteristic_length)
     {
         TCriteria criteria = TCriteria::defaults();
         criteria.xDelta = solver_params["x_delta"];

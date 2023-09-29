@@ -1,16 +1,19 @@
-#pragma once
-
 #include "SparseNewton.hpp"
+
 #include <unsupported/Eigen/SparseExtra>
 
 namespace polysolve::nonlinear
 {
-    template <typename ProblemType>
-    SparseNewton<ProblemType>::SparseNewton(
-        const json &solver_params, const json &linear_solver_params, const double dt, const double characteristic_length)
-        : Superclass(solver_params, dt, characteristic_length), characteristic_length(characteristic_length)
+
+    SparseNewton::SparseNewton(
+        const json &solver_params,
+        const json &linear_solver_params,
+        const double dt,
+        const double characteristic_length,
+        spdlog::logger &logger)
+        : Superclass(solver_params, dt, characteristic_length, logger)
     {
-        linear_solver = polysolve::LinearSolver::create(
+        linear_solver = polysolve::linear::Solver::create(
             linear_solver_params["solver"], linear_solver_params["precond"]);
         linear_solver->setParameters(linear_solver_params);
 
@@ -19,8 +22,7 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    std::string SparseNewton<ProblemType>::descent_strategy_name(int descent_strategy) const
+    std::string SparseNewton::descent_strategy_name(int descent_strategy) const
     {
         switch (descent_strategy)
         {
@@ -39,8 +41,7 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    void SparseNewton<ProblemType>::increase_descent_strategy()
+    void SparseNewton::increase_descent_strategy()
     {
         if (this->descent_strategy == 1 && reg_weight < reg_weight_max)
             reg_weight = std::clamp(reg_weight_inc * reg_weight, reg_weight_min, reg_weight_max);
@@ -51,20 +52,19 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    void SparseNewton<ProblemType>::reset(const int ndof)
+    void SparseNewton::reset(const int ndof)
     {
         Superclass::reset(ndof);
         assert(linear_solver != nullptr);
         reg_weight = 0;
+        this->descent_strategy = 0;
         internal_solver_info = json::array();
     }
 
     // =======================================================================
 
-    template <typename ProblemType>
-    bool SparseNewton<ProblemType>::compute_update_direction(
-        ProblemType &objFunc,
+    bool SparseNewton::compute_update_direction(
+        Problem &objFunc,
         const TVector &x,
         const TVector &grad,
         TVector &direction)
@@ -75,7 +75,7 @@ namespace polysolve::nonlinear
             return true;
         }
 
-        polyfem::StiffnessMatrix hessian;
+        polysolve::StiffnessMatrix hessian;
 
         assemble_hessian(objFunc, x, hessian);
 
@@ -100,9 +100,8 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    void SparseNewton<ProblemType>::assemble_hessian(
-        ProblemType &objFunc, const TVector &x, polyfem::StiffnessMatrix &hessian)
+    void SparseNewton::assemble_hessian(
+        Problem &objFunc, const TVector &x, polysolve::StiffnessMatrix &hessian)
     {
         POLYSOLVE_SCOPED_TIMER("assembly time", this->assembly_time);
 
@@ -117,15 +116,14 @@ namespace polysolve::nonlinear
 
         if (reg_weight > 0)
         {
-            hessian += reg_weight * polyfem::utils::sparse_identity(hessian.rows(), hessian.cols());
+            hessian += reg_weight * sparse_identity(hessian.rows(), hessian.cols());
         }
     }
 
     // =======================================================================
 
-    template <typename ProblemType>
-    bool SparseNewton<ProblemType>::solve_linear_system(
-        const polyfem::StiffnessMatrix &hessian, const TVector &grad, TVector &direction)
+    bool SparseNewton::solve_linear_system(
+        const polysolve::StiffnessMatrix &hessian, const TVector &grad, TVector &direction)
     {
         POLYSOLVE_SCOPED_TIMER("linear solve", this->inverting_time);
         // TODO: get the correct size
@@ -140,7 +138,7 @@ namespace polysolve::nonlinear
             increase_descent_strategy();
 
             // warn if using gradient descent
-            polyfem::logger().log(
+            m_logger.log(
                 log_level(), "Unable to factorize Hessian: \"{}\"; reverting to {}",
                 err.what(), this->descent_strategy_name());
 
@@ -155,9 +153,8 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    bool SparseNewton<ProblemType>::check_direction(
-        const polyfem::StiffnessMatrix &hessian, const TVector &grad, const TVector &direction)
+    bool SparseNewton::check_direction(
+        const polysolve::StiffnessMatrix &hessian, const TVector &grad, const TVector &direction)
     {
         // gradient descent, check descent direction
         const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
@@ -165,7 +162,7 @@ namespace polysolve::nonlinear
         {
             increase_descent_strategy();
 
-            polyfem::logger().log(
+            m_logger.log(
                 log_level(),
                 "[{}] large (or nan) linear solve residual {} (||∇f||={}); reverting to {}",
                 name(), residual, grad.norm(), this->descent_strategy_name());
@@ -174,14 +171,14 @@ namespace polysolve::nonlinear
         }
         else
         {
-            polyfem::logger().trace("linear solve residual {}", residual);
+            m_logger.trace("linear solve residual {}", residual);
         }
 
         // do this check here because we need to repeat the solve without resetting reg_weight
         if (grad.norm() != 0 && grad.dot(direction) >= 0)
         {
             increase_descent_strategy();
-            polyfem::logger().log(
+            m_logger.log(
                 log_level(), "[{}] direction is not a descent direction (‖g‖={:g}; ‖Δx‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
                 name(), grad.norm(), direction.norm(), direction.dot(grad), descent_strategy_name());
             return false;
@@ -192,8 +189,7 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    void SparseNewton<ProblemType>::update_solver_info(const double energy)
+    void SparseNewton::update_solver_info(const double energy)
     {
         Superclass::update_solver_info(energy);
         this->solver_info["internal_solver"] = internal_solver_info;
@@ -201,12 +197,11 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    template <typename ProblemType>
-    static bool has_hessian_nans(const polyfem::StiffnessMatrix &hessian)
+    static bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian)
     {
         for (int k = 0; k < hessian.outerSize(); ++k)
         {
-            for (polyfem::StiffnessMatrix::InnerIterator it(hessian, k); it; ++it)
+            for (polysolve::StiffnessMatrix::InnerIterator it(hessian, k); it; ++it)
             {
                 if (std::isnan(it.value()))
                     return true;

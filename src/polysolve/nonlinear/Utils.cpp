@@ -10,6 +10,13 @@ namespace polysolve::nonlinear
         throw std::runtime_error(msg);
     }
 
+    inline Eigen::SparseMatrix<double> sparse_identity(int rows, int cols)
+    {
+        Eigen::SparseMatrix<double> I(rows, cols);
+        I.setIdentity();
+        return I;
+    }
+
     void save_sampled_values(
         const std::string &filename,
         const typename Problem::TVector &x,

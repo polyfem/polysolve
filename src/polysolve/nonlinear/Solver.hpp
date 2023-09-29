@@ -75,6 +75,8 @@ namespace polysolve::nonlinear
         double first_grad_norm_tol;
         double dt;
 
+        const double characteristic_length;
+
         // ====================================================================
         //                           Solver state
         // ====================================================================

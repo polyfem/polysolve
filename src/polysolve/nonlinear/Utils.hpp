@@ -27,4 +27,7 @@ namespace polysolve::nonlinear
                                     spdlog::logger &logger,
                                     const double starting_step_size = 1e-1,
                                     const int num_samples = 1000);
+
+    Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
+
 } // namespace polysolve::nonlinear

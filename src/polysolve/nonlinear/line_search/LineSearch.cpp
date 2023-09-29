@@ -7,7 +7,7 @@
 
 #include <polysolve/nonlinear/Utils.hpp>
 
-#include <polysolve/types.hpp>
+#include <polysolve/Types.hpp>
 
 #include <spdlog/spdlog.h>
 

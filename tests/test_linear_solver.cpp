@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////
-#include <polysolve/types.hpp>
+#include <polysolve/Types.hpp>
 #include <polysolve/linear/FEMSolver.hpp>
 
 #include <catch2/catch.hpp>

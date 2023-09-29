@@ -10,7 +10,7 @@ namespace polysolve::nonlinear
         throw std::runtime_error(msg);
     }
 
-    inline Eigen::SparseMatrix<double> sparse_identity(int rows, int cols)
+    Eigen::SparseMatrix<double> sparse_identity(int rows, int cols)
     {
         Eigen::SparseMatrix<double> I(rows, cols);
         I.setIdentity();

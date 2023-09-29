@@ -3,8 +3,6 @@
 #include "Solver.hpp"
 #include "Utils.hpp"
 
-#include <polysolve/linear/Solver.hpp>
-
 namespace polysolve::nonlinear
 {
     class Newton : public Solver

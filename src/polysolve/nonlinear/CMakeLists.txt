@@ -10,7 +10,8 @@ set(SOURCES
 	Solver.cpp
 	Newton.hpp
 	Newton.cpp
-	BoxConstraints.hpp
+	BoxConstraintSolver.cpp
+	BoxConstraintSolver.hpp
 	SparseNewton.hpp
 	SparseNewton.cpp
 	DenseNewton.hpp

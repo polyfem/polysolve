@@ -12,7 +12,7 @@ set(SOURCES
 	SparseNewton.hpp
 	SparseNewton.cpp
 	DenseNewton.hpp
-	DenseNewton.tpp
+	DenseNewton.cpp
 	MMA.hpp
 	MMA.tpp
 	MMAAux.hpp

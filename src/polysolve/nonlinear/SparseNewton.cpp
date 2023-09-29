@@ -11,7 +11,11 @@ namespace polysolve::nonlinear
         const double dt,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(solver_params, linear_solver_params, dt, characteristic_length, logger)
+        : Superclass(solver_params,
+                     linear_solver_params,
+                     dt,
+                     characteristic_length,
+                     logger)
     {
         linear_solver = polysolve::linear::Solver::create(
             linear_solver_params["solver"], linear_solver_params["precond"]);

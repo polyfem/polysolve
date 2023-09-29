@@ -18,7 +18,7 @@ set(SOURCES
 	DenseNewton.hpp
 	DenseNewton.cpp
 	MMA.hpp
-	MMA.tpp
+	MMA.cpp
 	MMAAux.hpp
 	MMAAux.cpp
 	Utils.hpp

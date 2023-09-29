@@ -1,6 +1,6 @@
 set(SOURCES
 	LBFGS.hpp
-	LBFGS.tpp
+	LBFGS.cpp
 	LBFGSB.hpp
 	BFGS.hpp
 	GradientDescent.hpp

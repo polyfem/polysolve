@@ -169,6 +169,10 @@ target_link_libraries(polysolve PUBLIC cppoptlib)
 include(spdlog)
 target_link_libraries(polysolve PUBLIC spdlog::spdlog)
 
+# LBFGSpp
+include(LBFGSpp)
+target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
+
 # Accelerate solver
 if(POLYSOLVE_WITH_ACCELERATE)
     include(CPM)

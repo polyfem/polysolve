@@ -2,28 +2,24 @@
 
 #pragma once
 
-#include <polyfem/Common.hpp>
-#include "NonlinearSolver.hpp"
-#include <polysolve/LinearSolver.hpp>
-#include <polyfem/utils/MatrixUtils.hpp>
-
-#include <polyfem/utils/Logger.hpp>
-
-#include <igl/Timer.h>
+#include "Solver.hpp"
+#include "Utils.hpp"
 
 #include <LBFGSpp/BFGSMat.h>
 
 namespace polysolve::nonlinear
 {
-    template <typename ProblemType>
-    class LBFGS : public NonlinearSolver<ProblemType>
+    class LBFGS : public Solver
     {
     public:
-        using Superclass = NonlinearSolver<ProblemType>;
+        using Superclass = Solver;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        LBFGS(const json &solver_params, const double dt, const double characteristic_length);
+        LBFGS(const json &solver_params,
+              const double dt,
+              const double characteristic_length,
+              spdlog::logger &logger);
 
         std::string name() const override { return "L-BFGS"; }
 
@@ -38,7 +34,7 @@ namespace polysolve::nonlinear
         void reset(const int ndof) override;
 
         bool compute_update_direction(
-            ProblemType &objFunc,
+            Problem &objFunc,
             const TVector &x,
             const TVector &grad,
             TVector &direction) override;
@@ -57,5 +53,3 @@ namespace polysolve::nonlinear
         TVector m_prev_grad; // Previous gradient
     };
 } // namespace polysolve::nonlinear
-
-#include "LBFGS.tpp"

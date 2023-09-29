@@ -1,20 +1,22 @@
 // L-BFGS solver (Using the LBFGSpp under MIT License).
 
-#pragma once
-
 #include "LBFGS.hpp"
 
 namespace polysolve::nonlinear
 {
-    template <typename ProblemType>
-    LBFGS<ProblemType>::LBFGS(const json &solver_params, const double dt, const double characteristic_length)
-        : Superclass(solver_params, dt, characteristic_length)
+    LBFGS::LBFGS(const json &solver_params,
+                 const double dt,
+                 const double characteristic_length,
+                 spdlog::logger &logger)
+        : Superclass(solver_params,
+                     dt,
+                     characteristic_length,
+                     logger)
     {
         m_history_size = solver_params.value("history_size", 6);
     }
 
-    template <typename ProblemType>
-    std::string LBFGS<ProblemType>::descent_strategy_name(int descent_strategy) const
+    std::string LBFGS::descent_strategy_name(int descent_strategy) const
     {
         switch (descent_strategy)
         {
@@ -27,8 +29,7 @@ namespace polysolve::nonlinear
         }
     }
 
-    template <typename ProblemType>
-    void LBFGS<ProblemType>::increase_descent_strategy()
+    void LBFGS::increase_descent_strategy()
     {
         if (this->descent_strategy == 1)
             this->descent_strategy++;
@@ -38,8 +39,7 @@ namespace polysolve::nonlinear
         assert(this->descent_strategy <= 2);
     }
 
-    template <typename ProblemType>
-    void LBFGS<ProblemType>::reset(const int ndof)
+    void LBFGS::reset(const int ndof)
     {
         Superclass::reset(ndof);
 
@@ -49,9 +49,8 @@ namespace polysolve::nonlinear
         this->descent_strategy = 2;
     }
 
-    template <typename ProblemType>
-    bool LBFGS<ProblemType>::compute_update_direction(
-        ProblemType &objFunc,
+    bool LBFGS::compute_update_direction(
+        Problem &objFunc,
         const TVector &x,
         const TVector &grad,
         TVector &direction)

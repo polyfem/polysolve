@@ -1,28 +1,23 @@
 #pragma once
 
-#include <polyfem/Common.hpp>
-#include "NonlinearSolver.hpp"
-#include <polysolve/LinearSolver.hpp>
-#include <polyfem/utils/MatrixUtils.hpp>
+#include "Solver.hpp"
+#include "Utils.hpp"
 
-#include <polyfem/utils/Logger.hpp>
-
-#include <igl/Timer.h>
+#include <polysolve/linear/Solver.hpp>
 
 namespace polysolve::nonlinear
 {
-    template <typename ProblemType>
-    class GradientDescent : public NonlinearSolver<ProblemType>
+    class GradientDescent : public Solver
     {
     public:
-        using Superclass = NonlinearSolver<ProblemType>;
+        using Superclass = Solver;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        GradientDescent(const json &solver_params_, const double dt, const double characteristic_length)
-            : Superclass(solver_params_, dt, characteristic_length)
-        {
-        }
+        GradientDescent(const json &solver_params_,
+                        const double dt,
+                        const double characteristic_length,
+                        spdlog::logger &logger);
 
         std::string name() const override { return "GradientDescent"; }
 
@@ -30,38 +25,16 @@ namespace polysolve::nonlinear
         virtual int default_descent_strategy() override { return 1; }
 
         using Superclass::descent_strategy_name;
-        std::string descent_strategy_name(int descent_strategy_) const override
-        {
-            switch (descent_strategy_)
-            {
-            case 1:
-                return "gradient descent";
-            default:
-                throw std::invalid_argument("invalid descent strategy");
-            }
-        }
-
-        void increase_descent_strategy() override
-        {
-            assert(this->descent_strategy <= 1);
-        }
+        std::string descent_strategy_name(int descent_strategy_) const override;
+        void increase_descent_strategy() override;
 
     protected:
-        void reset(const int ndof) override
-        {
-            Superclass::reset(ndof);
-            this->descent_strategy = 1;
-        }
+        void reset(const int ndof) override;
 
         virtual bool compute_update_direction(
-            ProblemType &objFunc,
+            Problem &objFunc,
             const TVector &x,
             const TVector &grad,
-            TVector &direction) override
-        {
-            direction = -grad;
-
-            return true;
-        }
+            TVector &direction) override;
     };
 } // namespace polysolve::nonlinear

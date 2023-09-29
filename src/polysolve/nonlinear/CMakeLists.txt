@@ -1,6 +1,7 @@
 set(SOURCES
 	LBFGS.hpp
 	LBFGS.cpp
+	LBFGSB.cpp
 	LBFGSB.hpp
 	BFGS.cpp
 	BFGS.hpp

@@ -3,7 +3,6 @@
 namespace polysolve::nonlinear
 {
     BoxConstraintSolver::BoxConstraintSolver(const json &solver_params,
-                                             const json &linear_solver_params,
                                              const double dt,
                                              const double characteristic_length,
                                              spdlog::logger &logger)

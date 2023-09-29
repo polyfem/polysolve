@@ -133,13 +133,16 @@ endif()
 ################################################################################
 
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
+add_library(polysolve_linear)
+add_library(polysolve::polysolve_linear ALIAS polysolve_linear)
+add_subdirectory(src/polysolve/linear)
+
 add_library(polysolve)
 add_library(polysolve::polysolve ALIAS polysolve)
-
-add_subdirectory(src/polysolve/linear)
 add_subdirectory(src/polysolve/nonlinear)
 
 # Public include directory for Polysolve
+target_include_directories(polysolve_linear PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 ################################################################################
@@ -147,13 +150,16 @@ target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 ################################################################################
 
 if(POLYSOLVE_LARGE_INDEX)
-    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_LARGE_INDEX)
+    target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_LARGE_INDEX)
 endif()
 
 ################################################################################
 # Dependencies
 ################################################################################
 
+
+# polysolve_linear
+target_link_libraries(polysolve PUBLIC polysolve::polysolve_linear)
 
 # CppNumericalSolvers
 include(cppoptlib)
@@ -175,61 +181,63 @@ if(POLYSOLVE_WITH_ACCELERATE)
     set(BLA_VENDOR Apple)
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
-    target_link_libraries(polysolve PRIVATE BLAS::BLAS LAPACK::LAPACK)
+    target_link_libraries(polysolve_linear PRIVATE BLAS::BLAS LAPACK::LAPACK)
 endif()
 
 # Extra warnings
 include(polysolve_warnings)
+target_link_libraries(polysolve_linear PRIVATE polysolve::warnings)
 target_link_libraries(polysolve PRIVATE polysolve::warnings)
 
 # Sanitizers
 if(POLYSOLVE_WITH_SANITIZERS)
     include(sanitizers)
+    add_sanitizers(polysolve_linear)
     add_sanitizers(polysolve)
 endif()
 
 include(eigen)
-target_link_libraries(polysolve PUBLIC Eigen3::Eigen)
+target_link_libraries(polysolve_linear PUBLIC Eigen3::Eigen)
 
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
-    target_link_libraries(polysolve PUBLIC HYPRE::HYPRE)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_HYPRE)
+    target_link_libraries(polysolve_linear PUBLIC HYPRE::HYPRE)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_HYPRE)
     if(HYPRE_WITH_MPI)
-        target_compile_definitions(polysolve PUBLIC HYPRE_WITH_MPI)
+        target_compile_definitions(polysolve_linear PUBLIC HYPRE_WITH_MPI)
     endif()
 endif()
 
 # Json (MIT)
 include(json)
-target_link_libraries(polysolve PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(polysolve_linear PUBLIC nlohmann_json::nlohmann_json)
 
 # Accelerate solvers
 if(POLYSOLVE_WITH_ACCELERATE)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_ACCELERATE)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_ACCELERATE)
 endif()
 
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)
     include(suitesparse)
-    target_link_libraries(polysolve PRIVATE SuiteSparse::CHOLMOD)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_CHOLMOD)
+    target_link_libraries(polysolve_linear PRIVATE SuiteSparse::CHOLMOD)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_CHOLMOD)
 endif()
 
 # MKL library
 if(POLYSOLVE_WITH_MKL)
     include(mkl)
-    target_link_libraries(polysolve PRIVATE mkl::mkl)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_MKL)
+    target_link_libraries(polysolve_linear PRIVATE mkl::mkl)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_MKL)
 endif()
 
 # Pardiso solver
 if(POLYSOLVE_WITH_PARDISO)
     include(pardiso)
     if(TARGET Pardiso::Pardiso)
-        target_link_libraries(polysolve PRIVATE Pardiso::Pardiso)
-        target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_PARDISO)
+        target_link_libraries(polysolve_linear PRIVATE Pardiso::Pardiso)
+        target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_PARDISO)
     else()
         message(WARNING "Pardiso not found, solver will not be available.")
     endif()
@@ -238,16 +246,16 @@ endif()
 # UmfPack solver
 if(POLYSOLVE_WITH_UMFPACK)
     include(suitesparse)
-    target_link_libraries(polysolve PRIVATE SuiteSparse::UMFPACK)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_UMFPACK)
+    target_link_libraries(polysolve_linear PRIVATE SuiteSparse::UMFPACK)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_UMFPACK)
 endif()
 
 # SuperLU solver
 if(POLYSOLVE_WITH_SUPERLU)
     include(superlu)
     if(TARGET SuperLU::SuperLU)
-        target_link_libraries(polysolve PRIVATE SuperLU::SuperLU)
-        target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_SUPERLU)
+        target_link_libraries(polysolve_linear PRIVATE SuperLU::SuperLU)
+        target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_SUPERLU)
     else()
         message(WARNING "SuperLU not found, solver will not be available.")
     endif()
@@ -256,23 +264,23 @@ endif()
 # AMGCL solver
 if(POLYSOLVE_WITH_AMGCL)
     include(amgcl)
-    target_link_libraries(polysolve PUBLIC amgcl::amgcl)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_AMGCL)
+    target_link_libraries(polysolve_linear PUBLIC amgcl::amgcl)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_AMGCL)
 endif()
 
 # Spectra (MPL 2.0)
 if(POLYSOLVE_WITH_SPECTRA)
     include(spectra)
-    target_link_libraries(polysolve PUBLIC Spectra::Spectra)
-    target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_SPECTRA)
+    target_link_libraries(polysolve_linear PUBLIC Spectra::Spectra)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_SPECTRA)
 endif()
 
 # cuSolver solvers
 if(POLYSOLVE_WITH_CUSOLVER)
     include(cusolverdn)
     if(TARGET CUDA::cusolver)
-        target_link_libraries(polysolve PUBLIC CUDA::cusolver)
-        target_compile_definitions(polysolve PRIVATE -DPOLYSOLVE_WITH_CUSOLVER)
+        target_link_libraries(polysolve_linear PUBLIC CUDA::cusolver)
+        target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_CUSOLVER)
     else()
         message(WARNING "cuSOLVER not found, solver will not be available.")
     endif()
@@ -282,8 +290,6 @@ endif()
 # Compiler options
 ################################################################################
 
-# Use C++14
-target_compile_features(polysolve PUBLIC cxx_std_14)
 
 ################################################################################
 # Tests

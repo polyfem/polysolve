@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef POLYSOLVE_WITH_AMGCL
-
 ////////////////////////////////////////////////////////////////////////////////
 #include "Solver.hpp"
 
@@ -163,5 +161,3 @@ namespace polysolve::linear
     };
 
 } // namespace polysolve::linear
-
-#endif

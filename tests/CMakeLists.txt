@@ -25,6 +25,10 @@ if(POLYSOLVE_WITH_SANITIZERS)
 	add_sanitizers(unit_tests)
 endif()
 
+if(POLYSOLVE_WITH_AMGCL)
+    target_compile_definitions(unit_tests PRIVATE -DPOLYSOLVE_WITH_AMGCL)
+endif()
+
 include(polyfem-data)
 target_link_libraries(unit_tests PRIVATE polyfem::data)
 

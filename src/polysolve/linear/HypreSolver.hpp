@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef POLYSOLVE_WITH_HYPRE
-
 ////////////////////////////////////////////////////////////////////////////////
 #include "Solver.hpp"
 #include <Eigen/Core>
@@ -73,5 +71,3 @@ namespace polysolve::linear
     };
 
 } // namespace polysolve::linear
-
-#endif

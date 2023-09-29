@@ -1,7 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/types.hpp>
 #include <polysolve/linear/FEMSolver.hpp>
-#include <polysolve/linear/AMGCL.hpp>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -190,15 +189,23 @@ TEST_CASE("pre_factor", "[solver]")
     }
 }
 
-#ifdef POLYSOLVE_WITH_HYPRE
 TEST_CASE("hypre", "[solver]")
 {
+    std::unique_ptr<Solver> solver;
+
+    try
+    {
+        solver = Solver::create("Hypre", "");
+    }
+    catch (const std::exception &)
+    {
+        return;
+    }
     const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solver = Solver::create("Hypre", "");
     // solver->setParameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
@@ -230,8 +237,15 @@ TEST_CASE("hypre_initial_guess", "[solver]")
     x.setZero();
     {
         json solver_info;
-
-        auto solver = Solver::create("Hypre", "");
+        std::unique_ptr<Solver> solver;
+        try
+        {
+            solver = Solver::create("Hypre", "");
+        }
+        catch (const std::exception &)
+        {
+            return;
+        }
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -242,7 +256,16 @@ TEST_CASE("hypre_initial_guess", "[solver]")
 
     {
         json solver_info;
-        auto solver = Solver::create("Hypre", "");
+        std::unique_ptr<Solver> solver;
+
+        try
+        {
+            solver = Solver::create("Hypre", "");
+        }
+        catch (const std::exception &)
+        {
+            return;
+        }
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -256,9 +279,7 @@ TEST_CASE("hypre_initial_guess", "[solver]")
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
-#endif
 
-#ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_initial_guess", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
@@ -273,8 +294,16 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
     x.setZero();
     {
         json solver_info;
+        std::unique_ptr<Solver> solver;
 
-        auto solver = Solver::create("AMGCL", "");
+        try
+        {
+            solver = Solver::create("AMGCL", "");
+        }
+        catch (const std::exception &)
+        {
+            return;
+        }
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -285,7 +314,15 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
 
     {
         json solver_info;
-        auto solver = Solver::create("AMGCL", "");
+        std::unique_ptr<Solver> solver;
+        try
+        {
+            solver = Solver::create("AMGCL", "");
+        }
+        catch (const std::exception &)
+        {
+            return;
+        }
         solver->analyzePattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
@@ -299,7 +336,6 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
-#endif
 
 TEST_CASE("saddle_point_test", "[solver]")
 {
@@ -378,9 +414,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
         REQUIRE(err < 1e-5);
     }
 }
-#endif
 
-#ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_b2", "[solver]")
 {
 #ifndef NDEBUG
@@ -390,8 +424,6 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
     std::string MatrixName = "gr_30_30.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
-
-    std::cout << "Matrix Load OK" << std::endl;
 
     Eigen::VectorXd b(A.rows());
     b.setRandom();
@@ -445,9 +477,7 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
 }
-#endif
 
-#ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
 {
 #ifndef NDEBUG
@@ -458,7 +488,6 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
-    std::cout << "Matrix Load OK" << std::endl;
     Eigen::VectorXd b(A.rows());
     b.setOnes();
     Eigen::VectorXd x_b(A.rows());
@@ -511,9 +540,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
     REQUIRE((A * x - b).norm() / b.norm() < 1e-7);
     REQUIRE((A * x_b - b).norm() / b.norm() < 1e-7);
 }
-#endif
 
-#ifdef POLYSOLVE_WITH_AMGCL
 TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
 {
 #ifndef NDEBUG
@@ -524,8 +551,6 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
     std::string MatrixName = "crystm03.mtx";
     Eigen::SparseMatrix<double> A;
     loadSymmetric(A, path + "/" + MatrixName);
-
-    std::cout << "Matrix Load OK" << std::endl;
 
     Eigen::VectorXd b(A.rows());
     b.setOnes();
@@ -583,15 +608,21 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
 }
 #endif
 
-#ifdef POLYSOLVE_WITH_CUSOLVER
 TEST_CASE("cusolverdn", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
-
-    auto solver = Solver::create("cuSolverDN", "");
+    std::unique_ptr<Solver> solver;
+    try
+    {
+        auto solver = Solver::create("cuSolverDN", "");
+    }
+    catch (const std::exception &)
+    {
+        return;
+    }
     // solver->setParameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
@@ -618,8 +649,15 @@ TEST_CASE("cusolverdn_dense", "[solver]")
     }
     A(0, 1) = 1.0;
     A(3, 0) = 1.0;
-
-    auto solver = Solver::create("cuSolverDN", "");
+    std::unique_ptr<Solver> solver;
+    try
+    {
+        auto solver = Solver::create("cuSolverDN", "");
+    }
+    catch (const std::exception &)
+    {
+        return;
+    }
     // solver->setParameters(params);
     for (int i = 0; i < 5; ++i)
     {
@@ -649,8 +687,15 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
     }
     A(0, 1) = 1.0;
     A(3, 0) = 1.0;
-
-    auto solver = Solver::create("cuSolverDN_float", "");
+    std::unique_ptr<Solver> solver;
+    try
+    {
+        auto solver = Solver::create("cuSolverDN_float", "");
+    }
+    catch (const std::exception &)
+    {
+        return;
+    }
     // solver->setParameters(params);
 
     for (int i = 0; i < 5; ++i)
@@ -673,7 +718,16 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
 TEST_CASE("cusolverdn_5cubes", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
-    auto solver = Solver::create("cuSolverDN", "");
+
+    std::unique_ptr<Solver> solver;
+    try
+    {
+        auto solver = Solver::create("cuSolverDN", "");
+    }
+    catch (const std::exception &)
+    {
+        return;
+    }
 
     // std::ofstream factorize_times_file(path+"/factorize_times_5cubes.txt");
     // std::ofstream solve_times_file(path+"/solve_times_5cubes.txt");
@@ -723,4 +777,3 @@ TEST_CASE("cusolverdn_5cubes", "[solver]")
         REQUIRE(err < 1e-8);
     }
 }
-#endif

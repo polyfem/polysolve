@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef POLYSOLVE_WITH_PARDISO
-
 ////////////////////////////////////////////////////////////////////////////////
 #include "Solver.hpp"
 #include <vector>
@@ -118,5 +116,3 @@ namespace polysolve::linear
     };
 
 } // namespace polysolve::linear
-
-#endif

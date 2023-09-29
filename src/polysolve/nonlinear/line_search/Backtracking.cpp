@@ -1,15 +1,15 @@
 #include "Backtracking.hpp"
 
-#include <polysolve/nonlinear/Logger.hpp>
+#include <polysolve/nonlinear/Utils.hpp>
 
-// #include <polyfem/utils/Timer.hpp>
+#include <spdlog/spdlog.h>
 
 #include <cfenv>
 
 namespace polysolve::nonlinear::line_search
 {
 
-    Backtracking::Backtracking(const std::shared_ptr<Logger> &logger)
+    Backtracking::Backtracking(spdlog::logger &logger)
         : Superclass(logger)
     {
         this->min_step_size = 0;
@@ -34,7 +34,7 @@ namespace polysolve::nonlinear::line_search
             old_energy = objFunc.value(x);
             if (std::isnan(old_energy))
             {
-                m_logger->error("Original energy in line search is nan!");
+                m_logger.error("Original energy in line search is nan!");
                 return std::nan("");
             }
 
@@ -68,7 +68,7 @@ namespace polysolve::nonlinear::line_search
 
         {
             POLYSOLVE_SCOPED_TIMER("CCD narrow-phase", this->ccd_time);
-            m_logger->trace("Performing narrow-phase CCD");
+            m_logger.trace("Performing narrow-phase CCD");
             step_size = this->compute_collision_free_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
                 return std::nan("");
@@ -110,7 +110,7 @@ namespace polysolve::nonlinear::line_search
             objFunc.line_search_end();
         }
 
-        m_logger->debug(
+        m_logger.debug(
             "Line search finished (nan_free_step_size={} collision_free_step_size={} descent_step_size={} final_step_size={})",
             nan_free_step_size, collision_free_step_size, descent_step_size, step_size);
 
@@ -148,7 +148,7 @@ namespace polysolve::nonlinear::line_search
             }
             catch (const std::runtime_error &e)
             {
-                m_logger->warn("Failed to take step due to \"{}\", reduce step size...", e.what());
+                m_logger.warn("Failed to take step due to \"{}\", reduce step size...", e.what());
 
                 step_size /= 2.0;
                 this->cur_iter++;
@@ -165,7 +165,7 @@ namespace polysolve::nonlinear::line_search
 
             is_step_valid = objFunc.is_step_valid(x, new_x);
 
-            m_logger->trace("ls it: {} delta: {} invalid: {} ", this->cur_iter, (cur_energy - old_energy), !is_step_valid);
+            m_logger.trace("ls it: {} delta: {} invalid: {} ", this->cur_iter, (cur_energy - old_energy), !is_step_valid);
 
             // if (!std::isfinite(cur_energy) || (cur_energy >= old_energy && fabs(cur_energy - old_energy) > 1e-12) || !is_step_valid)
             if (!std::isfinite(cur_energy) || cur_energy > old_energy || !is_step_valid)
@@ -183,7 +183,7 @@ namespace polysolve::nonlinear::line_search
 
         if (this->cur_iter >= this->max_step_size_iter || step_size <= this->min_step_size)
         {
-            m_logger->warn(
+            m_logger.warn(
                 "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g} is_step_valid={} use_grad_norm={} iter={:d})",
                 old_energy, cur_energy, starting_step_size, step_size, delta_x.norm(),
                 is_step_valid, use_grad_norm, this->cur_iter);

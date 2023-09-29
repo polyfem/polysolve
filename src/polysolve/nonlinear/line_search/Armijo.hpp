@@ -11,7 +11,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        Armijo(const std::shared_ptr<Logger> &logger);
+        Armijo(spdlog::logger &logger);
 
         double line_search(
             const TVector &x,

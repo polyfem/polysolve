@@ -13,7 +13,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        MoreThuente(const std::shared_ptr<Logger> &logger)
+        MoreThuente(spdlog::logger &logger)
             : Superclass(logger)
         {
         }

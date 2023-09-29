@@ -13,7 +13,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        CppOptArmijo(const std::shared_ptr<Logger> &logger)
+        CppOptArmijo(spdlog::logger &logger)
             : Superclass(logger)
         {
         }

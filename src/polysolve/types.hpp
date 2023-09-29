@@ -16,7 +16,4 @@ namespace polysolve
 
     using json = nlohmann::json;
 
-// TODO
-#define POLYSOLVE_SCOPED_TIMER(...) //
-
 } // namespace polysolve

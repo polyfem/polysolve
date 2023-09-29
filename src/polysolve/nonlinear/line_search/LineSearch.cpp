@@ -5,14 +5,17 @@
 #include "CppOptArmijo.hpp"
 #include "MoreThuente.hpp"
 
-#include <polysolve/nonlinear/Logger.hpp>
+#include <polysolve/nonlinear/Utils.hpp>
+
+#include <polysolve/types.hpp>
+
+#include <spdlog/spdlog.h>
 
 #include <cfenv>
-#include <fstream>
 
 namespace polysolve::nonlinear::line_search
 {
-    std::shared_ptr<LineSearch> LineSearch::construct_line_search(const std::string &name, const std::shared_ptr<Logger> &logger)
+    std::shared_ptr<LineSearch> LineSearch::construct_line_search(const std::string &name, spdlog::logger &logger)
     {
         if (name == "armijo" || name == "Armijo")
         {
@@ -24,7 +27,7 @@ namespace polysolve::nonlinear::line_search
         }
         else if (name == "bisection" || name == "Bisection")
         {
-            logger->warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
+            logger.warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
             return std::make_shared<Backtracking>(logger);
         }
         else if (name == "backtracking" || name == "Backtracking")
@@ -41,47 +44,12 @@ namespace polysolve::nonlinear::line_search
         }
         else
         {
-            logger->log_and_throw_error("Unknown line search {}!", name);
+            log_and_throw_error(logger, "Unknown line search {}!", name);
             return nullptr;
         }
     }
 
-    void LineSearch::save_sampled_values(
-        const std::string &filename,
-        const typename Problem::TVector &x,
-        const typename Problem::TVector &delta_x,
-        Problem &objFunc,
-        const Logger &logger,
-        const double starting_step_size,
-        const int num_samples)
-    {
-        std::ofstream samples(filename, std::ios::out);
-        if (!samples.is_open())
-        {
-            logger.log_and_throw_error("Unable to save sampled values to file \"{}\" !", filename);
-        }
-
-        samples << "alpha,f(x + alpha * delta_x),valid,decrease\n";
-
-        objFunc.solution_changed(x);
-        double fx = objFunc.value(x);
-
-        Eigen::VectorXd alphas = Eigen::VectorXd::LinSpaced(2 * num_samples - 1, -starting_step_size, starting_step_size);
-        for (int i = 0; i < alphas.size(); i++)
-        {
-            Problem::TVector new_x = x + alphas[i] * delta_x;
-            objFunc.solution_changed(new_x);
-            double fxi = objFunc.value(new_x);
-            samples << alphas[i] << ","
-                    << fxi << ","
-                    << (objFunc.is_step_valid(x, new_x) ? "true" : "false") << ","
-                    << (fxi < fx ? "true" : "false") << "\n";
-        }
-
-        samples.close();
-    }
-
-    LineSearch::LineSearch(const std::shared_ptr<Logger> &logger)
+    LineSearch::LineSearch(spdlog::logger &logger)
         : m_logger(logger)
     {
     }
@@ -118,7 +86,7 @@ namespace polysolve::nonlinear::line_search
 
         if (cur_iter >= max_step_size_iter || step_size <= min_step_size)
         {
-            m_logger->error(
+            m_logger.error(
                 "Line search failed to find a valid finite energy step (cur_iter={:d} step_size={:g})!",
                 cur_iter, step_size);
             return std::nan("");
@@ -140,7 +108,7 @@ namespace polysolve::nonlinear::line_search
         double max_step_size = objFunc.max_step_size(x, new_x);
         if (max_step_size == 0)
         {
-            m_logger->error("Line search failed because CCD produced a stepsize of zero!");
+            m_logger.error("Line search failed because CCD produced a stepsize of zero!");
             objFunc.line_search_end();
             return std::nan("");
         }

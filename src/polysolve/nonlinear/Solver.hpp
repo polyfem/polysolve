@@ -5,9 +5,13 @@
 
 #include <cppoptlib/solver/isolver.h>
 
+namespace spdlog
+{
+    class logger;
+}
+
 namespace polysolve::nonlinear
 {
-    class Logger;
 
     enum class ErrorCode
     {
@@ -31,7 +35,7 @@ namespace polysolve::nonlinear
         Solver(const json &solver_params,
                const double dt,
                const double characteristic_length,
-               const std::shared_ptr<Logger> &logger);
+               spdlog::logger &logger);
 
         virtual double compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const;
 
@@ -111,7 +115,7 @@ namespace polysolve::nonlinear
 
         ErrorCode m_error_code;
 
-        std::shared_ptr<Logger> m_logger;
+        spdlog::logger &m_logger;
 
         // ====================================================================
         //                                 END

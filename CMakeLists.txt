@@ -159,6 +159,10 @@ endif()
 include(cppoptlib)
 target_link_libraries(polysolve PUBLIC cppoptlib)
 
+# spdlog
+include(spdlog)
+target_link_libraries(polysolve PUBLIC spdlog::spdlog)
+
 # Accelerate solver
 if(POLYSOLVE_WITH_ACCELERATE)
     include(CPM)

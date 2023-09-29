@@ -2,9 +2,9 @@
 
 #include <polysolve/nonlinear/Problem.hpp>
 
-namespace polysolve::nonlinear
+namespace spdlog
 {
-    class Logger;
+    class logger;
 }
 
 namespace polysolve::nonlinear::line_search
@@ -15,7 +15,7 @@ namespace polysolve::nonlinear::line_search
         using Scalar = typename Problem::Scalar;
         using TVector = typename Problem::TVector;
 
-        LineSearch(const std::shared_ptr<Logger> &m_logger);
+        LineSearch(spdlog::logger &m_logger);
         virtual ~LineSearch() = default;
 
         virtual double line_search(
@@ -25,16 +25,7 @@ namespace polysolve::nonlinear::line_search
 
         static std::shared_ptr<LineSearch> construct_line_search(
             const std::string &name,
-            const std::shared_ptr<Logger> &logger);
-
-        // TODO why is this one here?
-        static void save_sampled_values(const std::string &filename,
-                                        const TVector &x,
-                                        const TVector &grad,
-                                        Problem &objFunc,
-                                        const Logger &logger,
-                                        const double starting_step_size = 1e-1,
-                                        const int num_samples = 1000);
+            spdlog::logger &logger);
 
         void set_min_step_size(const double min_step_size_) { min_step_size = min_step_size_; };
 
@@ -61,7 +52,7 @@ namespace polysolve::nonlinear::line_search
         double min_step_size = 0;
         int max_step_size_iter = 100;
         int cur_iter = 0;
-        const std::shared_ptr<Logger> m_logger;
+        spdlog::logger &m_logger;
 
         double
         compute_nan_free_step_size(

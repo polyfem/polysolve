@@ -2,13 +2,13 @@
 
 #include "Armijo.hpp"
 
-#include <polysolve/nonlinear/Logger.hpp>
+#include <polysolve/nonlinear/Utils.hpp>
 
-// #include <polyfem/utils/Timer.hpp>
+#include <spdlog/spdlog.h>
 
 namespace polysolve::nonlinear::line_search
 {
-    Armijo::Armijo(const std::shared_ptr<Logger> &logger)
+    Armijo::Armijo(spdlog::logger &logger)
         : Superclass(logger)
     {
         this->min_step_size = 1e-7;
@@ -32,7 +32,7 @@ namespace polysolve::nonlinear::line_search
             f_in = objFunc.value(x);
             if (std::isnan(f_in))
             {
-                m_logger->error("Original energy in line search is nan!");
+                m_logger.error("Original energy in line search is nan!");
                 return std::nan("");
             }
 
@@ -112,7 +112,7 @@ namespace polysolve::nonlinear::line_search
                 // max_step_size should return a collision free step
                 // assert(objFunc.is_step_collision_free(x, x1));
 
-                m_logger->trace("ls it: {} f: {} (f_in + alpha * Cache): {} invalid: {} ", this->cur_iter, f, f_in + alpha * Cache, !valid);
+                m_logger.trace("ls it: {} f: {} (f_in + alpha * Cache): {} invalid: {} ", this->cur_iter, f, f_in + alpha * Cache, !valid);
 
                 this->cur_iter++;
             }
@@ -127,7 +127,7 @@ namespace polysolve::nonlinear::line_search
                 objFunc.line_search_end();
             }
 
-            m_logger->warn(
+            m_logger.warn(
                 "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g} is_step_valid={} iter={:d})",
                 f_in, f, default_alpha_init, alpha, searchDir.norm(),
                 valid ? "true" : "false", this->cur_iter);
@@ -151,7 +151,7 @@ namespace polysolve::nonlinear::line_search
             objFunc.line_search_end();
         }
 
-        m_logger->debug(
+        m_logger.debug(
             "Line search finished (nan_free_step_size={} collision_free_step_size={} descent_step_size={} final_step_size={})",
             nan_free_step_size, collision_free_step_size, descent_step_size, alpha);
 

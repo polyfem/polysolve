@@ -29,5 +29,6 @@ namespace polysolve::nonlinear
                                     const int num_samples = 1000);
 
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
+    bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian);
 
 } // namespace polysolve::nonlinear

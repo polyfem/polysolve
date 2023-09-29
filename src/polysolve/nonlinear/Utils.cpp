@@ -17,6 +17,20 @@ namespace polysolve::nonlinear
         return I;
     }
 
+    bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian)
+    {
+        for (int k = 0; k < hessian.outerSize(); ++k)
+        {
+            for (polysolve::StiffnessMatrix::InnerIterator it(hessian, k); it; ++it)
+            {
+                if (std::isnan(it.value()))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     void save_sampled_values(
         const std::string &filename,
         const typename Problem::TVector &x,

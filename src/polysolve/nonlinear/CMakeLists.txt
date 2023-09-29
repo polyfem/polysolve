@@ -6,6 +6,8 @@ set(SOURCES
 	GradientDescent.hpp
 	Solver.hpp
 	Solver.cpp
+	Newton.hpp
+	Newton.cpp
 	BoxConstraints.hpp
 	SparseNewton.hpp
 	SparseNewton.cpp

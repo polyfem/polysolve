@@ -134,7 +134,7 @@ endif()
 
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve_linear)
-add_library(polysolve::polysolve_linear ALIAS polysolve_linear)
+add_library(polysolve::linear ALIAS polysolve_linear)
 add_subdirectory(src/polysolve/linear)
 
 add_library(polysolve)
@@ -159,7 +159,7 @@ endif()
 
 
 # polysolve_linear
-target_link_libraries(polysolve PUBLIC polysolve::polysolve_linear)
+target_link_libraries(polysolve PUBLIC polysolve::linear)
 
 # CppNumericalSolvers
 include(cppoptlib)

@@ -141,6 +141,10 @@ add_library(polysolve)
 add_library(polysolve::polysolve ALIAS polysolve)
 add_subdirectory(src/polysolve/nonlinear)
 
+
+target_compile_features(polysolve_linear PUBLIC cxx_std_17)
+target_compile_features(polysolve PUBLIC cxx_std_17)
+
 # Public include directory for Polysolve
 target_include_directories(polysolve_linear PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)

@@ -2,31 +2,24 @@
 
 #pragma once
 
-#include <polyfem/Common.hpp>
-#include "NonlinearSolver.hpp"
-#include <polysolve/LinearSolver.hpp>
-#include <polyfem/utils/MatrixUtils.hpp>
-
-#include <polyfem/utils/Logger.hpp>
-
-#include <igl/Timer.h>
+#include "Solver.hpp"
+#include "Utils.hpp"
 
 #include <LBFGSpp/BFGSMat.h>
 
 namespace polysolve::nonlinear
 {
-    template <typename ProblemType>
-    class BFGS : public NonlinearSolver<ProblemType>
+    class BFGS : public Solver
     {
     public:
-        using Superclass = NonlinearSolver<ProblemType>;
+        using Superclass = Solver;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        BFGS(const json &solver_params, const double dt, const double characteristic_length)
-            : Superclass(solver_params, dt, characteristic_length)
-        {
-        }
+        BFGS(const json &solver_params,
+             const json &linear_solver_params,
+             const double dt, const double characteristic_length,
+             spdlog::logger &logger);
 
         std::string name() const override { return "BFGS"; }
 
@@ -34,26 +27,9 @@ namespace polysolve::nonlinear
         virtual int default_descent_strategy() override { return 1; }
 
         using Superclass::descent_strategy_name;
-        std::string descent_strategy_name(int descent_strategy) const override
-        {
-            switch (descent_strategy)
-            {
-            case 1:
-                return "BFGS";
-            case 2:
-                return "gradient descent";
-            default:
-                throw std::invalid_argument("invalid descent strategy");
-            }
-        }
+        std::string descent_strategy_name(int descent_strategy) const override;
 
-        void increase_descent_strategy() override
-        {
-            if (this->descent_strategy == 1)
-                this->descent_strategy++;
-
-            assert(this->descent_strategy <= 2);
-        }
+        void increase_descent_strategy() override;
 
     protected:
         TVector m_prev_x;    // Previous x
@@ -61,73 +37,14 @@ namespace polysolve::nonlinear
 
         Eigen::MatrixXd hess;
 
-        void reset(const int ndof) override
-        {
-            Superclass::reset(ndof);
+        void reset(const int ndof) override;
 
-            reset_history(ndof);
-        }
-
-        void reset_history(const int ndof)
-        {
-            m_prev_x.resize(ndof);
-            m_prev_grad.resize(ndof);
-
-            hess.setIdentity(ndof, ndof);
-
-            // Use gradient descent for first iteration
-            this->descent_strategy = 2;
-        }
+        void reset_history(const int ndof);
 
         virtual bool compute_update_direction(
-            ProblemType &objFunc,
+            Problem &objFunc,
             const TVector &x,
             const TVector &grad,
-            TVector &direction) override
-        {
-            if (this->descent_strategy == 2)
-            {
-                direction = -grad;
-            }
-            else
-            {
-                direction = hess.ldlt().solve(-grad);
-
-                TVector y = grad - m_prev_grad;
-                TVector s = x - m_prev_x;
-
-                double y_s = y.dot(s);
-                TVector Bs = hess * s;
-                double sBs = s.transpose() * Bs;
-
-                hess += (y * y.transpose()) / y_s - (Bs * Bs.transpose()) / sBs;
-            }
-
-            m_prev_x = x;
-            m_prev_grad = grad;
-
-            if (std::isnan(direction.squaredNorm()))
-            {
-                reset_history(x.size());
-                increase_descent_strategy();
-                polyfem::logger().log(
-                    this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug,
-                    "nan in direction {} (||∇f||={}); reverting to {}",
-                    direction.dot(grad), this->descent_strategy_name());
-                return compute_update_direction(objFunc, x, grad, direction);
-            }
-            else if (grad.squaredNorm() != 0 && direction.dot(grad) >= 0)
-            {
-                reset_history(x.size());
-                increase_descent_strategy();
-                polyfem::logger().log(
-                    this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug,
-                    "L-BFGS direction is not a descent direction (Δx⋅g={}≥0); reverting to {}",
-                    direction.dot(grad), this->descent_strategy_name());
-                return compute_update_direction(objFunc, x, grad, direction);
-            }
-
-            return true;
-        }
+            TVector &direction) override;
     };
 } // namespace polysolve::nonlinear

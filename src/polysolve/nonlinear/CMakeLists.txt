@@ -2,6 +2,7 @@ set(SOURCES
 	LBFGS.hpp
 	LBFGS.cpp
 	LBFGSB.hpp
+	BFGS.cpp
 	BFGS.hpp
 	GradientDescent.hpp
 	Solver.hpp

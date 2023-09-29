@@ -1,66 +1,64 @@
-#pragma once
-
 #include "LineSearch.hpp"
-// #include "ArmijoLineSearch.hpp"
-// #include "BacktrackingLineSearch.hpp"
-// #include "CppOptArmijoLineSearch.hpp"
-// #include "MoreThuenteLineSearch.hpp"
 
+#include "Armijo.hpp"
+#include "Backtracking.hpp"
+#include "CppOptArmijo.hpp"
+#include "MoreThuente.hpp"
+
+#include <polysolve/nonlinear/Logger.hpp>
+
+#include <cfenv>
 #include <fstream>
 
 namespace polysolve::nonlinear::line_search
 {
-    std::shared_ptr<LineSearch> LineSearch::construct_line_search(const std::string &name)
+    std::shared_ptr<LineSearch> LineSearch::construct_line_search(const std::string &name, const std::shared_ptr<Logger> &logger)
     {
-        return nullptr;
-        // todo
-        //  if (name == "armijo" || name == "Armijo")
-        //  {
-        //      return std::make_shared<ArmijoLineSearch<ProblemType>>();
-        //  }
-        //  else if (name == "armijo_alt" || name == "ArmijoAlt")
-        //  {
-        //      return std::make_shared<CppOptArmijoLineSearch<ProblemType>>();
-        //  }
-        //  else if (name == "bisection" || name == "Bisection")
-        //  {
-        //      logger().warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
-        //      return std::make_shared<BacktrackingLineSearch<ProblemType>>();
-        //  }
-        //  else if (name == "backtracking" || name == "Backtracking")
-        //  {
-        //      return std::make_shared<BacktrackingLineSearch<ProblemType>>();
-        //  }
-        //  else if (name == "more_thuente" || name == "MoreThuente")
-        //  {
-        //      return std::make_shared<MoreThuenteLineSearch<ProblemType>>();
-        //  }
-        //  else if (name == "none")
-        //  {
-        //      return nullptr;
-        //  }
-        //  else
-        //  {
-        //      const std::string msg = fmt::format("Unknown line search {}!", name);
-        //      logger().error(msg);
-        //      throw std::invalid_argument(msg);
-        //  }
+        if (name == "armijo" || name == "Armijo")
+        {
+            return std::make_shared<Armijo>(logger);
+        }
+        else if (name == "armijo_alt" || name == "ArmijoAlt")
+        {
+            return std::make_shared<CppOptArmijo>(logger);
+        }
+        else if (name == "bisection" || name == "Bisection")
+        {
+            logger->warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
+            return std::make_shared<Backtracking>(logger);
+        }
+        else if (name == "backtracking" || name == "Backtracking")
+        {
+            return std::make_shared<Backtracking>(logger);
+        }
+        else if (name == "more_thuente" || name == "MoreThuente")
+        {
+            return std::make_shared<MoreThuente>(logger);
+        }
+        else if (name == "none")
+        {
+            return nullptr;
+        }
+        else
+        {
+            logger->log_and_throw_error("Unknown line search {}!", name);
+            return nullptr;
+        }
     }
 
-    template <typename ProblemType>
     void LineSearch::save_sampled_values(
         const std::string &filename,
-        const typename ProblemType::TVector &x,
-        const typename ProblemType::TVector &delta_x,
-        ProblemType &objFunc,
+        const typename Problem::TVector &x,
+        const typename Problem::TVector &delta_x,
+        Problem &objFunc,
+        const Logger &logger,
         const double starting_step_size,
         const int num_samples)
     {
         std::ofstream samples(filename, std::ios::out);
         if (!samples.is_open())
         {
-            spdlog::error("Unable to save sampled values to file \"{}\" !", filename);
-            return;
+            logger.log_and_throw_error("Unable to save sampled values to file \"{}\" !", filename);
         }
 
         samples << "alpha,f(x + alpha * delta_x),valid,decrease\n";
@@ -71,7 +69,7 @@ namespace polysolve::nonlinear::line_search
         Eigen::VectorXd alphas = Eigen::VectorXd::LinSpaced(2 * num_samples - 1, -starting_step_size, starting_step_size);
         for (int i = 0; i < alphas.size(); i++)
         {
-            typename ProblemType::TVector new_x = x + alphas[i] * delta_x;
+            Problem::TVector new_x = x + alphas[i] * delta_x;
             objFunc.solution_changed(new_x);
             double fxi = objFunc.value(new_x);
             samples << alphas[i] << ","
@@ -83,11 +81,15 @@ namespace polysolve::nonlinear::line_search
         samples.close();
     }
 
-    template <typename ProblemType>
+    LineSearch::LineSearch(const std::shared_ptr<Logger> &logger)
+        : m_logger(logger)
+    {
+    }
+
     double LineSearch::compute_nan_free_step_size(
         const TVector &x,
         const TVector &delta_x,
-        ProblemType &objFunc,
+        Problem &objFunc,
         const double starting_step_size,
         const double rate)
     {
@@ -116,7 +118,7 @@ namespace polysolve::nonlinear::line_search
 
         if (cur_iter >= max_step_size_iter || step_size <= min_step_size)
         {
-            logger().error(
+            m_logger->error(
                 "Line search failed to find a valid finite energy step (cur_iter={:d} step_size={:g})!",
                 cur_iter, step_size);
             return std::nan("");
@@ -125,11 +127,10 @@ namespace polysolve::nonlinear::line_search
         return step_size;
     }
 
-    template <typename ProblemType>
     double LineSearch::compute_collision_free_step_size(
         const TVector &x,
         const TVector &delta_x,
-        ProblemType &objFunc,
+        Problem &objFunc,
         const double starting_step_size)
     {
         double step_size = starting_step_size;
@@ -139,7 +140,7 @@ namespace polysolve::nonlinear::line_search
         double max_step_size = objFunc.max_step_size(x, new_x);
         if (max_step_size == 0)
         {
-            logger().error("Line search failed because CCD produced a stepsize of zero!");
+            m_logger->error("Line search failed because CCD produced a stepsize of zero!");
             objFunc.line_search_end();
             return std::nan("");
         }
@@ -152,7 +153,7 @@ namespace polysolve::nonlinear::line_search
 				std::fesetround(current_round);
 				} // clang-format on
 
-        // logger().trace("\t\tpre TOI={}, ss={}", max_step_size, step_size);
+        // m_logger->trace("\t\tpre TOI={}, ss={}", max_step_size, step_size);
 
         // while (max_step_size != 1)
         // {
@@ -163,7 +164,7 @@ namespace polysolve::nonlinear::line_search
         // 	step_size *= max_step_size; // TODO: check me if correct
         // 	std::fesetround(current_roudn);
         // 	if (max_step_size != 1)
-        // 		logger().trace("\t\trepeating TOI={}, ss={}", max_step_size, step_size);
+        // 		m_logger->trace("\t\trepeating TOI={}, ss={}", max_step_size, step_size);
         // }
 
         return step_size;
@@ -189,7 +190,7 @@ namespace polysolve::nonlinear::line_search
     // 				// safe guard check
     // 				while (!objFunc.is_step_collision_free(x, new_x))
     // 				{
-    // 					logger().error("step is not collision free!!");
+    // 					m_logger->error("step is not collision free!!");
     // 					step_size *= rate;
     // 					new_x = x + step_size * delta_x;
     // 					{

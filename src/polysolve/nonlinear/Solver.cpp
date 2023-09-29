@@ -44,7 +44,7 @@ namespace polysolve::nonlinear
 
     void Solver::set_line_search(const std::string &line_search_name)
     {
-        m_line_search = line_search::LineSearch::construct_line_search(line_search_name);
+        m_line_search = line_search::LineSearch::construct_line_search(line_search_name, m_logger);
         solver_info["line_search"] = line_search_name;
     }
 

@@ -6,20 +6,24 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    template <typename ProblemType>
-    class CppOptArmijoLineSearch : public LineSearch<ProblemType>
+    class CppOptArmijo : public LineSearch
     {
     public:
-        using Superclass = LineSearch<ProblemType>;
+        using Superclass = LineSearch;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
+
+        CppOptArmijo(const std::shared_ptr<Logger> &logger)
+            : Superclass(logger)
+        {
+        }
 
         double line_search(
             const TVector &x,
             const TVector &searchDir,
-            ProblemType &objFunc) override
+            Problem &objFunc) override
         {
-            return cppoptlib::Armijo<ProblemType, 1>::linesearch(x, searchDir, objFunc);
+            return cppoptlib::Armijo<Problem, 1>::linesearch(x, searchDir, objFunc);
         }
     };
 } // namespace polysolve::nonlinear::line_search

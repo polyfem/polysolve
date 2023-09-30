@@ -1,7 +1,5 @@
 #include "MMA.hpp"
 
-#include "Constraint.hpp"
-
 #include <sstream>
 
 namespace polysolve::nonlinear
@@ -59,7 +57,7 @@ namespace polysolve::nonlinear
         for (int i = 0; i < m; i++)
         {
             g(i) = constraints_[i]->value(x);
-            constraints_[i]->first_derivative(x, gradv);
+            constraints_[i]->gradient(x, gradv);
             dg(Eigen::seqN(0, gradv.size(), m)) = gradv;
         }
         std::stringstream ss;

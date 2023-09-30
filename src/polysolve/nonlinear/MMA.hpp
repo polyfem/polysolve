@@ -5,8 +5,6 @@
 
 namespace polysolve::nonlinear
 {
-    class Constraint;
-
     class MMA : public BoxConstraintSolver
     {
     public:
@@ -19,7 +17,7 @@ namespace polysolve::nonlinear
             const double characteristic_length,
             spdlog::logger &logger);
 
-        void set_constraints(const std::vector<std::shared_ptr<Constraint>> &constraints) { constraints_ = constraints; }
+        void set_constraints(const std::vector<std::shared_ptr<Problem>> &constraints) { constraints_ = constraints; }
 
         std::string name() const override { return "MMA"; }
 
@@ -33,7 +31,7 @@ namespace polysolve::nonlinear
     protected:
         std::shared_ptr<MMAAux> mma;
 
-        std::vector<std::shared_ptr<Constraint>> constraints_;
+        std::vector<std::shared_ptr<Problem>> constraints_;
 
         void reset(const int ndof) override;
 

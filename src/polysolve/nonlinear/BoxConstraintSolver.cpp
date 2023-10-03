@@ -1,7 +1,36 @@
 #include "BoxConstraintSolver.hpp"
 
+#include "LBFGSB.hpp"
+#include "MMA.hpp"
+
 namespace polysolve::nonlinear
 {
+
+    // Static constructor
+    std::unique_ptr<Solver> BoxConstraintSolver::create(const std::string &solver,
+                                                        const json &solver_params,
+                                                        const json &linear_solver_params,
+                                                        const double dt,
+                                                        const double characteristic_length,
+                                                        spdlog::logger &logger)
+    {
+        if (solver == "LBFGSB" || solver == "L-BFGS-B")
+        {
+            return std::make_unique<LBFGSB>(solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "MMA")
+        {
+            return std::make_unique<MMA>(solver_params, dt, characteristic_length, logger);
+        }
+        throw std::runtime_error("Unrecognized solver type: " + solver);
+    }
+
+    std::vector<std::string> BoxConstraintSolver::available_solvers()
+    {
+        return {{"L-BFGS-B",
+                 "MMA"}};
+    }
+
     BoxConstraintSolver::BoxConstraintSolver(const json &solver_params,
                                              const double dt,
                                              const double characteristic_length,

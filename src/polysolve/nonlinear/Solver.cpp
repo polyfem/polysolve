@@ -5,8 +5,6 @@
 #include "DenseNewton.hpp"
 #include "GradientDescent.hpp"
 #include "LBFGS.hpp"
-#include "LBFGSB.hpp"
-#include "MMA.hpp"
 #include "SparseNewton.hpp"
 
 #include "Utils.hpp"
@@ -47,14 +45,6 @@ namespace polysolve::nonlinear
         {
             return std::make_unique<LBFGS>(solver_params, dt, characteristic_length, logger);
         }
-        else if (solver == "LBFGSB" || solver == "L-BFGS-B")
-        {
-            return std::make_unique<LBFGSB>(solver_params, dt, characteristic_length, logger);
-        }
-        else if (solver == "MMA")
-        {
-            return std::make_unique<MMA>(solver_params, dt, characteristic_length, logger);
-        }
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }
 
@@ -64,9 +54,7 @@ namespace polysolve::nonlinear
                  "dense_newton",
                  "sparse_newton",
                  "gradient_descent",
-                 "L-BFGS",
-                 "L-BFGS-B",
-                 "MMA"}};
+                 "L-BFGS"}};
     }
 
     Solver::Solver(const json &solver_params,

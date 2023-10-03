@@ -27,7 +27,7 @@ namespace polysolve::nonlinear::line_search
             const std::string &name,
             spdlog::logger &logger);
 
-        std::vector<std::string> available_methods();
+        static std::vector<std::string> available_methods();
 
         void set_min_step_size(const double min_step_size_) { min_step_size = min_step_size_; };
 

@@ -46,6 +46,11 @@ public:
         hessian.resize(3, 3);
         sparse_identity(hessian.rows(), hessian.cols());
     }
+    void hessian(const TVector &x, Eigen::MatrixXd &hessian) override
+    {
+        hessian.resize(3, 3);
+        hessian.setIdentity();
+    }
 
     TVector solution() override
     {
@@ -64,6 +69,7 @@ TEST_CASE("non-linear", "[solver]")
     json solver_params, linear_solver_params;
     solver_params["x_delta"] = 1e-10;
     solver_params["f_delta"] = 1e-10;
+    solver_params["force_psd_projection"] = false;
 
     solver_params["grad_norm"] = 1e-8;
     solver_params["max_iterations"] = 100;
@@ -86,18 +92,23 @@ TEST_CASE("non-linear", "[solver]")
                                      characteristic_length,
                                      *logger);
 
-        QuadraticProblem::TVector x(prob.size());
-        x.setZero();
-
-        for (int i = 0; i < N_RANDOM; ++i)
+        for (const auto &ls : line_search::LineSearch::available_methods())
         {
-            solver->minimize(prob, x);
+            solver_params["line_search"]["method"] = ls;
 
-            const double err = (x - prob.solution()).norm();
-            INFO("solver: " + solver_name);
-            REQUIRE(err < 1e-8);
+            QuadraticProblem::TVector x(prob.size());
+            x.setZero();
 
-            x.setRandom();
+            for (int i = 0; i < N_RANDOM; ++i)
+            {
+                solver->minimize(prob, x);
+
+                const double err = (x - prob.solution()).norm();
+                INFO("solver: " + solver_name + " LS: " + ls);
+                CHECK(err < 1e-8);
+
+                x.setRandom();
+            }
         }
     }
 }

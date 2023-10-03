@@ -23,6 +23,20 @@ namespace polysolve::nonlinear
     class Solver : public cppoptlib::ISolver<Problem, /*Ord=*/-1>
     {
     public:
+        // Static constructor
+        //
+        // @param[in]  solver   Solver type
+        // @param[in]  precond  Preconditioner for iterative solvers
+        //
+        static std::unique_ptr<Solver> create(const std::string &solver,
+                                              const json &solver_params,
+                                              const json &linear_solver_params,
+                                              const double dt,
+                                              const double characteristic_length,
+                                              spdlog::logger &logger);
+        // List available solvers
+        static std::vector<std::string> availableSolvers();
+
         using Superclass = ISolver<Problem, /*Ord=*/-1>;
         using typename Superclass::Scalar;
         using typename Superclass::TCriteria;

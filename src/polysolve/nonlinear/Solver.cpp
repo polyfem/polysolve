@@ -1,6 +1,14 @@
 
 #include "Solver.hpp"
 
+#include "BFGS.hpp"
+#include "DenseNewton.hpp"
+#include "GradientDescent.hpp"
+#include "LBFGS.hpp"
+#include "LBFGSB.hpp"
+#include "MMA.hpp"
+#include "SparseNewton.hpp"
+
 #include "Utils.hpp"
 
 #include <spdlog/spdlog.h>
@@ -10,6 +18,57 @@
 
 namespace polysolve::nonlinear
 {
+
+    // Static constructor
+    std::unique_ptr<Solver> Solver::create(const std::string &solver,
+                                           const json &solver_params,
+                                           const json &linear_solver_params,
+                                           const double dt,
+                                           const double characteristic_length,
+                                           spdlog::logger &logger)
+    {
+        if (solver == "BFGS")
+        {
+            return std::make_unique<BFGS>(solver_params, linear_solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "DenseNewton" || solver == "dense_newton")
+        {
+            return std::make_unique<DenseNewton>(solver_params, linear_solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "SparseNewton" || solver == "sparse_newton")
+        {
+            return std::make_unique<SparseNewton>(solver_params, linear_solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "GradientDescent" || solver == "gradient_descent")
+        {
+            return std::make_unique<GradientDescent>(solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "LBFGS" || solver == "L-BFGS")
+        {
+            return std::make_unique<LBFGS>(solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "LBFGSB" || solver == "L-BFGS-B")
+        {
+            return std::make_unique<LBFGSB>(solver_params, dt, characteristic_length, logger);
+        }
+        else if (solver == "MMA")
+        {
+            return std::make_unique<MMA>(solver_params, dt, characteristic_length, logger);
+        }
+        throw std::runtime_error("Unrecognized solver type: " + solver);
+    }
+
+    std::vector<std::string> Solver::availableSolvers()
+    {
+        return {{"BFGS",
+                 "dense_newton",
+                 "sparse_newton",
+                 "gradient_descent",
+                 "L-BFGS",
+                 "L-BFGS-B",
+                 "MMA"}};
+    }
+
     Solver::Solver(const json &solver_params,
                    const double dt,
                    const double characteristic_length,

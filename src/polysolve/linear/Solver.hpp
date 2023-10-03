@@ -48,7 +48,7 @@ namespace polysolve::linear
         static std::unique_ptr<Solver> create(const std::string &solver, const std::string &precond);
 
         // List available solvers
-        static std::vector<std::string> availableSolvers();
+        static std::vector<std::string> available_solvers();
         static std::string defaultSolver();
 
         // List available preconditioners

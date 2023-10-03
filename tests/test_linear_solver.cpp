@@ -47,7 +47,7 @@ TEST_CASE("all", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solvers = Solver::availableSolvers();
+    auto solvers = Solver::available_solvers();
     for (const auto &s : solvers)
     {
         std::cout << s << std::endl;
@@ -90,7 +90,7 @@ TEST_CASE("eigen_params", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solvers = Solver::availableSolvers();
+    auto solvers = Solver::available_solvers();
 
     for (const auto &s : solvers)
     {
@@ -128,7 +128,7 @@ TEST_CASE("pre_factor", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    auto solvers = Solver::availableSolvers();
+    auto solvers = Solver::available_solvers();
 
     for (const auto &s : solvers)
     {

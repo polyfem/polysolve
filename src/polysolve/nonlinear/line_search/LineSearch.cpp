@@ -15,7 +15,7 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    std::shared_ptr<LineSearch> LineSearch::construct_line_search(const std::string &name, spdlog::logger &logger)
+    std::shared_ptr<LineSearch> LineSearch::create(const std::string &name, spdlog::logger &logger)
     {
         if (name == "armijo" || name == "Armijo")
         {
@@ -47,6 +47,15 @@ namespace polysolve::nonlinear::line_search
             log_and_throw_error(logger, "Unknown line search {}!", name);
             return nullptr;
         }
+    }
+
+    std::vector<std::string> LineSearch::available_methods()
+    {
+        return {{"armijo",
+                 "armijo_alt",
+                 "backtracking",
+                 "more_thuente",
+                 "none"}};
     }
 
     LineSearch::LineSearch(spdlog::logger &logger)

@@ -359,7 +359,7 @@ namespace polysolve::linear
     ////////////////////////////////////////////////////////////////////////////////
 
     // List available solvers
-    std::vector<std::string> Solver::availableSolvers()
+    std::vector<std::string> Solver::available_solvers()
     {
         return {{
             "Eigen::SimplicialLDLT",

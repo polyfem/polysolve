@@ -35,7 +35,7 @@ namespace polysolve::nonlinear
                                               const double characteristic_length,
                                               spdlog::logger &logger);
         // List available solvers
-        static std::vector<std::string> availableSolvers();
+        static std::vector<std::string> available_solvers();
 
         using Superclass = ISolver<Problem, /*Ord=*/-1>;
         using typename Superclass::Scalar;

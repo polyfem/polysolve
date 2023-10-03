@@ -58,7 +58,7 @@ namespace polysolve::nonlinear
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }
 
-    std::vector<std::string> Solver::availableSolvers()
+    std::vector<std::string> Solver::available_solvers()
     {
         return {{"BFGS",
                  "dense_newton",
@@ -106,7 +106,7 @@ namespace polysolve::nonlinear
 
     void Solver::set_line_search(const std::string &line_search_name)
     {
-        m_line_search = line_search::LineSearch::construct_line_search(line_search_name, m_logger);
+        m_line_search = line_search::LineSearch::create(line_search_name, m_logger);
         solver_info["line_search"] = line_search_name;
     }
 

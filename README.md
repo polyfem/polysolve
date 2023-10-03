@@ -33,7 +33,7 @@ solver->factorize(A);
 solver->solve(b, x);
 ```
 
-You can use `Solver::availableSolvers()` to obtain the list of available solvers.
+You can use `Solver::available_solvers()` to obtain the list of available solvers.
 
 ## Parameters
 

@@ -30,7 +30,7 @@ namespace polysolve::nonlinear
         polysolve::StiffnessMatrix hessian;
 
         {
-            POLYSOLVE_SCOPED_TIMER("assembly time", this->assembly_time);
+            POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
 
             objFunc.hessian(x, hessian);
 
@@ -41,7 +41,7 @@ namespace polysolve::nonlinear
         }
 
         {
-            POLYSOLVE_SCOPED_TIMER("linear solve", this->inverting_time);
+            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
             // TODO: get the correct size
             linear_solver->analyzePattern(hessian, hessian.rows());
 

@@ -117,12 +117,12 @@ namespace polysolve::nonlinear
         double old_energy = NaN;
 
         {
-            POLYSOLVE_SCOPED_TIMER("constraint set update", constraint_set_update_time);
+            POLYSOLVE_SCOPED_STOPWATCH("constraint set update", constraint_set_update_time, m_logger);
             objFunc.solution_changed(x);
         }
 
         {
-            POLYSOLVE_SCOPED_TIMER("compute gradient", grad_time);
+            POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
             objFunc.gradient(x, grad);
         }
         double first_grad_norm = compute_grad_norm(x, grad);
@@ -142,7 +142,7 @@ namespace polysolve::nonlinear
         this->m_status = checkConvergence(this->m_stop, this->m_current);
         if (this->m_status != cppoptlib::Status::Continue)
         {
-            POLYSOLVE_SCOPED_TIMER("compute objective function", obj_fun_time);
+            POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
             this->m_current.fDelta = objFunc.value(x);
             m_logger.info(
                 "[{}] Not even starting, {} (f={:g} ‖∇f‖={:g} g={:g} tol={:g})",
@@ -173,13 +173,13 @@ namespace polysolve::nonlinear
         {
             if (name() == "MMA")
             {
-                POLYSOLVE_SCOPED_TIMER("constraint set update", constraint_set_update_time);
+                POLYSOLVE_SCOPED_STOPWATCH("constraint set update", constraint_set_update_time, m_logger);
                 objFunc.solution_changed(x);
             }
 
             double energy;
             {
-                POLYSOLVE_SCOPED_TIMER("compute objective function", obj_fun_time);
+                POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
                 energy = objFunc.value(x);
             }
             if (!std::isfinite(energy))
@@ -191,7 +191,7 @@ namespace polysolve::nonlinear
             }
 
             {
-                POLYSOLVE_SCOPED_TIMER("compute gradient", grad_time);
+                POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
                 objFunc.gradient(x, grad);
             }
 
@@ -323,7 +323,7 @@ namespace polysolve::nonlinear
 
     double Solver::line_search(const TVector &x, const TVector &delta_x, Problem &objFunc)
     {
-        POLYSOLVE_SCOPED_TIMER("line search", line_search_time);
+        POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
 
         if (!m_line_search)
             return 1; // no linesearch

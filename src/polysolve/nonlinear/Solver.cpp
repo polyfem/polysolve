@@ -313,9 +313,9 @@ namespace polysolve::nonlinear
         // timer.getElapsedTimeInSec()
         double tot_time = 0;
         m_logger.info(
-            "[{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} fdelta={} ftol={})",
+            "[{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} ftol={})",
             name(), this->m_status, tot_time, this->m_current.iterations,
-            old_energy, this->m_current.fDelta, this->m_current.gradNorm, this->m_current.xDelta, this->m_current.fDelta, this->m_stop.fDelta);
+            old_energy, this->m_current.fDelta, this->m_current.gradNorm, this->m_current.xDelta, this->m_stop.fDelta);
 
         log_times();
         update_solver_info(objFunc.value(x));

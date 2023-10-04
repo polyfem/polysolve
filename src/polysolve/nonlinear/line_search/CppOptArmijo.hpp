@@ -2,8 +2,6 @@
 
 #include "LineSearch.hpp"
 
-#include <cppoptlib/linesearch/armijo.h>
-
 namespace polysolve::nonlinear::line_search
 {
     class CppOptArmijo : public LineSearch
@@ -13,10 +11,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        CppOptArmijo(spdlog::logger &logger)
-            : Superclass(logger)
-        {
-        }
+        CppOptArmijo(spdlog::logger &logger);
 
     protected:
         double compute_descent_step_size(
@@ -25,10 +20,6 @@ namespace polysolve::nonlinear::line_search
             Problem &objFunc,
             const bool,
             const double,
-            const double starting_step_size) override
-        {
-            const double tmp = cppoptlib::Armijo<Problem, 1>::linesearch(x, delta_x, objFunc);
-            return std::min(starting_step_size, tmp);
-        }
+            const double starting_step_size) override;
     };
 } // namespace polysolve::nonlinear::line_search

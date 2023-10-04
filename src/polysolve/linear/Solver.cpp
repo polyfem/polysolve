@@ -313,43 +313,43 @@ namespace polysolve::linear
             return std::make_unique<SaddlePointSolver>();
         }
         /////DENSE Eigen
-        else if (solver.empty() || solver == "Eigen::PartialPivLU")
+        else if (solver == "Eigen::PartialPivLU")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(PartialPivLU, "Eigen::PartialPivLU");
         }
-        else if (solver.empty() || solver == "Eigen::FullPivLU")
+        else if (solver == "Eigen::FullPivLU")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(FullPivLU, "Eigen::FullPivLU");
         }
-        else if (solver.empty() || solver == "Eigen::HouseholderQR")
+        else if (solver == "Eigen::HouseholderQR")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(HouseholderQR, "Eigen::HouseholderQR");
         }
-        else if (solver.empty() || solver == "Eigen::ColPivHouseholderQR")
+        else if (solver == "Eigen::ColPivHouseholderQR")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(ColPivHouseholderQR, "Eigen::ColPivHouseholderQR");
         }
-        else if (solver.empty() || solver == "Eigen::FullPivHouseholderQR")
+        else if (solver == "Eigen::FullPivHouseholderQR")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(FullPivHouseholderQR, "Eigen::FullPivHouseholderQR");
         }
-        else if (solver.empty() || solver == "Eigen::CompleteOrthogonalDecomposition")
+        else if (solver == "Eigen::CompleteOrthogonalDecomposition")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(CompleteOrthogonalDecomposition, "Eigen::CompleteOrthogonalDecomposition");
         }
-        else if (solver.empty() || solver == "Eigen::LLT")
+        else if (solver == "Eigen::LLT")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(LLT, "Eigen::LLT");
         }
-        else if (solver.empty() || solver == "Eigen::LDLT")
+        else if (solver == "Eigen::LDLT")
         {
             RETURN_DIRECT_DENSE_SOLVER_PTR(LDLT, "Eigen::LDLT");
         }
-        // else if (solver.empty() || solver == "Eigen::BDCSVD")
+        // else if (solver == "Eigen::BDCSVD")
         // {
         //     RETURN_DIRECT_DENSE_SOLVER_PTR(BDCSVD, "Eigen::BDCSVD");
         // }
-        // else if (solver.empty() || solver == "Eigen::JacobiSVD")
+        // else if (solver == "Eigen::JacobiSVD")
         // {
         //     RETURN_DIRECT_DENSE_SOLVER_PTR(JacobiSVD, "Eigen::JacobiSVD");
         // }

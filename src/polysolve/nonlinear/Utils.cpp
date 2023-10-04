@@ -48,13 +48,13 @@ namespace polysolve::nonlinear
         stop();
     }
 
-    inline void StopWatch::start()
+    void StopWatch::start()
     {
         is_running = true;
         m_start = clock::now();
     }
 
-    inline void StopWatch::stop()
+    void StopWatch::stop()
     {
         if (!is_running)
             return;
@@ -68,12 +68,12 @@ namespace polysolve::nonlinear
             ++(*m_count);
     }
 
-    inline double StopWatch::getElapsedTimeInSec()
+    double StopWatch::getElapsedTimeInSec()
     {
         return std::chrono::duration<double>(m_stop - m_start).count();
     }
 
-    inline void StopWatch::log_msg()
+    void StopWatch::log_msg()
     {
         const static std::string log_fmt_text =
             fmt::format("[{}] {{}} {{:.3g}}s", fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"));

@@ -170,12 +170,6 @@ namespace polysolve::nonlinear
 
         do
         {
-            if (name() == "MMA")
-            {
-                POLYSOLVE_SCOPED_STOPWATCH("constraint set update", constraint_set_update_time, m_logger);
-                objFunc.solution_changed(x);
-            }
-
             double energy;
             {
                 POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
@@ -322,7 +316,10 @@ namespace polysolve::nonlinear
         POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
 
         if (!m_line_search)
+        {
+            objFunc.solution_changed(x + delta_x);
             return 1; // no linesearch
+        }
 
         double rate = m_line_search->line_search(x, delta_x, objFunc);
 

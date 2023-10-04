@@ -621,7 +621,7 @@ TEST_CASE("cusolverdn", "[solver]")
     std::unique_ptr<Solver> solver;
     try
     {
-        auto solver = Solver::create("cuSolverDN", "");
+        solver = Solver::create("cuSolverDN", "");
     }
     catch (const std::exception &)
     {
@@ -656,7 +656,7 @@ TEST_CASE("cusolverdn_dense", "[solver]")
     std::unique_ptr<Solver> solver;
     try
     {
-        auto solver = Solver::create("cuSolverDN", "");
+        solver = Solver::create("cuSolverDN", "");
     }
     catch (const std::exception &)
     {
@@ -694,7 +694,7 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
     std::unique_ptr<Solver> solver;
     try
     {
-        auto solver = Solver::create("cuSolverDN_float", "");
+        solver = Solver::create("cuSolverDN_float", "");
     }
     catch (const std::exception &)
     {
@@ -726,7 +726,7 @@ TEST_CASE("cusolverdn_5cubes", "[solver]")
     std::unique_ptr<Solver> solver;
     try
     {
-        auto solver = Solver::create("cuSolverDN", "");
+        solver = Solver::create("cuSolverDN", "");
     }
     catch (const std::exception &)
     {

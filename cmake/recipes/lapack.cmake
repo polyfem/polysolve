@@ -19,8 +19,11 @@ if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm64" OR "${CMAKE_OSX_ARCHITECTURES}" M
     # Use Accelerate on macOS M1
     set(BLA_VENDOR Apple)
     find_package(LAPACK REQUIRED)
-else()
-    # Use MKL on other platforms
+elseif(POLYSOLVE_WITH_MKL)
+    # Use MKL if enabled
     include(mkl)
     add_library(LAPACK::LAPACK ALIAS mkl::mkl)
+else()
+    # otherwise find system version
+    find_package(LAPACK REQUIRED)
 endif()

@@ -104,6 +104,8 @@ namespace polysolve::nonlinear
         virtual int default_descent_strategy() = 0;
         virtual void increase_descent_strategy() = 0;
 
+        virtual bool is_direction_descent() { return true; }
+
         virtual std::string descent_strategy_name(int descent_strategy) const = 0;
         virtual std::string descent_strategy_name() const { return descent_strategy_name(descent_strategy); };
 

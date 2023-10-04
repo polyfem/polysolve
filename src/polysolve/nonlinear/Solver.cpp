@@ -208,7 +208,7 @@ namespace polysolve::nonlinear
                 continue;
             }
 
-            if (name() != "MMA" && grad_norm != 0 && delta_x.dot(grad) >= 0)
+            if (is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0)
             {
                 increase_descent_strategy();
                 m_logger.debug(

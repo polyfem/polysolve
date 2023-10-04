@@ -28,6 +28,8 @@ namespace polysolve::nonlinear
         std::string descent_strategy_name(int descent_strategy) const override;
         void increase_descent_strategy() override;
 
+        bool is_direction_descent() override { return false; }
+
     protected:
         std::shared_ptr<MMAAux> mma;
 

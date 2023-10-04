@@ -13,14 +13,16 @@ namespace polysolve::nonlinear::line_search
 
         Armijo(spdlog::logger &logger);
 
-        double line_search(
-            const TVector &x,
-            const TVector &searchDir,
-            Problem &objFunc) override;
-
     protected:
-        const double default_alpha_init = 1.0;
+        double compute_descent_step_size(
+            const TVector &x,
+            const TVector &delta_x,
+            Problem &objFunc,
+            const bool use_grad_norm,
+            const double old_energy_in,
+            const double starting_step_size) override;
+
+    private:
         const double c = 0.5;
-        const double tau = 0.5;
     };
 } // namespace polysolve::nonlinear::line_search

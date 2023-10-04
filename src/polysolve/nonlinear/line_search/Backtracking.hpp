@@ -13,17 +13,13 @@ namespace polysolve::nonlinear::line_search
 
         Backtracking(spdlog::logger &logger);
 
-        double line_search(
-            const TVector &x,
-            const TVector &delta_x,
-            Problem &objFunc) override;
-
     protected:
         double compute_descent_step_size(
             const TVector &x,
             const TVector &delta_x,
             Problem &objFunc,
+            const bool use_grad_norm,
             const double old_energy_in,
-            const double starting_step_size = 1);
+            const double starting_step_size) override;
     };
 } // namespace polysolve::nonlinear::line_search

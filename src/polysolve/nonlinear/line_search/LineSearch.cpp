@@ -63,6 +63,119 @@ namespace polysolve::nonlinear::line_search
     {
     }
 
+    double LineSearch::line_search(
+        const TVector &x,
+        const TVector &delta_x,
+        Problem &objFunc)
+    {
+        // ----------------
+        // Begin linesearch
+        // ----------------
+        double old_energy, step_size;
+        {
+            POLYSOLVE_SCOPED_TIMER("LS begin");
+
+            cur_iter = 0;
+
+            old_energy = objFunc.value(x);
+            if (std::isnan(old_energy))
+            {
+                m_logger.error("Original energy in line search is nan!");
+                return std::nan("");
+            }
+
+            step_size = default_init_step_size;
+
+            // TODO: removed feature
+            // objFunc.heuristic_max_step(delta_x);
+        }
+        const double initial_energy = old_energy;
+
+        // ----------------------------
+        // Find finite energy step size
+        // ----------------------------
+        {
+            POLYSOLVE_SCOPED_TIMER("LS compute finite energy step size", checking_for_nan_inf_time);
+            step_size = compute_nan_free_step_size(x, delta_x, objFunc, step_size, step_ratio);
+            if (std::isnan(step_size))
+                return std::nan("");
+        }
+
+        const double nan_free_step_size = step_size;
+        // -----------------------------
+        // Find collision-free step size
+        // -----------------------------
+        {
+            POLYSOLVE_SCOPED_TIMER("Line Search Begin - CCD broad-phase", broad_phase_ccd_time);
+            TVector new_x = x + step_size * delta_x;
+            objFunc.line_search_begin(x, new_x);
+        }
+
+        {
+            POLYSOLVE_SCOPED_TIMER("CCD narrow-phase", ccd_time);
+            m_logger.trace("Performing narrow-phase CCD");
+            step_size = compute_collision_free_step_size(x, delta_x, objFunc, step_size);
+            if (std::isnan(step_size))
+                return std::nan("");
+        }
+
+        const double collision_free_step_size = step_size;
+
+        TVector grad(x.rows());
+        objFunc.gradient(x, grad);
+
+        if (grad.norm() < 1e-30)
+            return 1;
+
+        const bool use_grad_norm = grad.norm() < use_grad_norm_tol;
+        if (use_grad_norm)
+            old_energy = grad.squaredNorm();
+        const double starting_step_size = step_size;
+
+        // ----------------------
+        // Find descent step size
+        // ----------------------
+        {
+            POLYSOLVE_SCOPED_TIMER("energy min in LS", classical_line_search_time);
+            step_size = compute_descent_step_size(x, delta_x, objFunc, use_grad_norm, old_energy, step_size);
+            if (std::isnan(step_size))
+            {
+                // Superclass::save_sampled_values("failed-line-search-values.csv", x, delta_x, objFunc);
+                return std::nan("");
+            }
+        }
+
+        const double cur_energy = objFunc.value(x + step_size * delta_x);
+
+        const double descent_step_size = step_size;
+
+        if (cur_iter >= max_step_size_iter || step_size <= min_step_size)
+        {
+            m_logger.warn(
+                "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g}  use_grad_norm={} iter={:d})",
+                old_energy, cur_energy, starting_step_size,
+                step_size, delta_x.norm(), use_grad_norm, cur_iter);
+            objFunc.solution_changed(x);
+#ifndef NDEBUG
+            // tolerance for rounding error due to multithreading
+            assert(abs(initial_energy - objFunc.value(x)) < 1e-15);
+#endif
+            objFunc.line_search_end();
+            return std::nan("");
+        }
+
+        {
+            POLYSOLVE_SCOPED_TIMER("LS end");
+            objFunc.line_search_end();
+        }
+
+        m_logger.debug(
+            "Line search finished (nan_free_step_size={} collision_free_step_size={} descent_step_size={} final_step_size={})",
+            nan_free_step_size, collision_free_step_size, descent_step_size, step_size);
+
+        return step_size;
+    }
+
     double LineSearch::compute_nan_free_step_size(
         const TVector &x,
         const TVector &delta_x,
@@ -130,54 +243,6 @@ namespace polysolve::nonlinear::line_search
             std::fesetround(current_round);
         }
 
-        // m_logger->trace("\t\tpre TOI={}, ss={}", max_step_size, step_size);
-
-        // while (max_step_size != 1)
-        // {
-        // 	new_x = x + step_size * delta_x;
-        // 	max_step_size = objFunc.max_step_size(x, new_x);
-        //
-        // 	std::fesetround(FE_DOWNWARD);
-        // 	step_size *= max_step_size; // TODO: check me if correct
-        // 	std::fesetround(current_roudn);
-        // 	if (max_step_size != 1)
-        // 		m_logger->trace("\t\trepeating TOI={}, ss={}", max_step_size, step_size);
-        // }
-
         return step_size;
     }
-
-    // #ifndef NDEBUG
-    // 			template <typename ProblemType>
-    // 			double LineSearch::compute_debug_collision_free_step_size(
-    // 				const TVector &x,
-    // 				const TVector &delta_x,
-    // 				ProblemType &objFunc,
-    // 				const double starting_step_size,
-    // 				const double rate)
-    // 			{
-    // 				double step_size = starting_step_size;
-
-    // 				TVector new_x = x + step_size * delta_x;
-    // 				{
-    // 					POLYSOLVE_SCOPED_TIMER("constraint set update in LS", this->constraint_set_update_time);
-    // 					objFunc.solution_changed(new_x);
-    // 				}
-
-    // 				// safe guard check
-    // 				while (!objFunc.is_step_collision_free(x, new_x))
-    // 				{
-    // 					m_logger->error("step is not collision free!!");
-    // 					step_size *= rate;
-    // 					new_x = x + step_size * delta_x;
-    // 					{
-    // 						POLYSOLVE_SCOPED_TIMER("constraint set update in LS", this->constraint_set_update_time);
-    // 						objFunc.solution_changed(new_x);
-    // 					}
-    // 				}
-    // 				assert(objFunc.is_step_collision_free(x, new_x));
-
-    // 				return step_size;
-    // 			}
-    // #endif
 } // namespace polysolve::nonlinear::line_search

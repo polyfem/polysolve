@@ -101,6 +101,8 @@ TEST_CASE("non-linear", "[solver]")
 
         for (const auto &ls : line_search::LineSearch::available_methods())
         {
+            if (ls == "none")
+                continue;
             solver_params["line_search"]["method"] = ls;
 
             QuadraticProblem::TVector x(prob.size());

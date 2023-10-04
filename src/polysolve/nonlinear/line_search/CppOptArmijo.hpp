@@ -18,12 +18,17 @@ namespace polysolve::nonlinear::line_search
         {
         }
 
-        double line_search(
+    protected:
+        double compute_descent_step_size(
             const TVector &x,
-            const TVector &searchDir,
-            Problem &objFunc) override
+            const TVector &delta_x,
+            Problem &objFunc,
+            const bool,
+            const double,
+            const double starting_step_size) override
         {
-            return cppoptlib::Armijo<Problem, 1>::linesearch(x, searchDir, objFunc);
+            const double tmp = cppoptlib::Armijo<Problem, 1>::linesearch(x, delta_x, objFunc);
+            return std::min(starting_step_size, tmp);
         }
     };
 } // namespace polysolve::nonlinear::line_search

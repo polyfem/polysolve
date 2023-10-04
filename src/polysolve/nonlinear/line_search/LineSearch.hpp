@@ -18,10 +18,10 @@ namespace polysolve::nonlinear::line_search
         LineSearch(spdlog::logger &m_logger);
         virtual ~LineSearch() = default;
 
-        virtual double line_search(
+        double line_search(
             const TVector &x,
             const TVector &grad,
-            Problem &objFunc) = 0;
+            Problem &objFunc);
 
         static std::shared_ptr<LineSearch> create(
             const std::string &name,
@@ -31,7 +31,7 @@ namespace polysolve::nonlinear::line_search
 
         void set_min_step_size(const double min_step_size_) { min_step_size = min_step_size_; };
 
-        virtual void reset_times()
+        void reset_times()
         {
             iterations = 0;
             checking_for_nan_inf_time = 0;
@@ -56,8 +56,19 @@ namespace polysolve::nonlinear::line_search
         int cur_iter = 0;
         spdlog::logger &m_logger;
 
-        double
-        compute_nan_free_step_size(
+        double default_init_step_size = 1;
+        double step_ratio = 0.5;
+
+        virtual double compute_descent_step_size(
+            const TVector &x,
+            const TVector &delta_x,
+            Problem &objFunc,
+            const bool use_grad_norm,
+            const double old_energy_in,
+            const double starting_step_size) = 0;
+
+    private:
+        double compute_nan_free_step_size(
             const TVector &x,
             const TVector &delta_x,
             Problem &objFunc,
@@ -68,13 +79,5 @@ namespace polysolve::nonlinear::line_search
             const TVector &delta_x,
             Problem &objFunc,
             const double starting_step_size);
-        // #ifndef NDEBUG
-        // 				double compute_debug_collision_free_step_size(
-        // 					const typename Problem::TVector &x,
-        // 					const typename Problem::TVector &delta_x,
-        // 					Problem &objFunc,
-        // 					const double starting_step_size,
-        // 					const double rate);
-        // #endif
     };
 } // namespace polysolve::nonlinear::line_search

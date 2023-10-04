@@ -152,9 +152,8 @@ namespace polysolve::nonlinear
         }
         this->m_stop.gradNorm = current_g_norm;
 
-        // TODO
-        // utils::Timer timer("non-linear solver", this->total_time);
-        // timer.start();
+        StopWatch stop_watch("non-linear solver", this->total_time, m_logger);
+        stop_watch.start();
 
         if (m_line_search)
             m_line_search->use_grad_norm_tol = use_grad_norm_tol;
@@ -295,8 +294,7 @@ namespace polysolve::nonlinear
 
         } while (objFunc.callback(this->m_current, x) && (this->m_status == cppoptlib::Status::Continue));
 
-        // todo
-        // timer.stop();
+        stop_watch.stop();
 
         // -----------
         // Log results
@@ -309,9 +307,7 @@ namespace polysolve::nonlinear
         if (this->m_status == cppoptlib::Status::UserDefined && m_error_code != ErrorCode::SUCCESS)
             log_and_throw_error(m_logger, "[{}] Failed to find minimizer", name());
 
-        // todo
-        // timer.getElapsedTimeInSec()
-        double tot_time = 0;
+        double tot_time = stop_watch.getElapsedTimeInSec();
         m_logger.info(
             "[{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} ftol={})",
             name(), this->m_status, tot_time, this->m_current.iterations,

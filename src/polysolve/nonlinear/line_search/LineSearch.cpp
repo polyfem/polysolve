@@ -190,7 +190,6 @@ namespace polysolve::nonlinear::line_search
         while (step_size > min_step_size && cur_iter < max_step_size_iter)
         {
             // Compute the new energy value without contacts
-            // TODO: removed only elastic
             const double energy = objFunc.value(new_x);
             const bool is_step_valid = objFunc.is_step_valid(x, new_x);
 

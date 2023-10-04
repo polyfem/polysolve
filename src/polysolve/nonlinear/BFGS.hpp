@@ -5,6 +5,8 @@
 #include "Solver.hpp"
 #include "Utils.hpp"
 
+#include <polysolve/linear/Solver.hpp>
+
 #include <LBFGSpp/BFGSMat.h>
 
 namespace polysolve::nonlinear
@@ -46,5 +48,7 @@ namespace polysolve::nonlinear
             const TVector &x,
             const TVector &grad,
             TVector &direction) override;
+
+        std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
     };
 } // namespace polysolve::nonlinear

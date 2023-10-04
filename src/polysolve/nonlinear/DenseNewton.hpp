@@ -25,6 +25,8 @@ namespace polysolve::nonlinear
         double solve_linear_system(Problem &objFunc,
                                    const TVector &x, const TVector &grad,
                                    TVector &direction) override;
+
+        std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
     };
 
 } // namespace polysolve::nonlinear

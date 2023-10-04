@@ -11,7 +11,9 @@ namespace polysolve::nonlinear
                spdlog::logger &logger)
         : Superclass(solver_params, dt, characteristic_length, logger)
     {
-        // todo dense solver
+        linear_solver = polysolve::linear::Solver::create(
+            linear_solver_params["solver"], linear_solver_params["precond"]);
+        linear_solver->setParameters(linear_solver_params);
     }
 
     std::string BFGS::descent_strategy_name(int descent_strategy) const
@@ -64,7 +66,21 @@ namespace polysolve::nonlinear
         }
         else
         {
-            direction = hess.ldlt().solve(-grad);
+            try
+            {
+                linear_solver->analyzePattern_dense(hess, hess.rows());
+                linear_solver->factorize_dense(hess);
+                linear_solver->solve(-grad, direction);
+            }
+            catch (const std::runtime_error &err)
+            {
+                increase_descent_strategy();
+
+                // warn if using gradient descent
+                m_logger.warn("Unable to factorize Hessian: \"{}\"; reverting to {}",
+                              err.what(), this->descent_strategy_name());
+                return compute_update_direction(objFunc, x, grad, direction);
+            }
 
             TVector y = grad - m_prev_grad;
             TVector s = x - m_prev_x;

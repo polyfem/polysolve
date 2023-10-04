@@ -2,6 +2,10 @@
 #include <polysolve/Types.hpp>
 #include <polysolve/linear/FEMSolver.hpp>
 
+#ifdef POLYSOLVE_WITH_AMGCL
+#include <polysolve/linear/AMGCL.hpp>
+#endif
+
 #include <catch2/catch.hpp>
 #include <iostream>
 #include <unsupported/Eigen/SparseExtra>

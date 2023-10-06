@@ -1,6 +1,7 @@
 # PolySolve
 
 ![Build](https://github.com/polyfem/polysolve/workflows/Build/badge.svg)
+[![codecov](https://codecov.io/github/polyfem/polysolve/graph/badge.svg?token=9CTTZX9A2D)](https://codecov.io/github/polyfem/polysolve)
 
 This library contains a cross-platform Eigen wrapper for many different external linear solvers including (but not limited to):
 

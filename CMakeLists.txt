@@ -94,6 +94,18 @@ option(POLYSOLVE_WITH_TESTS         "Build unit-tests"        ${POLYSOLVE_TOPLEV
 include(CMakeDependentOption)
 cmake_dependent_option(EIGEN_WITH_MKL "Use Eigen with MKL" ON "POLYSOLVE_WITH_MKL" OFF)
 
+option(POLYSOLVE_CODE_COVERAGE "Enable coverage reporting" OFF)
+
+add_library(polysolve_coverage_config INTERFACE)
+if(POLYSOLVE_CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  # Add required flags (GCC & LLVM/Clang)
+  target_compile_options(polysolve_coverage_config INTERFACE
+    -g         # generate debug info
+    --coverage # sets all required flags
+  )
+  target_link_options(polysolve_coverage_config INTERFACE --coverage)
+endif()
+
 # Set default minimum C++ standard
 if(POLYSOLVE_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_STANDARD 14)
@@ -135,6 +147,8 @@ endif()
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve)
 add_library(polysolve::polysolve ALIAS polysolve)
+
+target_link_libraries(polysolve PUBLIC polysolve_coverage_config)
 
 add_subdirectory(src/polysolve)
 

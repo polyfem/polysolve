@@ -14,6 +14,8 @@ set(SOURCES
     LinearSolverHypre.hpp
     LinearSolverPardiso.cpp
     LinearSolverPardiso.hpp
+    LinearSolverSympiler.cpp
+    LinearSolverSympiler.hpp
     SaddlePointSolver.cpp
     SaddlePointSolver.hpp
 )

@@ -70,6 +70,7 @@ endif()
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 
 # Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_SYMPILER      "Enable sympiler library"                       ${UNIX})
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
@@ -209,7 +210,14 @@ endif()
 include(json)
 target_link_libraries(polysolve PUBLIC nlohmann_json::nlohmann_json)
 
-# Accelerate solvers
+# Polysolve solver
+if (POLYSOLVE_WITH_SYMPILER)
+    include(sympiler)
+    target_link_libraries(polysolve PUBLIC sympiler::sym_sparse_blas)
+    target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_SYMPILER)
+endif()
+
+# Accelerate solver
 if(POLYSOLVE_WITH_ACCELERATE)
     target_compile_definitions(polysolve PUBLIC -DPOLYSOLVE_WITH_ACCELERATE)
 endif()

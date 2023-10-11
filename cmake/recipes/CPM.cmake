@@ -1,3 +1,6 @@
+# Source: https://github.com/cpm-cmake/CPM.cmake/blob/master/cmake/get_cpm.cmake
+# SPDX-License-Identifier: MIT
+
 set(CPM_DOWNLOAD_VERSION 0.38.1)
 
 if(CPM_SOURCE_CACHE)

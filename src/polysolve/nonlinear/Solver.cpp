@@ -11,6 +11,7 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/bundled/color.h>
+#include <spdlog/fmt/ostr.h>
 
 #include <iomanip>
 

@@ -4,9 +4,9 @@
 
 #include <spdlog/spdlog.h>
 
-namespace polysolve
-
 #define POLYSOLVE_SCOPED_STOPWATCH(...) polysolve::StopWatch __polysolve_stopwatch(__VA_ARGS__)
+
+namespace polysolve
 {
 
     struct Timing

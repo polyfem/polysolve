@@ -30,6 +30,8 @@ public:
 
     virtual TVector min() = 0;
     virtual TVector max() = 0;
+
+    virtual std::string name() = 0;
 };
 
 class AnalyticTestProblem : public TestProblem
@@ -122,6 +124,7 @@ public:
     }
 
     int size() override { return 3; }
+    std::string name() override { return "Quadratic"; }
 };
 
 class Rosenbrock : public AnalyticTestProblem
@@ -134,6 +137,7 @@ class Rosenbrock : public AnalyticTestProblem
 
         return res;
     }
+    std::string name() override { return "Rosenbrock"; }
 
     int size() override { return 10; }
 
@@ -170,6 +174,7 @@ class Sphere : public AnalyticTestProblem
         return res;
     }
 
+    std::string name() override { return "Sphere"; }
     int size() override { return 10; }
 
     std::vector<TVector> solutions() override
@@ -204,6 +209,7 @@ class Beale : public AnalyticTestProblem
                (2.625 - x[0] + x[0] * x[1] * x[1] * x[1]) * (2.625 - x[0] + x[0] * x[1] * x[1] * x[1]);
     }
 
+    std::string name() override { return "Beale"; }
     int size() override { return 2; }
 
     std::vector<TVector> solutions() override
@@ -266,32 +272,43 @@ TEST_CASE("non-linear", "[solver]")
             else
                 linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
 
-            auto solver = Solver::create(solver_name,
-                                         solver_params,
-                                         linear_solver_params,
-                                         dt,
-                                         characteristic_length,
-                                         *logger);
-
             for (const auto &ls : line_search::LineSearch::available_methods())
             {
                 if (ls == "none")
                     continue;
                 solver_params["line_search"]["method"] = ls;
 
+                auto solver = Solver::create(solver_name,
+                                             solver_params,
+                                             linear_solver_params,
+                                             dt,
+                                             characteristic_length,
+                                             *logger);
+
                 TestProblem::TVector x(prob->size());
                 x.setZero();
 
                 for (int i = 0; i < N_RANDOM; ++i)
                 {
-                    solver->minimize(*prob, x);
+                    try
+                    {
+                        solver->minimize(*prob, x);
 
-                    double err = std::numeric_limits<double>::max();
-                    for (auto sol : prob->solutions())
-                        err = std::min(err, (x - sol).norm());
+                        double err = std::numeric_limits<double>::max();
+                        for (auto sol : prob->solutions())
+                            err = std::min(err, (x - sol).norm());
 
-                    INFO("solver: " + solver_name + " LS: " + ls);
-                    CHECK(err < 1e-8);
+                        INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
+                        CHECK(err < 1e-8);
+                        if (err >= 1e-8)
+                            break;
+                    }
+                    catch (const std::exception &)
+                    {
+                        INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
+                        CHECK(false);
+                        break;
+                    }
 
                     x.setRandom();
                     x += prob->min();

@@ -7,7 +7,7 @@
 #include "LBFGS.hpp"
 #include "SparseNewton.hpp"
 
-#include "Utils.hpp"
+#include <polysolve/Utils.hpp>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/bundled/color.h>

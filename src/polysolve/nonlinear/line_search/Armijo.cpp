@@ -2,7 +2,7 @@
 
 #include "Armijo.hpp"
 
-#include <polysolve/nonlinear/Utils.hpp>
+#include <polysolve/Utils.hpp>
 
 #include <spdlog/spdlog.h>
 

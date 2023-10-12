@@ -12,7 +12,7 @@ namespace polysolve::linear
 {
     // Get info on the last solve step
     template <typename SparseSolver>
-    void EigenDirect<SparseSolver>::getInfo(json &params) const
+    void EigenDirect<SparseSolver>::get_info(json &params) const
     {
         switch (m_Solver.info())
         {
@@ -35,7 +35,7 @@ namespace polysolve::linear
 
     // Analyze sparsity pattern
     template <typename SparseSolver>
-    void EigenDirect<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+    void EigenDirect<SparseSolver>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
     {
         m_Solver.analyzePattern(A);
     }
@@ -65,7 +65,7 @@ namespace polysolve::linear
 
     // Set solver parameters
     template <typename SparseSolver>
-    void EigenIterative<SparseSolver>::setParameters(const json &params)
+    void EigenIterative<SparseSolver>::set_parameters(const json &params)
     {
         const std::string solver_name = name();
         if (params.contains(solver_name))
@@ -83,7 +83,7 @@ namespace polysolve::linear
 
     // Get info on the last solve step
     template <typename SparseSolver>
-    void EigenIterative<SparseSolver>::getInfo(json &params) const
+    void EigenIterative<SparseSolver>::get_info(json &params) const
     {
         params["solver_iter"] = m_Solver.iterations();
         params["solver_error"] = m_Solver.error();
@@ -91,7 +91,7 @@ namespace polysolve::linear
 
     // Analyze sparsity pattern
     template <typename SparseSolver>
-    void EigenIterative<SparseSolver>::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+    void EigenIterative<SparseSolver>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
     {
         m_Solver.analyzePattern(A);
     }
@@ -118,7 +118,7 @@ namespace polysolve::linear
 
     // Get info on the last solve step
     template <typename DenseSolver>
-    void EigenDenseSolver<DenseSolver>::getInfo(json &params) const
+    void EigenDenseSolver<DenseSolver>::get_info(json &params) const
     {
         params["solver_info"] = "Success";
     }

@@ -16,7 +16,7 @@ namespace polysolve::nonlinear
     {
         linear_solver = polysolve::linear::Solver::create(
             linear_solver_params["solver"], linear_solver_params["precond"]);
-        linear_solver->setParameters(linear_solver_params);
+        linear_solver->set_parameters(linear_solver_params);
     }
 
     double DenseNewton::solve_linear_system(Problem &objFunc,
@@ -43,7 +43,7 @@ namespace polysolve::nonlinear
 
             try
             {
-                linear_solver->analyzePattern_dense(hessian, hessian.rows());
+                linear_solver->analyze_pattern_dense(hessian, hessian.rows());
                 linear_solver->factorize_dense(hessian);
                 linear_solver->solve(-grad, direction);
             }
@@ -64,7 +64,7 @@ namespace polysolve::nonlinear
         const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
 
         json info;
-        linear_solver->getInfo(info);
+        linear_solver->get_info(info);
         internal_solver_info.push_back(info);
 
         return residual;

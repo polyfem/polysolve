@@ -68,17 +68,17 @@ TEST_CASE("all", "[solver]")
         auto solver = Solver::create(s, "");
         json params;
         params[s]["tolerance"] = 1e-10;
-        solver->setParameters(params);
+        solver->set_parameters(params);
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());
         x.setZero();
 
-        solver->analyzePattern(A, A.rows());
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
 
-        // solver->getInfo(solver_info);
+        // solver->get_info(solver_info);
 
         // std::cout<<"Solver error: "<<x<<std::endl;
         const double err = (A * x - b).norm();
@@ -104,18 +104,18 @@ TEST_CASE("eigen_params", "[solver]")
             json params;
             params[s]["max_iter"] = 1000;
             params[s]["tolerance"] = 1e-10;
-            solver->setParameters(params);
+            solver->set_parameters(params);
 
             Eigen::VectorXd b(A.rows());
             b.setRandom();
             Eigen::VectorXd x(b.size());
             x.setZero();
 
-            solver->analyzePattern(A, A.rows());
+            solver->analyze_pattern(A, A.rows());
             solver->factorize(A);
             solver->solve(b, x);
 
-            // solver->getInfo(solver_info);
+            // solver->get_info(solver_info);
 
             // std::cout<<"Solver error: "<<x<<std::endl;
             const double err = (A * x - b).norm();
@@ -144,7 +144,7 @@ TEST_CASE("pre_factor", "[solver]")
 #endif
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         auto solver = Solver::create(s, "");
-        solver->analyzePattern(A, A.rows());
+        solver->analyze_pattern(A, A.rows());
 
         std::default_random_engine eng{42};
         std::uniform_real_distribution<double> urd(0.1, 5);
@@ -181,7 +181,7 @@ TEST_CASE("pre_factor", "[solver]")
             solver->factorize(Atmp);
             solver->solve(b, x);
 
-            // solver->getInfo(solver_info);
+            // solver->get_info(solver_info);
 
             // std::cout<<"Solver error: "<<x<<std::endl;
             const double err = (Atmp * x - b).norm();
@@ -210,17 +210,17 @@ TEST_CASE("hypre", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(b.size());
     x.setZero();
 
-    solver->analyzePattern(A, A.rows());
+    solver->analyze_pattern(A, A.rows());
     solver->factorize(A);
     solver->solve(b, x);
 
-    // solver->getInfo(solver_info);
+    // solver->get_info(solver_info);
 
     // std::cout<<"Solver error: "<<x<<std::endl;
     const double err = (A * x - b).norm();
@@ -234,7 +234,7 @@ TEST_CASE("hypre_initial_guess", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(A.rows());
@@ -250,10 +250,10 @@ TEST_CASE("hypre_initial_guess", "[solver]")
         {
             return;
         }
-        solver->analyzePattern(A, A.rows());
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
 
         REQUIRE(solver_info["num_iterations"] > 1);
     }
@@ -270,11 +270,11 @@ TEST_CASE("hypre_initial_guess", "[solver]")
         {
             return;
         }
-        solver->analyzePattern(A, A.rows());
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
 
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
 
         REQUIRE(solver_info["num_iterations"] == 1);
     }
@@ -291,7 +291,7 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(A.rows());
@@ -308,10 +308,10 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
         {
             return;
         }
-        solver->analyzePattern(A, A.rows());
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
 
         REQUIRE(solver_info["num_iterations"] > 0);
     }
@@ -327,11 +327,11 @@ TEST_CASE("amgcl_initial_guess", "[solver]")
         {
             return;
         }
-        solver->analyzePattern(A, A.rows());
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
 
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
 
         REQUIRE(solver_info["num_iterations"] == 0);
     }
@@ -358,7 +358,7 @@ TEST_CASE("saddle_point_test", "[solver]")
     REQUIRE(ok);
 
     auto solver = Solver::create("SaddlePointSolver", "");
-    solver->analyzePattern(A, 9934);
+    solver->analyze_pattern(A, 9934);
     solver->factorize(A);
     Eigen::VectorXd x(A.rows());
     solver->solve(b, x);
@@ -377,7 +377,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(A.rows());
@@ -390,11 +390,11 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
         auto solver = Solver::create("AMGCL", "");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
 
         REQUIRE(solver_info["num_iterations"] > 0);
         const double err = (A * x - b).norm();
@@ -407,11 +407,11 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["block_size"] = 3;
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x_b);
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
 
         REQUIRE(solver_info["num_iterations"] > 0);
         const double err = (A * x_b - b).norm();
@@ -443,14 +443,14 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 1000;
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
         prof.tic("solve");
         solver->solve(b, x);
         prof.toc("solve");
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl
@@ -465,14 +465,14 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 1000;
         params["AMGCL"]["block_size"] = 2;
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
         prof.tic("solve");
         solver->solve(b, x_b);
         prof.toc("solve");
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl
@@ -507,14 +507,14 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 1000;
         params["AMGCL"]["block_size"] = 3;
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
         prof.tic("solve");
         solver->solve(b, x_b);
         prof.toc("solve");
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl
@@ -528,14 +528,14 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 10000;
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
         prof.tic("solve");
         solver->solve(b, x);
         prof.toc("solve");
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl
@@ -572,14 +572,14 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
         params["AMGCL"]["max_iter"] = 10000;
         params["AMGCL"]["block_size"] = 3;
         params["AMGCL"]["solver_type"] = "bicgstab";
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
         prof.tic("solve");
         solver->solve(b, x_b);
         prof.toc("solve");
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl
@@ -594,14 +594,14 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 10000;
         params["AMGCL"]["solver_type"] = "bicgstab";
-        solver->setParameters(params);
-        solver->analyzePattern(A, A.rows());
+        solver->set_parameters(params);
+        solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         prof.toc("setup");
         prof.tic("solve");
         solver->solve(b, x);
         prof.toc("solve");
-        solver->getInfo(solver_info);
+        solver->get_info(solver_info);
         REQUIRE(solver_info["num_iterations"] > 0);
         std::cout << solver_info["num_iterations"] << std::endl;
         std::cout << solver_info["final_res_norm"] << std::endl
@@ -627,13 +627,13 @@ TEST_CASE("cusolverdn", "[solver]")
     {
         return;
     }
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
     Eigen::VectorXd b(A.rows());
     b.setRandom();
     Eigen::VectorXd x(b.size());
     x.setZero();
 
-    solver->analyzePattern(A, A.rows());
+    solver->analyze_pattern(A, A.rows());
     solver->factorize(A);
     solver->solve(b, x);
 
@@ -662,7 +662,7 @@ TEST_CASE("cusolverdn_dense", "[solver]")
     {
         return;
     }
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
     for (int i = 0; i < 5; ++i)
     {
         Eigen::VectorXd b(A.rows());
@@ -670,7 +670,7 @@ TEST_CASE("cusolverdn_dense", "[solver]")
         Eigen::VectorXd x(b.size());
         x.setZero();
 
-        solver->analyzePattern_dense(A, A.rows());
+        solver->analyze_pattern_dense(A, A.rows());
         solver->factorize_dense(A);
         solver->solve(b, x);
 
@@ -700,7 +700,7 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
     {
         return;
     }
-    // solver->setParameters(params);
+    // solver->set_parameters(params);
 
     for (int i = 0; i < 5; ++i)
     {
@@ -709,7 +709,7 @@ TEST_CASE("cusolverdn_dense_float", "[solver]")
         Eigen::VectorXd x(b.size());
         x.setZero();
 
-        solver->analyzePattern_dense(A, A.rows());
+        solver->analyze_pattern_dense(A, A.rows());
         solver->factorize_dense(A);
         solver->solve(b, x);
 
@@ -760,7 +760,7 @@ TEST_CASE("cusolverdn_5cubes", "[solver]")
         Eigen::VectorXd x(b.size());
         x.setZero();
 
-        solver->analyzePattern_dense(A, A.rows());
+        solver->analyze_pattern_dense(A, A.rows());
 
         // std::chrono::steady_clock::time_point beginf = std::chrono::steady_clock::now();
         solver->factorize_dense(A);

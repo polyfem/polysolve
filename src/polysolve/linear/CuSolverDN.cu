@@ -106,7 +106,7 @@ namespace polysolve::linear
     }
 
     template <typename T>
-    void CuSolverDN<T>::getInfo(json &params) const
+    void CuSolverDN<T>::get_info(json &params) const
     {
     }
 

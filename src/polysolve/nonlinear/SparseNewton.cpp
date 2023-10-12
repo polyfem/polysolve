@@ -19,7 +19,7 @@ namespace polysolve::nonlinear
     {
         linear_solver = polysolve::linear::Solver::create(
             linear_solver_params["solver"], linear_solver_params["precond"]);
-        linear_solver->setParameters(linear_solver_params);
+        linear_solver->set_parameters(linear_solver_params);
     }
 
     double SparseNewton::solve_linear_system(Problem &objFunc,
@@ -43,7 +43,7 @@ namespace polysolve::nonlinear
         {
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
             // TODO: get the correct size
-            linear_solver->analyzePattern(hessian, hessian.rows());
+            linear_solver->analyze_pattern(hessian, hessian.rows());
 
             try
             {
@@ -68,7 +68,7 @@ namespace polysolve::nonlinear
         const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
 
         json info;
-        linear_solver->getInfo(info);
+        linear_solver->get_info(info);
         internal_solver_info.push_back(info);
 
         return residual;

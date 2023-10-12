@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Newton.hpp"
-#include "Utils.hpp"
+#include <polysolve/Utils.hpp>
 
 #include <polysolve/linear/Solver.hpp>
 

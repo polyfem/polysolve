@@ -3,7 +3,7 @@
 #pragma once
 
 #include "Solver.hpp"
-#include "Utils.hpp"
+#include <polysolve/Utils.hpp>
 
 #include <LBFGSpp/BFGSMat.h>
 

@@ -1,14 +1,12 @@
 #pragma once
 
-#include <polysolve/Types.hpp>
-
-#include "Problem.hpp"
+#include "Types.hpp"
 
 #include <spdlog/spdlog.h>
 
-namespace polysolve::nonlinear
+namespace polysolve
 
-#define POLYSOLVE_SCOPED_STOPWATCH(...) polysolve::nonlinear::StopWatch __polysolve_stopwatch(__VA_ARGS__)
+#define POLYSOLVE_SCOPED_STOPWATCH(...) polysolve::StopWatch __polysolve_stopwatch(__VA_ARGS__)
 {
 
     struct Timing
@@ -64,15 +62,7 @@ namespace polysolve::nonlinear
         log_and_throw_error(logger, fmt::format(msg, args...));
     }
 
-    static void save_sampled_values(const std::string &filename,
-                                    const typename Problem::TVector &x,
-                                    const typename Problem::TVector &grad,
-                                    Problem &objFunc,
-                                    spdlog::logger &logger,
-                                    const double starting_step_size = 1e-1,
-                                    const int num_samples = 1000);
-
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
     bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian);
 
-} // namespace polysolve::nonlinear
+} // namespace polysolve

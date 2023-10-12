@@ -147,6 +147,7 @@ endif()
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve_linear)
 add_library(polysolve::linear ALIAS polysolve_linear)
+add_subdirectory(src/polysolve)
 add_subdirectory(src/polysolve/linear)
 
 add_library(polysolve)
@@ -173,10 +174,12 @@ if(POLYSOLVE_LARGE_INDEX)
     target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_LARGE_INDEX)
 endif()
 
+target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_LINEAR_SPEC="${CMAKE_SOURCE_DIR}/linear-solver-spec.json")
+
+
 ################################################################################
 # Dependencies
 ################################################################################
-
 
 # polysolve_linear
 target_link_libraries(polysolve PUBLIC polysolve::linear)
@@ -185,13 +188,20 @@ target_link_libraries(polysolve PUBLIC polysolve::linear)
 include(cppoptlib)
 target_link_libraries(polysolve PUBLIC cppoptlib)
 
-# spdlog
-include(spdlog)
-target_link_libraries(polysolve PUBLIC spdlog::spdlog)
-
 # LBFGSpp
 include(LBFGSpp)
 target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
+
+
+
+
+# JSON Specification Engine library
+include(jse)
+target_link_libraries(polysolve_linear PUBLIC jse::jse)
+
+# spdlog
+include(spdlog)
+target_link_libraries(polysolve_linear PUBLIC spdlog::spdlog)
 
 # Accelerate solver
 if(POLYSOLVE_WITH_ACCELERATE)

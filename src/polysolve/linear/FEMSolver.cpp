@@ -216,7 +216,7 @@ namespace polysolve::linear
             }
 
             Eigen::VectorXd us = u;
-            solver.analyzePattern(As, precond_num);
+            solver.analyze_pattern(As, precond_num);
             solver.factorize(As);
             solver.solve(gs, us);
             f = g;
@@ -245,7 +245,7 @@ namespace polysolve::linear
                 u.setZero();
             }
 
-            solver.analyzePattern(A, precond_num);
+            solver.analyze_pattern(A, precond_num);
             solver.factorize(A);
             solver.solve(g, u);
             f = g;
@@ -306,7 +306,7 @@ namespace polysolve::linear
         A.setFromTriplets(coeffs.begin(), coeffs.end());
         A.makeCompressed();
 
-        solver.analyzePattern(A, precond_num);
+        solver.analyze_pattern(A, precond_num);
         solver.factorize(A);
 
         if (!save_path.empty())

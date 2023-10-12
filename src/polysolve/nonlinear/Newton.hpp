@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Solver.hpp"
-#include "Utils.hpp"
+#include <polysolve/Utils.hpp>
 
 namespace polysolve::nonlinear
 {

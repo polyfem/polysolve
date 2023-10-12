@@ -42,7 +42,7 @@ namespace polysolve::linear
     }
 
     // Set solver parameters
-    void Pardiso::setParameters(const json &params)
+    void Pardiso::set_parameters(const json &params)
     {
         if (params.contains("Pardiso"))
         {
@@ -53,7 +53,7 @@ namespace polysolve::linear
         }
     }
 
-    void Pardiso::getInfo(json &params) const
+    void Pardiso::get_info(json &params) const
     {
         params["mem_symbolic_peak"] = iparm[14];
         params["mem_symbolic_perm"] = iparm[15];
@@ -200,7 +200,7 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void Pardiso::analyzePattern(const StiffnessMatrix &A, const int precond_num)
+    void Pardiso::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
     {
         if (mtype == -1)
         {

@@ -35,7 +35,7 @@ namespace polysolve::linear
     }
 
     // Set solver parameters
-    void HypreSolver::setParameters(const json &params)
+    void HypreSolver::set_parameters(const json &params)
     {
         if (params.contains("Hypre"))
         {
@@ -54,7 +54,7 @@ namespace polysolve::linear
         }
     }
 
-    void HypreSolver::getInfo(json &params) const
+    void HypreSolver::get_info(json &params) const
     {
         params["num_iterations"] = num_iterations;
         params["final_res_norm"] = final_res_norm;

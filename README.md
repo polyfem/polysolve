@@ -18,7 +18,7 @@ const std::string solver_name = "Hypre"
 auto solver = Solver::create(solver_name, "");
 
 // Configuration parameters like iteration or accuracy for iterative solvers
-// solver->setParameters(params);
+// solver->set_parameters(params);
 
 // System sparse matrix
 Eigen::SparseMatrix<double> A;
@@ -29,7 +29,7 @@ Eigen::VectorXd b;
 // Solution
 Eigen::VectorXd x(b.size());
 
-solver->analyzePattern(A, A.rows());
+solver->analyze_pattern(A, A.rows());
 solver->factorize(A);
 solver->solve(b, x);
 ```

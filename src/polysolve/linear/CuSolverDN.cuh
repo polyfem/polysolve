@@ -34,7 +34,7 @@ namespace polysolve::linear
         //////////////////////
 
         // Retrieve memory information from cuSolverDN
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Factorize system matrix (sparse)
         virtual void factorize(const StiffnessMatrix &A) override;

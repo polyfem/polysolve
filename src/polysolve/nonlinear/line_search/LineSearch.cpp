@@ -5,7 +5,7 @@
 #include "CppOptArmijo.hpp"
 #include "MoreThuente.hpp"
 
-#include <polysolve/nonlinear/Utils.hpp>
+#include <polysolve/Utils.hpp>
 
 #include <polysolve/Types.hpp>
 

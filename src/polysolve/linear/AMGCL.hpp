@@ -62,13 +62,13 @@ namespace polysolve::linear
         //////////////////////
 
         // Set solver parameters
-        virtual void setParameters(const json &params) override;
+        virtual void set_parameters(const json &params) override;
 
         // Retrieve information
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
 
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) override;
@@ -111,22 +111,22 @@ namespace polysolve::linear
         //////////////////////
 
         // Set solver parameters
-        virtual void setParameters(const json &params) override;
+        virtual void set_parameters(const json &params) override;
 
         // Retrieve information
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override
         {
             if (block_size_ == 2)
             {
-                block2_solver_.analyzePattern(A, precond_num);
+                block2_solver_.analyze_pattern(A, precond_num);
                 return;
             }
             else if (block_size_ == 3)
             {
-                block3_solver_.analyzePattern(A, precond_num);
+                block3_solver_.analyze_pattern(A, precond_num);
                 return;
             }
             precond_num_ = precond_num;

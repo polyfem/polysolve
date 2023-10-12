@@ -18,6 +18,11 @@
 // - [ ] Document the json parameters for each
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace spdlog
+{
+    class logger;
+}
+
 namespace polysolve::linear
 {
     /**
@@ -40,6 +45,8 @@ namespace polysolve::linear
         // Virtual destructor
         virtual ~Solver() = default;
 
+        static std::unique_ptr<Solver> create(const json &params, spdlog::logger &logger, const bool strict_validation = false);
+
         // Static constructor
         //
         // @param[in]  solver   Solver type
@@ -49,11 +56,11 @@ namespace polysolve::linear
 
         // List available solvers
         static std::vector<std::string> available_solvers();
-        static std::string defaultSolver();
+        static std::string default_solver();
 
         // List available preconditioners
-        static std::vector<std::string> availablePrecond();
-        static std::string defaultPrecond();
+        static std::vector<std::string> available_preconds();
+        static std::string default_precond();
 
     protected:
         // Default constructor
@@ -65,19 +72,19 @@ namespace polysolve::linear
         //////////////////////
 
         // Set solver parameters
-        virtual void setParameters(const json &params) {}
+        virtual void set_parameters(const json &params) {}
 
         // Get info on the last solve step
-        virtual void getInfo(json &params) const {};
+        virtual void get_info(json &params) const {};
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) {}
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}
 
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) {}
 
         // Analyze sparsity pattern of a dense matrix
-        virtual void analyzePattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}
+        virtual void analyze_pattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}
 
         // Factorize system matrix of a dense matrix
         virtual void factorize_dense(const Eigen::MatrixXd &A) {}

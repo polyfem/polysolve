@@ -103,7 +103,7 @@ namespace polysolve::linear
     }
 
     // Set solver parameters
-    void AMGCL::setParameters(const json &params)
+    void AMGCL::set_parameters(const json &params)
     {
         if (params.contains("AMGCL"))
         {
@@ -114,12 +114,12 @@ namespace polysolve::linear
             }
             if (block_size_ == 2)
             {
-                block2_solver_.setParameters(params);
+                block2_solver_.set_parameters(params);
                 return;
             }
             else if (block_size_ == 3)
             {
-                block3_solver_.setParameters(params);
+                block3_solver_.set_parameters(params);
                 return;
             }
 
@@ -127,16 +127,16 @@ namespace polysolve::linear
         }
     }
 
-    void AMGCL::getInfo(json &params) const
+    void AMGCL::get_info(json &params) const
     {
         if (block_size_ == 2)
         {
-            block2_solver_.getInfo(params);
+            block2_solver_.get_info(params);
             return;
         }
         else if (block_size_ == 3)
         {
-            block3_solver_.getInfo(params);
+            block3_solver_.get_info(params);
             return;
         }
         params["num_iterations"] = iterations_;
@@ -228,13 +228,13 @@ namespace polysolve::linear
     }
 
     template <int BLOCK_SIZE>
-    void AMGCL_Block<BLOCK_SIZE>::setParameters(const json &params)
+    void AMGCL_Block<BLOCK_SIZE>::set_parameters(const json &params)
     {
         set_params(params, params_);
     }
 
     template <int BLOCK_SIZE>
-    void AMGCL_Block<BLOCK_SIZE>::getInfo(json &params) const
+    void AMGCL_Block<BLOCK_SIZE>::get_info(json &params) const
     {
         params["num_iterations"] = iterations_;
         params["final_res_norm"] = residual_error_;

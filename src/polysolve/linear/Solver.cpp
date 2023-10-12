@@ -1,7 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////
+#include <polysolve/Utils.hpp>
+
 #include "Solver.hpp"
 #include "EigenSolver.hpp"
 #include "SaddlePointSolver.hpp"
+
+#include <jse/jse.h>
+
+#include <fstream>
 
 // -----------------------------------------------------------------------------
 #include <Eigen/Sparse>
@@ -40,12 +46,97 @@ namespace polysolve::linear
 {
     using polysolve::StiffnessMatrix;
 
+    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation)
+    {
+        json params = params_in; // mutable copy
+
+        json rules;
+        jse::JSE jse;
+
+        jse.strict = strict_validation;
+        const std::string input_spec = POLYSOLVE_LINEAR_SPEC;
+        std::ifstream file(input_spec);
+
+        if (file.is_open())
+            file >> rules;
+        else
+            log_and_throw_error(logger, "unable to open {} rules", input_spec);
+
+        // set default wrt availability
+        for (int i = 0; i < rules.size(); i++)
+        {
+            if (rules[i]["pointer"] == "/solver")
+            {
+                rules[i]["default"] = default_solver();
+                rules[i]["options"] = available_solvers();
+            }
+            else if (rules[i]["pointer"] == "/precond")
+            {
+                rules[i]["default"] = default_precond();
+                rules[i]["options"] = available_preconds();
+            }
+        }
+
+        // if solver is an array, pick the first available
+        const auto lin_solver_ptr = "/solver"_json_pointer;
+        if (params.contains(lin_solver_ptr) && params[lin_solver_ptr].is_array())
+        {
+            const std::vector<std::string> solvers = params[lin_solver_ptr];
+            const std::vector<std::string> available_solvers = Solver::available_solvers();
+            std::string accepted_solver = "";
+            for (const std::string &solver : solvers)
+            {
+                if (std::find(available_solvers.begin(), available_solvers.end(), solver) != available_solvers.end())
+                {
+                    accepted_solver = solver;
+                    break;
+                }
+            }
+            if (!accepted_solver.empty())
+                logger.info("Solver {} is the highest priority availble solver; using it.", accepted_solver);
+            else
+                logger.warn("No valid solver found in the list of specified solvers!");
+            params[lin_solver_ptr] = accepted_solver;
+        }
+
+        // Fallback to default linear solver if the specified solver is invalid
+        // NOTE: I do not know why .value() causes a segfault only on Windows
+        // const bool fallback_solver = params.value("/enable_overwrite_solver"_json_pointer, false);
+        const bool fallback_solver =
+            params.contains("/enable_overwrite_solver"_json_pointer)
+                ? params.at("/enable_overwrite_solver"_json_pointer).get<bool>()
+                : false;
+        if (fallback_solver)
+        {
+            const std::vector<std::string> ss = Solver::available_solvers();
+            std::string s_json = "null";
+            if (!params.contains(lin_solver_ptr) || !params[lin_solver_ptr].is_string()
+                || std::find(ss.begin(), ss.end(), s_json = params[lin_solver_ptr].get<std::string>()) == ss.end())
+            {
+                logger.warn("Solver {} is invalid, falling back to {}", s_json, Solver::default_solver());
+                params[lin_solver_ptr] = Solver::default_solver();
+            }
+        }
+
+        const bool valid_input = jse.verify_json(params, rules);
+
+        if (!valid_input)
+            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
+
+        params = jse.inject_defaults(params, rules);
+
+        auto res = create(params["solver"], params["precond"]);
+        res->set_parameters(params);
+
+        return res;
+    }
+
     ////////////////////////////////////////////////////////////////////////////////
 
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 
 // Magic macro because C++ has no introspection
-#define ENUMERATE_PRECOND(HelperFunctor, SolverType, DefaultPrecond, precond, name)                                 \
+#define ENUMERATE_PRECOND(HelperFunctor, SolverType, default_precond, precond, name)                                \
     do                                                                                                              \
     {                                                                                                               \
         using namespace Eigen;                                                                                      \
@@ -77,14 +168,14 @@ namespace polysolve::linear
         else                                                                                                        \
         {                                                                                                           \
             return std::make_unique<typename HelperFunctor<SolverType,                                              \
-                                                           DefaultPrecond>::type>(name);                            \
+                                                           default_precond>::type>(name);                           \
         }                                                                                                           \
     } while (0)
 
 #else
 
     // Magic macro because C++ has no introspection
-#define ENUMERATE_PRECOND(HelperFunctor, SolverType, DefaultPrecond, precond)                        \
+#define ENUMERATE_PRECOND(HelperFunctor, SolverType, default_precond, precond)                       \
     do                                                                                               \
     {                                                                                                \
         using namespace Eigen;                                                                       \
@@ -111,7 +202,7 @@ namespace polysolve::linear
         else                                                                                         \
         {                                                                                            \
             return std::make_unique<typename HelperFunctor<SolverType,                               \
-                                                           DefaultPrecond>::type>();                 \
+                                                           default_precond>::type>();                \
         }                                                                                            \
     } while (0)
 
@@ -156,23 +247,23 @@ namespace polysolve::linear
 
         template <
             template <class, class> class SolverType,
-            typename DefaultPrecond = Eigen::DiagonalPreconditioner<double>>
+            typename default_precond = Eigen::DiagonalPreconditioner<double>>
         struct PrecondHelper
         {
             static std::unique_ptr<Solver> create(const std::string &arg, const std::string &name)
             {
-                ENUMERATE_PRECOND(MakeSolver, SolverType, DefaultPrecond, arg, name);
+                ENUMERATE_PRECOND(MakeSolver, SolverType, default_precond, arg, name);
             }
         };
 
         template <
             template <class, int, class> class SolverType,
-            typename DefaultPrecond = Eigen::DiagonalPreconditioner<double>>
+            typename default_precond = Eigen::DiagonalPreconditioner<double>>
         struct PrecondHelperSym
         {
             static std::unique_ptr<Solver> create(const std::string &arg, const std::string &name)
             {
-                ENUMERATE_PRECOND(MakeSolverSym, SolverType, DefaultPrecond, arg, name);
+                ENUMERATE_PRECOND(MakeSolverSym, SolverType, default_precond, arg, name);
             }
         };
 
@@ -421,7 +512,7 @@ namespace polysolve::linear
         }};
     }
 
-    std::string Solver::defaultSolver()
+    std::string Solver::default_solver()
     {
         // return "Eigen::BiCGSTAB";
 #ifdef POLYSOLVE_WITH_PARDISO
@@ -438,7 +529,7 @@ namespace polysolve::linear
     // -----------------------------------------------------------------------------
 
     // List available preconditioners
-    std::vector<std::string> Solver::availablePrecond()
+    std::vector<std::string> Solver::available_preconds()
     {
         return {{
             "Eigen::IdentityPreconditioner",
@@ -453,7 +544,7 @@ namespace polysolve::linear
         }};
     }
 
-    std::string Solver::defaultPrecond()
+    std::string Solver::default_precond()
     {
         return "Eigen::DiagonalPreconditioner";
     }

@@ -21,8 +21,6 @@ set(SOURCES
 	MMA.cpp
 	MMAAux.hpp
 	MMAAux.cpp
-	Utils.hpp
-	Utils.cpp
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})

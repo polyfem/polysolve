@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/nonlinear/Solver.hpp>
 #include <polysolve/nonlinear/Problem.hpp>
-#include <polysolve/nonlinear/Utils.hpp>
+#include <polysolve/Utils.hpp>
 #include <polysolve/Types.hpp>
 #include <polysolve/linear/Solver.hpp>
 
@@ -83,7 +83,7 @@ TEST_CASE("non-linear", "[solver]")
     solver_params["line_search"]["method"] = "backtracking";
 
     linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
-    linear_solver_params["precond"] = polysolve::linear::Solver::defaultPrecond();
+    linear_solver_params["precond"] = polysolve::linear::Solver::default_precond();
 
     const double dt = 0.1;
     const double characteristic_length = 1;

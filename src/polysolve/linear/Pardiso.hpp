@@ -38,13 +38,13 @@ namespace polysolve::linear
         //////////////////////
 
         // Set solver parameters
-        virtual void setParameters(const json &params) override;
+        virtual void set_parameters(const json &params) override;
 
         // Retrieve memory information from Pardiso
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
 
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) override;

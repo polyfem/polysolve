@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Utils.hpp"
+#include <polysolve/Utils.hpp>
 #include "BoxConstraintSolver.hpp"
 
 #include <LBFGSpp/BFGSMat.h>

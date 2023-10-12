@@ -65,7 +65,7 @@ namespace polysolve::linear
     }
 
     // Set solver parameters
-    void SaddlePointSolver::setParameters(const json &params)
+    void SaddlePointSolver::set_parameters(const json &params)
     {
         if (params.contains("max_iter"))
         {
@@ -102,7 +102,7 @@ namespace polysolve::linear
         }
     }
 
-    void SaddlePointSolver::getInfo(json &params) const
+    void SaddlePointSolver::get_info(json &params) const
     {
         params["num_iterations"] = num_iterations_;
         params["final_res_norm"] = final_res_norm_;
@@ -167,10 +167,10 @@ namespace polysolve::linear
 
         auto asymmetric_solver = Solver::create(asymmetric_solver_name_, "");
         auto symmetric_solver = Solver::create(symmetric_solver_name_, "");
-        asymmetric_solver->setParameters(asymmetric_solver_params_);
-        symmetric_solver->setParameters(symmetric_solver_params_);
+        asymmetric_solver->set_parameters(asymmetric_solver_params_);
+        symmetric_solver->set_parameters(symmetric_solver_params_);
 
-        symmetric_solver->analyzePattern(Ss, Ss.rows());
+        symmetric_solver->analyze_pattern(Ss, Ss.rows());
         symmetric_solver->factorize(Ss);
 
         int i;
@@ -184,7 +184,7 @@ namespace polysolve::linear
 
             // 1
             //  iters{i}.yu = gmres(As, iters{i}.Rms, iter_gmrs, eps_gm, outer_iter_gmrs);
-            asymmetric_solver->analyzePattern(As, As.rows());
+            asymmetric_solver->analyze_pattern(As, As.rows());
             asymmetric_solver->factorize(As);
             assert(currentRms.size() == yu[i].size());
             asymmetric_solver->solve(currentRms, yu[i]);
@@ -251,7 +251,7 @@ namespace polysolve::linear
 
             // alpha = A\b;
             Eigen::VectorXd alpha = A.ldlt().solve(b);
-            // small_solver->analyzePattern(A, A.rows());
+            // small_solver->analyze_pattern(A, A.rows());
             // small_solver->solve(b, alpha);
 
             // alphau = alpha(1:i);

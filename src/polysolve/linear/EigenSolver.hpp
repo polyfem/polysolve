@@ -23,15 +23,15 @@ namespace polysolve::linear
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return m_Name; }
 
-        // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
+        // Constructor requires a solver name used for finding parameters in the json file passed to set_parameters
         EigenDirect(const std::string &name) { m_Name = name; }
 
     public:
         // Get info on the last solve step
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &K, const int precond_num) override;
+        virtual void analyze_pattern(const StiffnessMatrix &K, const int precond_num) override;
 
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &K) override;
@@ -56,18 +56,18 @@ namespace polysolve::linear
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return m_Name; }
 
-        // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
+        // Constructor requires a solver name used for finding parameters in the json file passed to set_parameters
         EigenIterative(const std::string &name) { m_Name = name; }
 
     public:
         // Set solver parameters
-        virtual void setParameters(const json &params) override;
+        virtual void set_parameters(const json &params) override;
 
         // Get info on the last solve step
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyzePattern(const StiffnessMatrix &K, const int precond_num) override;
+        virtual void analyze_pattern(const StiffnessMatrix &K, const int precond_num) override;
 
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &K) override;
@@ -94,12 +94,12 @@ namespace polysolve::linear
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return m_Name; }
 
-        // Constructor requires a solver name used for finding parameters in the json file passed to setParameters
+        // Constructor requires a solver name used for finding parameters in the json file passed to set_parameters
         EigenDenseSolver(const std::string &name) { m_Name = name; }
 
     public:
         // Get info on the last solve step
-        virtual void getInfo(json &params) const override;
+        virtual void get_info(json &params) const override;
 
         // Factorize system matrix
         virtual void factorize(const StiffnessMatrix &K) override;

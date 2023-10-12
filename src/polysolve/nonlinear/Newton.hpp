@@ -43,7 +43,11 @@ namespace polysolve::nonlinear
 
         void reset(const int ndof) override;
 
-        virtual int default_descent_strategy() override { return force_psd_projection ? 1 : 0; }
+        virtual void set_default_descent_strategy() override
+        {
+            reg_weight = 0;
+            descent_strategy = force_psd_projection ? 1 : 0;
+        }
         void increase_descent_strategy() override;
 
         using Superclass::descent_strategy_name;

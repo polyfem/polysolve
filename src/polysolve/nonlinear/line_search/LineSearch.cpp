@@ -125,7 +125,7 @@ namespace polysolve::nonlinear::line_search
         objFunc.gradient(x, grad);
 
         if (grad.norm() < 1e-30)
-            return 1;
+            return step_size;
 
         const bool use_grad_norm = grad.norm() < use_grad_norm_tol;
         if (use_grad_norm)

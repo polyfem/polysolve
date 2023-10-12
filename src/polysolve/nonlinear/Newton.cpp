@@ -85,9 +85,9 @@ namespace polysolve::nonlinear
             // check_direction will increase descent_strategy if needed
             return compute_update_direction(objFunc, x, grad, direction);
 
-        reg_weight /= reg_weight_dec;
-        if (reg_weight < reg_weight_min)
-            reg_weight = 0;
+        // reg_weight /= reg_weight_dec;
+        // if (reg_weight < reg_weight_min)
+        //     reg_weight = 0;
 
         return true;
     }

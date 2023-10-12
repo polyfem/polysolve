@@ -101,7 +101,7 @@ namespace polysolve::nonlinear
         // Compute the search/update direction
         virtual bool compute_update_direction(Problem &objFunc, const TVector &x_vec, const TVector &grad, TVector &direction) = 0;
 
-        virtual int default_descent_strategy() = 0;
+        virtual void set_default_descent_strategy() = 0;
         virtual void increase_descent_strategy() = 0;
 
         virtual bool is_direction_descent() { return true; }

@@ -262,7 +262,7 @@ namespace polysolve::nonlinear
             // Post update
             // -----------
 
-            descent_strategy = default_descent_strategy(); // Reset this for the next iterations
+            set_default_descent_strategy(); // Reset this for the next iterations
 
             const double step = (rate * delta_x).norm();
 
@@ -344,7 +344,7 @@ namespace polysolve::nonlinear
     void Solver::reset(const int ndof)
     {
         this->m_current.reset();
-        descent_strategy = default_descent_strategy();
+        set_default_descent_strategy();
         m_error_code = ErrorCode::SUCCESS;
 
         const std::string line_search_name = solver_info["line_search"];

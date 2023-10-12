@@ -245,7 +245,7 @@ TEST_CASE("non-linear", "[solver]")
 
     json solver_params, linear_solver_params;
     solver_params["x_delta"] = 1e-10;
-    solver_params["f_delta"] = 1e-10;
+    solver_params["f_delta"] = 1e-30;
     solver_params["force_psd_projection"] = false;
 
     solver_params["grad_norm"] = 1e-8;
@@ -278,18 +278,17 @@ TEST_CASE("non-linear", "[solver]")
                     continue;
                 solver_params["line_search"]["method"] = ls;
 
-                auto solver = Solver::create(solver_name,
-                                             solver_params,
-                                             linear_solver_params,
-                                             dt,
-                                             characteristic_length,
-                                             *logger);
-
                 TestProblem::TVector x(prob->size());
                 x.setZero();
 
                 for (int i = 0; i < N_RANDOM; ++i)
                 {
+                    auto solver = Solver::create(solver_name,
+                                                 solver_params,
+                                                 linear_solver_params,
+                                                 dt,
+                                                 characteristic_length,
+                                                 *logger);
                     try
                     {
                         solver->minimize(*prob, x);

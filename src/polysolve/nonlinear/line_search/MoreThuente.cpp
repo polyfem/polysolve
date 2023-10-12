@@ -18,7 +18,7 @@ namespace polysolve::nonlinear::line_search
         const double starting_step_size)
     {
         const double tmp = cppoptlib::MoreThuente<Problem, 1>::linesearch(x, delta_x, objFunc, starting_step_size);
-        assert(tmp <= starting_step_size);
-        return tmp;
+
+        return std::min(tmp, starting_step_size);
     }
 } // namespace polysolve::nonlinear::line_search

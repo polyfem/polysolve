@@ -262,7 +262,7 @@ TEST_CASE("non-linear", "[solver]")
     const double characteristic_length = 1;
 
     static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
-    logger->set_level(spdlog::level::warn);
+    logger->set_level(spdlog::level::err);
     for (auto &prob : problems)
     {
         for (auto solver_name : Solver::available_solvers())

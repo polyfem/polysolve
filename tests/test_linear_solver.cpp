@@ -74,6 +74,32 @@ TEST_CASE("jse", "[solver]")
     REQUIRE(err < 1e-8);
 }
 
+TEST_CASE("multi-solver", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    logger->set_level(spdlog::level::warn);
+
+    json input = {};
+    input["solver"] = {"Hypre", "Eigen::SimplicialLDLT"};
+    auto solver = Solver::create(input, *logger);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyze_pattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+    const double err = (A * x - b).norm();
+    INFO("solver: " + solver->name());
+    REQUIRE(err < 1e-8);
+}
+
 TEST_CASE("all", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
@@ -107,6 +133,8 @@ TEST_CASE("all", "[solver]")
         solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
         solver->solve(b, x);
+
+        REQUIRE(solver->name() == s);
 
         // solver->get_info(solver_info);
 

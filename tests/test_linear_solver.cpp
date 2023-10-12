@@ -2,9 +2,13 @@
 #include <polysolve/Types.hpp>
 #include <polysolve/linear/FEMSolver.hpp>
 
+#include <polysolve/Utils.hpp>
+
 #ifdef POLYSOLVE_WITH_AMGCL
 #include <polysolve/linear/AMGCL.hpp>
 #endif
+
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -44,6 +48,32 @@ void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
     fin.close();
     A.setFromTriplets(triple.begin(), triple.end());
 };
+
+TEST_CASE("jse", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    logger->set_level(spdlog::level::warn);
+
+    json input = {};
+    auto solver = Solver::create(input, *logger);
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x(b.size());
+    x.setZero();
+
+    solver->analyze_pattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+    const double err = (A * x - b).norm();
+    INFO("solver: " + solver->name());
+    REQUIRE(err < 1e-8);
+}
+
 TEST_CASE("all", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;

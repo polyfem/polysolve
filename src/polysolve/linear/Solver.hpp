@@ -45,7 +45,7 @@ namespace polysolve::linear
         // Virtual destructor
         virtual ~Solver() = default;
 
-        static std::unique_ptr<Solver> create(const json &params, spdlog::logger &logger, const bool strict_validation = false);
+        static std::unique_ptr<Solver> create(const json &params, spdlog::logger &logger, const bool strict_validation = true);
 
         // Static constructor
         //

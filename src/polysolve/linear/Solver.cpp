@@ -6,6 +6,7 @@
 #include "SaddlePointSolver.hpp"
 
 #include <jse/jse.h>
+#include <spdlog/spdlog.h>
 
 #include <fstream>
 

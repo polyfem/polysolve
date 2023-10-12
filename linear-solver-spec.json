@@ -6,7 +6,6 @@
         "optional": [
             "enable_overwrite_solver",
             "solver",
-            "adjoint_solver",
             "precond",
             "Eigen::LeastSquaresConjugateGradient",
             "Eigen::DGMRES",

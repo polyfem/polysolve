@@ -31,7 +31,6 @@ namespace polysolve::nonlinear
         static std::unique_ptr<Solver> create(const std::string &solver,
                                               const json &solver_params,
                                               const json &linear_solver_params,
-                                              const double dt,
                                               const double characteristic_length,
                                               spdlog::logger &logger);
         // List available solvers
@@ -47,7 +46,6 @@ namespace polysolve::nonlinear
         /// @param dt time step size (use 1 if not time-dependent) TODO
         /// @param logger
         Solver(const json &solver_params,
-               const double dt,
                const double characteristic_length,
                spdlog::logger &logger);
 
@@ -58,8 +56,6 @@ namespace polysolve::nonlinear
         void set_line_search(const std::string &line_search_name);
 
         void minimize(Problem &objFunc, TVector &x) override;
-
-        double line_search(const TVector &x, const TVector &delta_x, Problem &objFunc);
 
         const json &get_info() const { return solver_info; }
 
@@ -84,10 +80,8 @@ namespace polysolve::nonlinear
         //                        Solver parameters
         // ====================================================================
 
-        bool normalize_gradient;
         double use_grad_norm_tol;
         double first_grad_norm_tol;
-        double dt;
 
         const double characteristic_length;
 
@@ -99,7 +93,7 @@ namespace polysolve::nonlinear
         virtual void reset(const int ndof);
 
         // Compute the search/update direction
-        virtual bool compute_update_direction(Problem &objFunc, const TVector &x_vec, const TVector &grad, TVector &direction) = 0;
+        virtual void compute_update_direction(Problem &objFunc, const TVector &x_vec, const TVector &grad, TVector &direction) = 0;
 
         virtual void set_default_descent_strategy() = 0;
         virtual void increase_descent_strategy() = 0;

@@ -5,11 +5,9 @@
 namespace polysolve::nonlinear
 {
     LBFGS::LBFGS(const json &solver_params,
-                 const double dt,
                  const double characteristic_length,
                  spdlog::logger &logger)
         : Superclass(solver_params,
-                     dt,
                      characteristic_length,
                      logger)
     {
@@ -49,7 +47,7 @@ namespace polysolve::nonlinear
         this->descent_strategy = 2;
     }
 
-    bool LBFGS::compute_update_direction(
+    void LBFGS::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
@@ -75,7 +73,5 @@ namespace polysolve::nonlinear
 
         m_prev_x = x;
         m_prev_grad = grad;
-
-        return true;
     }
 } // namespace polysolve::nonlinear

@@ -7,9 +7,9 @@ namespace polysolve::nonlinear
 
     BFGS::BFGS(const json &solver_params,
                const json &linear_solver_params,
-               const double dt, const double characteristic_length,
+               const double characteristic_length,
                spdlog::logger &logger)
-        : Superclass(solver_params, dt, characteristic_length, logger)
+        : Superclass(solver_params, characteristic_length, logger)
     {
         linear_solver = polysolve::linear::Solver::create(
             linear_solver_params["solver"], linear_solver_params["precond"]);
@@ -34,6 +34,8 @@ namespace polysolve::nonlinear
         if (this->descent_strategy == 1)
             this->descent_strategy++;
 
+        assert(m_prev_x.size() > 0);
+        reset_history(m_prev_x.size());
         assert(this->descent_strategy <= 2);
     }
 
@@ -54,7 +56,7 @@ namespace polysolve::nonlinear
         this->descent_strategy = 2;
     }
 
-    bool BFGS::compute_update_direction(
+    void BFGS::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
@@ -79,7 +81,8 @@ namespace polysolve::nonlinear
                 // warn if using gradient descent
                 m_logger.warn("Unable to factorize Hessian: \"{}\"; reverting to {}",
                               err.what(), this->descent_strategy_name());
-                return compute_update_direction(objFunc, x, grad, direction);
+                compute_update_direction(objFunc, x, grad, direction);
+                return;
             }
 
             TVector y = grad - m_prev_grad;
@@ -94,28 +97,5 @@ namespace polysolve::nonlinear
 
         m_prev_x = x;
         m_prev_grad = grad;
-
-        if (std::isnan(direction.squaredNorm()))
-        {
-            reset_history(x.size());
-            increase_descent_strategy();
-            m_logger.log(
-                this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug,
-                "nan in direction {} (||∇f||={}); reverting to {}",
-                direction.dot(grad), this->descent_strategy_name());
-            return compute_update_direction(objFunc, x, grad, direction);
-        }
-        else if (grad.squaredNorm() != 0 && direction.dot(grad) >= 0)
-        {
-            reset_history(x.size());
-            increase_descent_strategy();
-            m_logger.log(
-                this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug,
-                "BFGS direction is not a descent direction (Δx⋅g={}≥0); reverting to {}",
-                direction.dot(grad), this->descent_strategy_name());
-            return compute_update_direction(objFunc, x, grad, direction);
-        }
-
-        return true;
     }
 } // namespace polysolve::nonlinear

@@ -20,7 +20,7 @@ namespace polysolve::nonlinear
 
         BFGS(const json &solver_params,
              const json &linear_solver_params,
-             const double dt, const double characteristic_length,
+             const double characteristic_length,
              spdlog::logger &logger);
 
         std::string name() const override { return "BFGS"; }
@@ -43,7 +43,7 @@ namespace polysolve::nonlinear
 
         void reset_history(const int ndof);
 
-        virtual bool compute_update_direction(
+        virtual void compute_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,

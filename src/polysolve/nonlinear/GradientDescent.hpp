@@ -15,7 +15,6 @@ namespace polysolve::nonlinear
         using typename Superclass::TVector;
 
         GradientDescent(const json &solver_params_,
-                        const double dt,
                         const double characteristic_length,
                         spdlog::logger &logger);
 
@@ -31,7 +30,7 @@ namespace polysolve::nonlinear
     protected:
         void reset(const int ndof) override;
 
-        virtual bool compute_update_direction(
+        virtual void compute_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,

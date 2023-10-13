@@ -16,7 +16,6 @@ namespace polysolve::nonlinear
         static std::unique_ptr<Solver> create(const std::string &solver,
                                               const json &solver_params,
                                               const json &linear_solver_params,
-                                              const double dt,
                                               const double characteristic_length,
                                               spdlog::logger &logger);
         // List available solvers
@@ -27,7 +26,6 @@ namespace polysolve::nonlinear
         using typename Superclass::TVector;
 
         BoxConstraintSolver(const json &solver_params,
-                            const double dt,
                             const double characteristic_length,
                             spdlog::logger &logger);
 

@@ -6,11 +6,10 @@ namespace polysolve::nonlinear
     DenseNewton::DenseNewton(
         const json &solver_params,
         const json &linear_solver_params,
-        const double dt, const double characteristic_length,
+        const double characteristic_length,
         spdlog::logger &logger)
         : Superclass(solver_params,
                      linear_solver_params,
-                     dt,
                      characteristic_length,
                      logger)
     {

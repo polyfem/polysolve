@@ -16,7 +16,7 @@ namespace polysolve::nonlinear
 
         DenseNewton(const json &solver_params,
                     const json &linear_solver_params,
-                    const double dt, const double characteristic_length,
+                    const double characteristic_length,
                     spdlog::logger &logger);
 
         std::string name() const override { return "DenseNewton"; }

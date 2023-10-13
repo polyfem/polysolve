@@ -5,10 +5,9 @@
 namespace polysolve::nonlinear
 {
     MMA::MMA(const json &solver_params,
-             const double dt,
              const double characteristic_length,
              spdlog::logger &logger)
-        : Superclass(solver_params, dt, characteristic_length, logger)
+        : Superclass(solver_params, characteristic_length, logger)
     {
         this->m_line_search = nullptr;
     }
@@ -36,7 +35,7 @@ namespace polysolve::nonlinear
         this->descent_strategy++;
     }
 
-    bool MMA::compute_update_direction(
+    void MMA::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
@@ -67,6 +66,7 @@ namespace polysolve::nonlinear
         mma->Update(y.data(), grad.data(), g.data(), dg.data(), lower_bound.data(), upper_bound.data());
         direction = y - x;
 
+        // maybe remove me
         if (std::isnan(direction.squaredNorm()))
         {
             log_and_throw_error(m_logger, "nan in direction.");
@@ -76,7 +76,5 @@ namespace polysolve::nonlinear
         //     polyfem::logger().error("Direction is not a descent direction, stop.");
         //     throw std::runtime_error("Direction is not a descent direction, stop.");
         // }
-
-        return true;
     }
 } // namespace polysolve::nonlinear

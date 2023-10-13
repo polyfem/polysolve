@@ -6,10 +6,9 @@ namespace polysolve::nonlinear
     Newton::Newton(
         const json &solver_params,
         const json &linear_solver_params,
-        const double dt,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(solver_params, dt, characteristic_length, logger)
+        : Superclass(solver_params, characteristic_length, logger)
     {
         force_psd_projection = solver_params["force_psd_projection"];
     }
@@ -56,7 +55,7 @@ namespace polysolve::nonlinear
 
     // =======================================================================
 
-    bool Newton::compute_update_direction(
+    void Newton::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
@@ -65,7 +64,7 @@ namespace polysolve::nonlinear
         if (this->descent_strategy == 2)
         {
             direction = -grad;
-            return true;
+            return;
         }
 
         if (this->descent_strategy == 1)
@@ -75,21 +74,12 @@ namespace polysolve::nonlinear
         else
             assert(false);
 
+        // solve_linear_system will increase descent_strategy if needed
         const double residual = solve_linear_system(objFunc, x, grad, direction);
-
-        if (std::isnan(residual))
-            // solve_linear_system will increase descent_strategy if needed
-            return compute_update_direction(objFunc, x, grad, direction);
 
         if (!check_direction(residual, grad, direction))
             // check_direction will increase descent_strategy if needed
-            return compute_update_direction(objFunc, x, grad, direction);
-
-        // reg_weight /= reg_weight_dec;
-        // if (reg_weight < reg_weight_min)
-        //     reg_weight = 0;
-
-        return true;
+            compute_update_direction(objFunc, x, grad, direction);
     }
 
     // =======================================================================

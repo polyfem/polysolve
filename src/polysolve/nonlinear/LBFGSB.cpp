@@ -6,10 +6,9 @@
 namespace polysolve::nonlinear
 {
     LBFGSB::LBFGSB(const json &solver_params,
-                   const double dt,
                    const double characteristic_length,
                    spdlog::logger &logger)
-        : Superclass(solver_params, dt, characteristic_length, logger)
+        : Superclass(solver_params, characteristic_length, logger)
     {
         m_history_size = solver_params.value("history_size", 6);
     }
@@ -54,7 +53,7 @@ namespace polysolve::nonlinear
         this->descent_strategy = 1;
     }
 
-    bool LBFGSB::compute_update_direction(
+    void LBFGSB::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
@@ -105,6 +104,7 @@ namespace polysolve::nonlinear
         //     m_logger.debug("direc: {}", direction.transpose());
         // }
 
+        // maybe remove me?
         if (std::isnan(direction.squaredNorm()))
         {
             reset_history(x.size());
@@ -128,7 +128,5 @@ namespace polysolve::nonlinear
 
         m_prev_x = x;
         m_prev_grad = grad;
-
-        return true;
     }
 } // namespace polysolve::nonlinear

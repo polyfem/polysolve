@@ -22,29 +22,28 @@ namespace polysolve::nonlinear
     std::unique_ptr<Solver> Solver::create(const std::string &solver,
                                            const json &solver_params,
                                            const json &linear_solver_params,
-                                           const double dt,
                                            const double characteristic_length,
                                            spdlog::logger &logger)
     {
         if (solver == "BFGS")
         {
-            return std::make_unique<BFGS>(solver_params, linear_solver_params, dt, characteristic_length, logger);
+            return std::make_unique<BFGS>(solver_params, linear_solver_params, characteristic_length, logger);
         }
         else if (solver == "DenseNewton" || solver == "dense_newton")
         {
-            return std::make_unique<DenseNewton>(solver_params, linear_solver_params, dt, characteristic_length, logger);
+            return std::make_unique<DenseNewton>(solver_params, linear_solver_params, characteristic_length, logger);
         }
         else if (solver == "SparseNewton" || solver == "sparse_newton")
         {
-            return std::make_unique<SparseNewton>(solver_params, linear_solver_params, dt, characteristic_length, logger);
+            return std::make_unique<SparseNewton>(solver_params, linear_solver_params, characteristic_length, logger);
         }
         else if (solver == "GradientDescent" || solver == "gradient_descent")
         {
-            return std::make_unique<GradientDescent>(solver_params, dt, characteristic_length, logger);
+            return std::make_unique<GradientDescent>(solver_params, characteristic_length, logger);
         }
         else if (solver == "LBFGS" || solver == "L-BFGS")
         {
-            return std::make_unique<LBFGS>(solver_params, dt, characteristic_length, logger);
+            return std::make_unique<LBFGS>(solver_params, characteristic_length, logger);
         }
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }
@@ -59,10 +58,9 @@ namespace polysolve::nonlinear
     }
 
     Solver::Solver(const json &solver_params,
-                   const double dt,
                    const double characteristic_length,
                    spdlog::logger &logger)
-        : dt(dt), m_logger(logger), characteristic_length(characteristic_length)
+        : m_logger(logger), characteristic_length(characteristic_length)
     {
         TCriteria criteria = TCriteria::defaults();
         criteria.xDelta = solver_params["x_delta"];
@@ -77,7 +75,6 @@ namespace polysolve::nonlinear
         // criteria.condition = solver_params["condition"];
         this->setStopCriteria(criteria);
 
-        normalize_gradient = solver_params["relative_gradient"];
         use_grad_norm_tol = solver_params["line_search"]["use_grad_norm_tol"];
 
         first_grad_norm_tol = solver_params["first_grad_norm_tol"];
@@ -106,58 +103,25 @@ namespace polysolve::nonlinear
         // ---------------------------
         // Initialize the minimization
         // ---------------------------
-
         reset(x.size()); // place for children to initialize their fields
+
+        m_line_search->use_grad_norm_tol = use_grad_norm_tol;
 
         TVector grad = TVector::Zero(x.rows());
         TVector delta_x = TVector::Zero(x.rows());
 
-        // double factor = 1e-5;
-
         // Set these to nan to indicate they have not been computed yet
         double old_energy = NaN;
-
         {
             POLYSOLVE_SCOPED_STOPWATCH("constraint set update", constraint_set_update_time, m_logger);
             objFunc.solution_changed(x);
         }
 
-        {
-            POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
-            objFunc.gradient(x, grad);
-        }
-        double first_grad_norm = compute_grad_norm(x, grad);
-        if (std::isnan(first_grad_norm))
-        {
-            this->m_status = cppoptlib::Status::UserDefined;
-            m_error_code = ErrorCode::NAN_ENCOUNTERED;
-            log_and_throw_error(m_logger, "[{}] Initial gradient is nan; stopping", name());
-            return;
-        }
-        this->m_current.xDelta = NaN; // we don't know the initial step size
-        this->m_current.fDelta = old_energy;
-        this->m_current.gradNorm = first_grad_norm / (normalize_gradient ? first_grad_norm : 1);
-
-        const auto current_g_norm = this->m_stop.gradNorm;
+        const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
-        this->m_status = checkConvergence(this->m_stop, this->m_current);
-        if (this->m_status != cppoptlib::Status::Continue)
-        {
-            POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
-            this->m_current.fDelta = objFunc.value(x);
-            m_logger.info(
-                "[{}] Not even starting, {} (f={:g} ‖∇f‖={:g} g={:g} tol={:g})",
-                name(), this->m_status, this->m_current.fDelta, first_grad_norm, this->m_current.gradNorm, this->m_stop.gradNorm);
-            update_solver_info(this->m_current.fDelta);
-            return;
-        }
-        this->m_stop.gradNorm = current_g_norm;
 
         StopWatch stop_watch("non-linear solver", this->total_time, m_logger);
         stop_watch.start();
-
-        if (m_line_search)
-            m_line_search->use_grad_norm_tol = use_grad_norm_tol;
 
         objFunc.save_to_file(x);
 
@@ -171,11 +135,17 @@ namespace polysolve::nonlinear
 
         do
         {
+            this->m_current.xDelta = NaN;
+            this->m_current.fDelta = NaN;
+            this->m_current.gradNorm = NaN;
+
+            //////////// Energy
             double energy;
             {
                 POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
                 energy = objFunc.value(x);
             }
+
             if (!std::isfinite(energy))
             {
                 this->m_status = cppoptlib::Status::UserDefined;
@@ -184,6 +154,13 @@ namespace polysolve::nonlinear
                 break;
             }
 
+            this->m_current.fDelta = std::abs(old_energy - energy); // / std::abs(old_energy);
+            old_energy = energy;
+            this->m_status = checkConvergence(this->m_stop, this->m_current);
+            if (this->m_status != cppoptlib::Status::Continue)
+                break;
+
+            ///////////// gradient
             {
                 POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
                 objFunc.gradient(x, grad);
@@ -197,17 +174,17 @@ namespace polysolve::nonlinear
                 log_and_throw_error(m_logger, "[{}] Gradient is nan; stopping", name());
                 break;
             }
+            this->m_current.gradNorm = grad_norm;
+            this->m_status = checkConvergence(this->m_stop, this->m_current);
+            if (this->m_status != cppoptlib::Status::Continue)
+                break;
 
             // ------------------------
             // Compute update direction
             // ------------------------
-
             // Compute a Δx to update the variable
-            if (!compute_update_direction(objFunc, x, grad, delta_x))
-            {
-                this->m_status = cppoptlib::Status::Continue;
-                continue;
-            }
+            //
+            compute_update_direction(objFunc, x, grad, delta_x);
 
             if (is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0)
             {
@@ -230,30 +207,34 @@ namespace polysolve::nonlinear
             }
 
             // Use the maximum absolute displacement value divided by the timestep,
-            // so the units are in velocity units.
-            // TODO: Also divide by the world scale to make this criteria scale invariant.
-            this->m_current.xDelta = descent_strategy == 2 ? NaN : (delta_x_norm / dt);
-            this->m_current.fDelta = std::abs(old_energy - energy); // / std::abs(old_energy);
-            // if normalize_gradient, use relative to first norm
-            this->m_current.gradNorm = grad_norm / (normalize_gradient ? first_grad_norm : 1);
-
+            this->m_current.xDelta = descent_strategy == 2 ? NaN : delta_x_norm;
             this->m_status = checkConvergence(this->m_stop, this->m_current);
-
-            old_energy = energy;
+            if (this->m_status != cppoptlib::Status::Continue)
+                break;
 
             // ---------------
             // Variable update
             // ---------------
 
             // Perform a line_search to compute step scale
-            double rate = line_search(x, delta_x, objFunc);
+            double rate = m_line_search->line_search(x, delta_x, objFunc);
             if (std::isnan(rate))
             {
-                // descent_strategy set by line_search upon failure
-                if (this->m_status == cppoptlib::Status::Continue)
+                assert(this->m_status == cppoptlib::Status::Continue);
+
+                if (descent_strategy < 2) // 2 is the max, grad descent
+                {
+                    increase_descent_strategy();
+                    m_logger.warn(
+                        "[{}] Line search failed; reverting to {}", name(), descent_strategy_name());
                     continue;
+                }
                 else
-                    break;
+                {
+                    assert(descent_strategy == 2);                   // failed on gradient descent
+                    this->m_status = cppoptlib::Status::UserDefined; // Line search failed on gradient descent, so quit!
+                    log_and_throw_error(m_logger, "[{}] Line search failed on gradient descent; stopping", name());
+                }
             }
 
             x += rate * delta_x;
@@ -287,6 +268,9 @@ namespace polysolve::nonlinear
 
             objFunc.save_to_file(x);
 
+            // reset the tolerance, since in the first iter it might be smaller
+            this->m_stop.gradNorm = g_norm_tol;
+
         } while (objFunc.callback(this->m_current, x) && (this->m_status == cppoptlib::Status::Continue));
 
         stop_watch.stop();
@@ -297,8 +281,6 @@ namespace polysolve::nonlinear
 
         if (!allow_out_of_iterations && this->m_status == cppoptlib::Status::IterationLimit)
             log_and_throw_error(m_logger, "[{}] Reached iteration limit (limit={})", name(), this->m_stop.iterations);
-        if (this->m_current.iterations == 0)
-            log_and_throw_error(m_logger, "[{}] Unable to take a step", name());
         if (this->m_status == cppoptlib::Status::UserDefined && m_error_code != ErrorCode::SUCCESS)
             log_and_throw_error(m_logger, "[{}] Failed to find minimizer", name());
 
@@ -310,35 +292,6 @@ namespace polysolve::nonlinear
 
         log_times();
         update_solver_info(objFunc.value(x));
-    }
-
-    double Solver::line_search(const TVector &x, const TVector &delta_x, Problem &objFunc)
-    {
-        POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
-
-        if (!m_line_search)
-        {
-            objFunc.solution_changed(x + delta_x);
-            return 1; // no linesearch
-        }
-
-        double rate = m_line_search->line_search(x, delta_x, objFunc);
-
-        if (std::isnan(rate) && descent_strategy < 2) // 2 is the max, grad descent
-        {
-            increase_descent_strategy();
-            m_logger.warn(
-                "[{}] Line search failed; reverting to {}", name(), descent_strategy_name());
-            this->m_status = cppoptlib::Status::Continue; // Try the step again with gradient descent
-        }
-        else if (std::isnan(rate))
-        {
-            assert(descent_strategy == 2);                   // failed on gradient descent
-            this->m_status = cppoptlib::Status::UserDefined; // Line search failed on gradient descent, so quit!
-            log_and_throw_error(m_logger, "[{}] Line search failed on gradient descent; stopping", name());
-        }
-
-        return rate;
     }
 
     void Solver::reset(const int ndof)
@@ -381,7 +334,6 @@ namespace polysolve::nonlinear
         solver_info["fDelta"] = crit.fDelta;
         solver_info["gradNorm"] = crit.gradNorm;
         solver_info["condition"] = crit.condition;
-        solver_info["relative_gradient"] = normalize_gradient;
 
         double per_iteration = crit.iterations ? crit.iterations : 1;
 

@@ -258,7 +258,6 @@ TEST_CASE("non-linear", "[solver]")
     linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
     linear_solver_params["precond"] = polysolve::linear::Solver::default_precond();
 
-    const double dt = 0.1;
     const double characteristic_length = 1;
 
     static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
@@ -286,7 +285,6 @@ TEST_CASE("non-linear", "[solver]")
                     auto solver = Solver::create(solver_name,
                                                  solver_params,
                                                  linear_solver_params,
-                                                 dt,
                                                  characteristic_length,
                                                  *logger);
                     try

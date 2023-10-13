@@ -17,7 +17,6 @@ namespace polysolve::nonlinear
         using typename Superclass::TVector;
 
         LBFGS(const json &solver_params,
-              const double dt,
               const double characteristic_length,
               spdlog::logger &logger);
 
@@ -33,7 +32,7 @@ namespace polysolve::nonlinear
 
         void reset(const int ndof) override;
 
-        bool compute_update_direction(
+        void compute_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,

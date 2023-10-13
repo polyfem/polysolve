@@ -14,7 +14,6 @@ namespace polysolve::nonlinear
 
         Newton(const json &solver_params,
                const json &linear_solver_params,
-               const double dt,
                const double characteristic_length,
                spdlog::logger &logger);
 
@@ -25,7 +24,7 @@ namespace polysolve::nonlinear
                                            const TVector &x, const TVector &grad,
                                            TVector &direction) = 0;
 
-        bool compute_update_direction(Problem &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
+        void compute_update_direction(Problem &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
         bool check_direction(const double residual, const TVector &grad, const TVector &direction);
 
         // ====================================================================

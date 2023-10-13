@@ -4,6 +4,7 @@
 #include "Backtracking.hpp"
 #include "CppOptArmijo.hpp"
 #include "MoreThuente.hpp"
+#include "NoLineSearch.hpp"
 
 #include <polysolve/Utils.hpp>
 
@@ -40,7 +41,7 @@ namespace polysolve::nonlinear::line_search
         }
         else if (name == "none")
         {
-            return nullptr;
+            return std::make_shared<NoLineSearch>(logger);
         }
         else
         {

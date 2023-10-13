@@ -9,22 +9,49 @@
 
 #include <polysolve/Utils.hpp>
 
+#include <jse/jse.h>
+
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/bundled/color.h>
 #include <spdlog/fmt/ostr.h>
 
 #include <iomanip>
+#include <fstream>
 
 namespace polysolve::nonlinear
 {
 
     // Static constructor
-    std::unique_ptr<Solver> Solver::create(const std::string &solver,
-                                           const json &solver_params,
-                                           const json &linear_solver_params,
-                                           const double characteristic_length,
-                                           spdlog::logger &logger)
+    std::unique_ptr<Solver> Solver::create(
+        const json &solver_params_in,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const bool strict_validation)
     {
+        json solver_params = solver_params_in; // mutable copy
+
+        json rules;
+        jse::JSE jse;
+
+        jse.strict = strict_validation;
+        const std::string input_spec = POLYSOLVE_NON_LINEAR_SPEC;
+        std::ifstream file(input_spec);
+
+        if (file.is_open())
+            file >> rules;
+        else
+            log_and_throw_error(logger, "unable to open {} rules", input_spec);
+
+        const bool valid_input = jse.verify_json(solver_params, rules);
+
+        if (!valid_input)
+            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
+
+        solver_params = jse.inject_defaults(solver_params, rules);
+
+        const std::string solver = solver_params["solver"];
+
         if (solver == "BFGS")
         {
             return std::make_unique<BFGS>(solver_params, linear_solver_params, characteristic_length, logger);
@@ -82,7 +109,7 @@ namespace polysolve::nonlinear
         use_grad_norm_tol *= characteristic_length;
         first_grad_norm_tol *= characteristic_length;
 
-        set_line_search(solver_params["line_search"]["method"]);
+        set_line_search(solver_params);
     }
 
     double Solver::compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const
@@ -90,10 +117,10 @@ namespace polysolve::nonlinear
         return grad.norm();
     }
 
-    void Solver::set_line_search(const std::string &line_search_name)
+    void Solver::set_line_search(const json &params)
     {
-        m_line_search = line_search::LineSearch::create(line_search_name, m_logger);
-        solver_info["line_search"] = line_search_name;
+        m_line_search = line_search::LineSearch::create(params, m_logger);
+        solver_info["line_search"] = params["line_search"]["method"];
     }
 
     void Solver::minimize(Problem &objFunc, TVector &x)

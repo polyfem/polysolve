@@ -8,14 +8,10 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    Armijo::Armijo(spdlog::logger &logger)
-        : Superclass(logger)
+    Armijo::Armijo(const json &params, spdlog::logger &logger)
+        : Superclass(params, logger)
     {
-        min_step_size = 1e-7;
-        max_step_size_iter = 20; // std::numeric_limits<int>::max();
-
-        default_init_step_size = 1.0;
-        step_ratio = 0.5;
+        c = params["line_search"]["Armijo"]["c"];
     }
 
     double Armijo::compute_descent_step_size(

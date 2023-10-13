@@ -31,10 +31,10 @@ namespace polysolve::nonlinear
         //                        Solver parameters
         // ====================================================================
 
-        static constexpr double reg_weight_min = 1e-8; // needs to be greater than zero
-        static constexpr double reg_weight_max = 1e8;
-        static constexpr double reg_weight_inc = 10;
-        static constexpr double reg_weight_dec = 2;
+        double reg_weight_min; // needs to be greater than zero
+        double reg_weight_max;
+        double reg_weight_inc;
+        double reg_weight_dec;
 
         // ====================================================================
         //                           Solver state

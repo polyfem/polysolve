@@ -10,7 +10,12 @@ namespace polysolve::nonlinear
         spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger)
     {
-        force_psd_projection = solver_params["force_psd_projection"];
+        force_psd_projection = solver_params["Newton"]["force_psd_projection"];
+
+        reg_weight_min = solver_params["Newton"]["reg_weight_min"];
+        reg_weight_max = solver_params["Newton"]["reg_weight_max"];
+        reg_weight_inc = solver_params["Newton"]["reg_weight_inc"];
+        reg_weight_dec = solver_params["Newton"]["reg_weight_dec"];
     }
 
     // =======================================================================

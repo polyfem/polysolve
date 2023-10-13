@@ -9,14 +9,9 @@
 namespace polysolve::nonlinear::line_search
 {
 
-    Backtracking::Backtracking(spdlog::logger &logger)
-        : Superclass(logger)
+    Backtracking::Backtracking(const json &params, spdlog::logger &logger)
+        : Superclass(params, logger)
     {
-        this->min_step_size = 0;
-        this->max_step_size_iter = 100; // std::numeric_limits<int>::max();
-
-        default_init_step_size = 1.0;
-        step_ratio = 0.5;
     }
 
     double Backtracking::compute_descent_step_size(

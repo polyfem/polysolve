@@ -28,11 +28,13 @@ namespace polysolve::nonlinear
         // @param[in]  solver   Solver type
         // @param[in]  precond  Preconditioner for iterative solvers
         //
-        static std::unique_ptr<Solver> create(const std::string &solver,
-                                              const json &solver_params,
-                                              const json &linear_solver_params,
-                                              const double characteristic_length,
-                                              spdlog::logger &logger);
+        static std::unique_ptr<Solver> create(
+            const json &solver_params,
+            const json &linear_solver_params,
+            const double characteristic_length,
+            spdlog::logger &logger,
+            const bool strict_validation = true);
+
         // List available solvers
         static std::vector<std::string> available_solvers();
 
@@ -53,7 +55,7 @@ namespace polysolve::nonlinear
 
         virtual std::string name() const = 0;
 
-        void set_line_search(const std::string &line_search_name);
+        void set_line_search(const json &params);
 
         void minimize(Problem &objFunc, TVector &x) override;
 

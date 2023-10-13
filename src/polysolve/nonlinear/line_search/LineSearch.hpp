@@ -15,7 +15,7 @@ namespace polysolve::nonlinear::line_search
         using Scalar = typename Problem::Scalar;
         using TVector = typename Problem::TVector;
 
-        LineSearch(spdlog::logger &m_logger);
+        LineSearch(const json &params, spdlog::logger &m_logger);
         virtual ~LineSearch() = default;
 
         double line_search(
@@ -24,7 +24,7 @@ namespace polysolve::nonlinear::line_search
             Problem &objFunc);
 
         static std::shared_ptr<LineSearch> create(
-            const std::string &name,
+            const json &params,
             spdlog::logger &logger);
 
         static std::vector<std::string> available_methods();
@@ -51,13 +51,13 @@ namespace polysolve::nonlinear::line_search
         double use_grad_norm_tol = -1;
 
     protected:
-        double min_step_size = 0;
-        int max_step_size_iter = 100;
+        double min_step_size;
+        int max_step_size_iter;
         int cur_iter = 0;
         spdlog::logger &m_logger;
 
-        double default_init_step_size = 1;
-        double step_ratio = 0.5;
+        double default_init_step_size;
+        double step_ratio;
 
         virtual double compute_descent_step_size(
             const TVector &x,

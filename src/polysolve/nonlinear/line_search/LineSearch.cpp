@@ -16,32 +16,33 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    std::shared_ptr<LineSearch> LineSearch::create(const std::string &name, spdlog::logger &logger)
+    std::shared_ptr<LineSearch> LineSearch::create(const json &params, spdlog::logger &logger)
     {
+        const std::string name = params["line_search"]["method"];
         if (name == "armijo" || name == "Armijo")
         {
-            return std::make_shared<Armijo>(logger);
+            return std::make_shared<Armijo>(params, logger);
         }
         else if (name == "armijo_alt" || name == "ArmijoAlt")
         {
-            return std::make_shared<CppOptArmijo>(logger);
+            return std::make_shared<CppOptArmijo>(params, logger);
         }
         else if (name == "bisection" || name == "Bisection")
         {
             logger.warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
-            return std::make_shared<Backtracking>(logger);
+            return std::make_shared<Backtracking>(params, logger);
         }
         else if (name == "backtracking" || name == "Backtracking")
         {
-            return std::make_shared<Backtracking>(logger);
+            return std::make_shared<Backtracking>(params, logger);
         }
         else if (name == "more_thuente" || name == "MoreThuente")
         {
-            return std::make_shared<MoreThuente>(logger);
+            return std::make_shared<MoreThuente>(params, logger);
         }
         else if (name == "none")
         {
-            return std::make_shared<NoLineSearch>(logger);
+            return std::make_shared<NoLineSearch>(params, logger);
         }
         else
         {
@@ -59,9 +60,13 @@ namespace polysolve::nonlinear::line_search
                  "none"}};
     }
 
-    LineSearch::LineSearch(spdlog::logger &logger)
+    LineSearch::LineSearch(const json &params, spdlog::logger &logger)
         : m_logger(logger)
     {
+        min_step_size = params["line_search"]["min_step_size"];
+        max_step_size_iter = params["line_search"]["max_step_size_iter"];
+        default_init_step_size = params["line_search"]["default_init_step_size"];
+        step_ratio = params["line_search"]["step_ratio"];
     }
 
     double LineSearch::line_search(

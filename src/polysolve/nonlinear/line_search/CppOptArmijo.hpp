@@ -11,7 +11,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        CppOptArmijo(spdlog::logger &logger);
+        CppOptArmijo(const json &params, spdlog::logger &logger);
 
     protected:
         double compute_descent_step_size(

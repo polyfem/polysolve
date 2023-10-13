@@ -4,8 +4,8 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    MoreThuente::MoreThuente(spdlog::logger &logger)
-        : Superclass(logger)
+    MoreThuente::MoreThuente(const json &params, spdlog::logger &logger)
+        : Superclass(params, logger)
     {
     }
 

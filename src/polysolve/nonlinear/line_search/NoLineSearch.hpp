@@ -10,7 +10,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        NoLineSearch(spdlog::logger &logger);
+        NoLineSearch(const json &params, spdlog::logger &logger);
 
     protected:
         double compute_descent_step_size(

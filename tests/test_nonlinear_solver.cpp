@@ -244,19 +244,7 @@ TEST_CASE("non-linear", "[solver]")
     problems.push_back(std::make_unique<Beale>());
 
     json solver_params, linear_solver_params;
-    solver_params["x_delta"] = 1e-10;
-    solver_params["f_delta"] = 1e-30;
-    solver_params["force_psd_projection"] = false;
-
-    solver_params["grad_norm"] = 1e-8;
-    solver_params["max_iterations"] = 500;
-    solver_params["relative_gradient"] = false;
-    solver_params["line_search"]["use_grad_norm_tol"] = 1e-8;
-    solver_params["first_grad_norm_tol"] = 1e-10;
-    solver_params["line_search"]["method"] = "backtracking";
-
-    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
-    linear_solver_params["precond"] = polysolve::linear::Solver::default_precond();
+    solver_params["line_search"] = {};
 
     const double characteristic_length = 1;
 
@@ -266,10 +254,7 @@ TEST_CASE("non-linear", "[solver]")
     {
         for (auto solver_name : Solver::available_solvers())
         {
-            if (solver_name == "BFGS" || solver_name == "dense_newton")
-                linear_solver_params["solver"] = "Eigen::LDLT";
-            else
-                linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+            solver_params["solver"] = solver_name;
 
             for (const auto &ls : line_search::LineSearch::available_methods())
             {
@@ -282,8 +267,7 @@ TEST_CASE("non-linear", "[solver]")
 
                 for (int i = 0; i < N_RANDOM; ++i)
                 {
-                    auto solver = Solver::create(solver_name,
-                                                 solver_params,
+                    auto solver = Solver::create(solver_params,
                                                  linear_solver_params,
                                                  characteristic_length,
                                                  *logger);

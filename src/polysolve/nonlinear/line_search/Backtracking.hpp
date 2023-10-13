@@ -11,7 +11,7 @@ namespace polysolve::nonlinear::line_search
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        Backtracking(spdlog::logger &logger);
+        Backtracking(const json &params, spdlog::logger &logger);
 
     protected:
         double compute_descent_step_size(

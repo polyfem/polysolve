@@ -11,7 +11,7 @@ namespace polysolve::nonlinear
                      characteristic_length,
                      logger)
     {
-        m_history_size = solver_params.value("history_size", 6);
+        m_history_size = solver_params["LBFGS"]["history_size"];
     }
 
     std::string LBFGS::descent_strategy_name(int descent_strategy) const

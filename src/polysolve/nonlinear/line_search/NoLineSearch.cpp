@@ -2,8 +2,8 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    NoLineSearch::NoLineSearch(spdlog::logger &logger)
-        : Superclass(logger)
+    NoLineSearch::NoLineSearch(const json &params, spdlog::logger &logger)
+        : Superclass(params, logger)
     {
     }
 

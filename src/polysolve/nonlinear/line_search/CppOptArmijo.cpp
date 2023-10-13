@@ -4,8 +4,8 @@
 
 namespace polysolve::nonlinear::line_search
 {
-    CppOptArmijo::CppOptArmijo(spdlog::logger &logger)
-        : Superclass(logger)
+    CppOptArmijo::CppOptArmijo(const json &params, spdlog::logger &logger)
+        : Superclass(params, logger)
     {
     }
 

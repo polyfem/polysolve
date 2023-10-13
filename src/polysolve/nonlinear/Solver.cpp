@@ -182,7 +182,6 @@ namespace polysolve::nonlinear
             }
 
             this->m_current.fDelta = std::abs(old_energy - energy); // / std::abs(old_energy);
-            old_energy = energy;
             this->m_status = checkConvergence(this->m_stop, this->m_current);
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
@@ -265,6 +264,7 @@ namespace polysolve::nonlinear
             }
 
             x += rate * delta_x;
+            old_energy = energy;
 
             // -----------
             // Post update

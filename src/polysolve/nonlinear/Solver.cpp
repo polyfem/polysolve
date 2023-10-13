@@ -60,7 +60,7 @@ namespace polysolve::nonlinear
         {
             return std::make_unique<DenseNewton>(solver_params, linear_solver_params, characteristic_length, logger);
         }
-        else if (solver == "SparseNewton" || solver == "sparse_newton")
+        else if (solver == "Newton" || solver == "SparseNewton" || solver == "sparse_newton")
         {
             return std::make_unique<SparseNewton>(solver_params, linear_solver_params, characteristic_length, logger);
         }
@@ -78,9 +78,9 @@ namespace polysolve::nonlinear
     std::vector<std::string> Solver::available_solvers()
     {
         return {{"BFGS",
-                 "dense_newton",
-                 "sparse_newton",
-                 "gradient_descent",
+                 "DenseNewton",
+                 "Newton",
+                 "GradientDescent",
                  "L-BFGS"}};
     }
 

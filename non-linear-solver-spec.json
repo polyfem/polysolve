@@ -13,7 +13,7 @@
             "line_search",
             "allow_out_of_iterations",
             "LBFGS",
-            "Netwon"
+            "Newton"
         ],
         "doc": "Settings for nonlinear solver. Interior-loop linear solver settings are defined in the solver/linear section."
     },
@@ -22,9 +22,10 @@
         "default": "newton",
         "type": "string",
         "options": [
-            "Netwon",
-            "gradient_descent",
-            "LBFGS",
+            "Newton",
+            "DenseNewton",
+            "GradientDescent",
+            "L-BFGS",
             "BFGS"
         ],
         "doc": "Nonlinear solver type"

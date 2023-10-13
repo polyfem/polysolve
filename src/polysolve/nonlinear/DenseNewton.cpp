@@ -13,9 +13,7 @@ namespace polysolve::nonlinear
                      characteristic_length,
                      logger)
     {
-        linear_solver = polysolve::linear::Solver::create(
-            linear_solver_params["solver"], linear_solver_params["precond"]);
-        linear_solver->set_parameters(linear_solver_params);
+        linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
     }
 
     double DenseNewton::solve_linear_system(Problem &objFunc,

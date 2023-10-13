@@ -254,6 +254,11 @@ TEST_CASE("non-linear", "[solver]")
     {
         for (auto solver_name : Solver::available_solvers())
         {
+            if (solver_name == "BFGS" || solver_name == "DenseNewton")
+                linear_solver_params["solver"] = "Eigen::LDLT";
+            else
+                linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
             solver_params["solver"] = solver_name;
 
             for (const auto &ls : line_search::LineSearch::available_methods())

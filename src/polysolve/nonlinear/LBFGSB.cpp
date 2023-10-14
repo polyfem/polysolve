@@ -31,9 +31,6 @@ namespace polysolve::nonlinear
         this->descent_strategy++;
 
         m_bfgs.reset(m_prev_x.size(), m_history_size);
-
-        if (this->descent_strategy > 2)
-            log_and_throw_error(m_logger, "Invalid descent strategy!");
     }
 
     void LBFGSB::reset(const int ndof)

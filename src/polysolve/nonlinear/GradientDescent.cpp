@@ -23,7 +23,8 @@ namespace polysolve::nonlinear
 
     void GradientDescent::increase_descent_strategy()
     {
-        assert(this->descent_strategy <= 1);
+        this->descent_strategy = 3;
+        // assert(this->descent_strategy <= 1);
     }
 
     void GradientDescent::reset(const int ndof)

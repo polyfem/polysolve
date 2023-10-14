@@ -246,6 +246,8 @@ TEST_CASE("non-linear", "[solver]")
     json solver_params, linear_solver_params;
     solver_params["line_search"] = {};
     solver_params["max_iterations"] = 1000;
+    solver_params["f_delta"] = 0;
+    solver_params["grad_norm"] = 1e-7;
 
     const double characteristic_length = 1;
 

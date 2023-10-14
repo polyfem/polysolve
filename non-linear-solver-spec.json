@@ -13,7 +13,8 @@
             "line_search",
             "allow_out_of_iterations",
             "LBFGS",
-            "Newton"
+            "Newton",
+            "box_constraints"
         ],
         "doc": "Settings for nonlinear solver. Interior-loop linear solver settings are defined in the solver/linear section."
     },
@@ -26,7 +27,8 @@
             "DenseNewton",
             "GradientDescent",
             "L-BFGS",
-            "BFGS"
+            "BFGS",
+            "L-BFGS-B"
         ],
         "doc": "Nonlinear solver type"
     },
@@ -199,5 +201,31 @@
         "default": 0.5,
         "type": "float",
         "doc": "Armijo c parameter."
+    },
+    {
+        "pointer": "/box_constraints",
+        "type": "object",
+        "optional": [
+            "bounds",
+            "max_change"
+        ],
+        "default": null
+    },
+    {
+        "pointer": "/box_constraints/bounds",
+        "default": [],
+        "type": "list",
+        "doc": "Box constraints on optimization variables."
+    },
+    {
+        "pointer": "/box_constraints/bounds/*",
+        "type": "float",
+        "doc": "Box constraint values on optimization variables."
+    },
+    {
+        "pointer": "/box_constraints/max_change",
+        "default": -1,
+        "type": "float",
+        "doc": "Maximum change of optimization variables in one iteration, only for solvers with box constraints. Negative value to disable this constraint."
     }
 ]

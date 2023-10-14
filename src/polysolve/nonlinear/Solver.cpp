@@ -75,7 +75,7 @@ namespace polysolve::nonlinear
         }
         else if (solver == "LBFGSB" || solver == "L-BFGS-B")
         {
-            return std::make_unique<LBFGSB>(solver_params, dt, characteristic_length, logger);
+            return std::make_unique<LBFGSB>(solver_params, characteristic_length, logger);
         }
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }

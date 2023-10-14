@@ -35,39 +35,40 @@ namespace polysolve::nonlinear
                                              spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger)
     {
-        if (solver_params["max_change"].is_number())
-            max_change_val_ = solver_params["max_change"];
+        json box_constraint_params = solver_params["box_constraints"];
+        if (box_constraint_params["max_change"] > 0)
+            max_change_val_ = box_constraint_params["max_change"];
         // todo
         // else
-        //     nlohmann::adl_serializer<Eigen::VectorXd>::from_json(solver_params["max_change"], max_change_);
+        //     nlohmann::adl_serializer<Eigen::VectorXd>::from_json(box_constraint_params["max_change"], max_change_);
 
-        if (solver_params.contains("bounds"))
+        if (box_constraint_params.contains("bounds"))
         {
-            if (solver_params["bounds"].is_string())
+            if (box_constraint_params["bounds"].is_string())
             {
-                if (std::filesystem::is_regular_file(solver_params["bounds"].get<std::string>()))
+                if (std::filesystem::is_regular_file(box_constraint_params["bounds"].get<std::string>()))
                 {
                     // todo
-                    // polyfem::io::read_matrix(solver_params["bounds"].get<std::string>(), bounds_);
+                    // polyfem::io::read_matrix(box_constraint_params["bounds"].get<std::string>(), bounds_);
                     assert(bounds_.cols() == 2);
                 }
             }
-            else if (solver_params["bounds"].is_array() && solver_params["bounds"].size() == 2)
+            else if (box_constraint_params["bounds"].is_array() && box_constraint_params["bounds"].size() == 2)
             {
-                if (solver_params["bounds"][0].is_number())
+                if (box_constraint_params["bounds"][0].is_number())
                 {
                     bounds_.setZero(1, 2);
-                    bounds_ << solver_params["bounds"][0], solver_params["bounds"][1];
+                    bounds_ << box_constraint_params["bounds"][0], box_constraint_params["bounds"][1];
                 }
-                else if (solver_params["bounds"][0].is_array())
+                else if (box_constraint_params["bounds"][0].is_array())
                 {
-                    bounds_.setZero(solver_params["bounds"][0].size(), 2);
+                    bounds_.setZero(box_constraint_params["bounds"][0].size(), 2);
                     Eigen::VectorXd tmp;
                     // todo
-                    // nlohmann::adl_serializer<Eigen::VectorXd>::from_json(solver_params["bounds"][0], tmp);
+                    // nlohmann::adl_serializer<Eigen::VectorXd>::from_json(box_constraint_params["bounds"][0], tmp);
                     bounds_.col(0) = tmp;
                     // todo
-                    // nlohmann::adl_serializer<Eigen::VectorXd>::from_json(solver_params["bounds"][1], tmp);
+                    // nlohmann::adl_serializer<Eigen::VectorXd>::from_json(box_constraint_params["bounds"][1], tmp);
                     bounds_.col(1) = tmp;
                 }
             }

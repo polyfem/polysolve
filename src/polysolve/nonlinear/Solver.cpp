@@ -1,6 +1,7 @@
 
 #include "Solver.hpp"
 
+#include "LBFGSB.hpp"
 #include "BFGS.hpp"
 #include "DenseNewton.hpp"
 #include "GradientDescent.hpp"
@@ -71,6 +72,10 @@ namespace polysolve::nonlinear
         else if (solver == "LBFGS" || solver == "L-BFGS")
         {
             return std::make_unique<LBFGS>(solver_params, characteristic_length, logger);
+        }
+        else if (solver == "LBFGSB" || solver == "L-BFGS-B")
+        {
+            return std::make_unique<LBFGSB>(solver_params, dt, characteristic_length, logger);
         }
         throw std::runtime_error("Unrecognized solver type: " + solver);
     }
@@ -217,7 +222,7 @@ namespace polysolve::nonlinear
                 increase_descent_strategy();
                 m_logger.debug(
                     "[{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
-                    name(), delta_x.norm(), grad.norm(), delta_x.dot(grad), descent_strategy_name());
+                    name(), delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad), descent_strategy_name());
                 this->m_status = cppoptlib::Status::Continue;
                 continue;
             }

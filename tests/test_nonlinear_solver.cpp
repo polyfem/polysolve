@@ -235,6 +235,71 @@ class Beale : public AnalyticTestProblem
     }
 };
 
+class Rosenbrock : public TestProblem
+{
+private:
+    int n = 5;
+public:
+    Rosenbrock(int n_) : n(n_) {}
+    double operator()(const TVector& x, TVector& grad)
+    {
+        double fx = (x[0] - 1.0) * (x[0] - 1.0);
+        grad[0] = 2 * (x[0] - 1) + 16 * (x[0] * x[0] - x[1]) * x[0];
+        for(int i = 1; i < n; i++)
+        {
+            fx += 4 * std::pow(x[i] - x[i - 1] * x[i - 1], 2);
+            if(i == n - 1)
+            {
+                grad[i] = 8 * (x[i] - x[i - 1] * x[i - 1]);
+            } else {
+                grad[i] = 8 * (x[i] - x[i - 1] * x[i - 1]) + 16 * (x[i] * x[i] - x[i + 1]) * x[i];
+            }
+        }
+        return fx;
+    }
+
+    double value(const TVector &x) override
+    {
+        double fx = (x[0] - 1.0) * (x[0] - 1.0);
+        for(int i = 1; i < n; i++)
+            fx += 4 * std::pow(x[i] - x[i - 1] * x[i - 1], 2);
+        
+        return fx;
+    }
+    void gradient(const TVector &x, TVector &gradv) override
+    {
+        gradv.setZero(n);
+        gradv[0] = 2 * (x[0] - 1) + 16 * (x[0] * x[0] - x[1]) * x[0];
+        for(int i = 1; i < n; i++)
+        {
+            if(i == n - 1)
+            {
+                gradv[i] = 8 * (x[i] - x[i - 1] * x[i - 1]);
+            } else {
+                gradv[i] = 8 * (x[i] - x[i - 1] * x[i - 1]) + 16 * (x[i] * x[i] - x[i + 1]) * x[i];
+            }
+        }
+    }
+    void hessian(const TVector &x, THessian &hessian) override
+    {
+        hessian.resize(n, n);
+    }
+
+    void hessian(const TVector &x, Eigen::MatrixXd &hessian) override
+    {
+        hessian.resize(n, n);
+    }
+
+    TVector solution() override
+    {
+        TVector res;
+        res.setZero(n);
+        return res;
+    }
+
+    virtual int size() override { return n; }
+};
+
 TEST_CASE("non-linear", "[solver]")
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
@@ -306,6 +371,70 @@ TEST_CASE("non-linear", "[solver]")
                     x += prob->min();
                     x.array() *= (prob->max() - prob->min()).array();
                 }
+            }
+        }
+    }
+}
+
+TEST_CASE("non-linear-box-constraint", "[solver]")
+{
+    QuadraticProblem prob;
+
+    json solver_params, linear_solver_params;
+    solver_params["bounds"] = std::vector<double>({{0, 4}});
+    solver_params["max_change"] = 4;
+    solver_params["x_delta"] = 1e-10;
+    solver_params["f_delta"] = 1e-12;
+
+    solver_params["grad_norm"] = 1e-9;
+    solver_params["max_iterations"] = 10;
+    solver_params["relative_gradient"] = false;
+    solver_params["line_search"]["use_grad_norm_tol"] = 0;
+    solver_params["first_grad_norm_tol"] = 1e-10;
+    solver_params["line_search"]["method"] = "backtracking";
+
+    const double dt = 0.1;
+    const double characteristic_length = 1;
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    logger->set_level(spdlog::level::trace);
+
+    {
+        std::string solver_name = "L-BFGS-B";
+
+        auto solver = Solver::create(solver_name,
+                                     solver_params,
+                                     linear_solver_params,
+                                     dt,
+                                     characteristic_length,
+                                     *logger);
+
+        for (const auto &ls : line_search::LineSearch::available_methods())
+        {
+            if (ls == "none")
+                continue;
+            solver_params["line_search"]["method"] = ls;
+
+            QuadraticProblem::TVector x(prob.size());
+            x.setConstant(3);
+
+            for (int i = 0; i < N_RANDOM; ++i)
+            {
+                solver->minimize(prob, x);
+
+                INFO("solver: " + solver_name + " LS: " + ls);
+
+                Eigen::VectorXd gradv;
+                prob.gradient(x, gradv);
+                std::cout << "x " << x.transpose() << "\n";
+                std::cout << "grad " << gradv.transpose() << "\n";
+                gradv = ((x - gradv).cwiseMax(solver_params["bounds"][0]).cwiseMin(solver_params["bounds"][1]) - x).cwiseAbs();
+                std::cout << "proj grad " << gradv.transpose() << "\n";
+                const double err = gradv.norm();
+                CHECK(err < 1e-8);
+
+                x.setRandom();
+                x.array() += 3;
             }
         }
     }

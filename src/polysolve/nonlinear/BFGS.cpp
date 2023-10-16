@@ -18,9 +18,9 @@ namespace polysolve::nonlinear
     {
         switch (descent_strategy)
         {
-        case 1:
+        case Solver::BFGS_STRATEGY:
             return "BFGS";
-        case 2:
+        case Solver::GRADIENT_DESCENT_STRATEGY:
             return "gradient descent";
         default:
             throw std::invalid_argument("invalid descent strategy");
@@ -29,12 +29,12 @@ namespace polysolve::nonlinear
 
     void BFGS::increase_descent_strategy()
     {
-        if (this->descent_strategy == 1)
+        if (this->descent_strategy == Solver::BFGS_STRATEGY)
             this->descent_strategy++;
 
         assert(m_prev_x.size() > 0);
         reset_history(m_prev_x.size());
-        assert(this->descent_strategy <= 2);
+        assert(this->descent_strategy <= Solver::MAX_STRATEGY);
     }
 
     void BFGS::reset(const int ndof)
@@ -51,7 +51,7 @@ namespace polysolve::nonlinear
         hess.setIdentity(ndof, ndof);
 
         // Use gradient descent for first iteration
-        this->descent_strategy = 2;
+        this->descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY;
     }
 
     void BFGS::compute_update_direction(
@@ -60,7 +60,7 @@ namespace polysolve::nonlinear
         const TVector &grad,
         TVector &direction)
     {
-        if (this->descent_strategy == 2)
+        if (this->descent_strategy == Solver::GRADIENT_DESCENT_STRATEGY)
         {
             direction = -grad;
         }

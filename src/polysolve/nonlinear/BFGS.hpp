@@ -26,7 +26,7 @@ namespace polysolve::nonlinear
         std::string name() const override { return "BFGS"; }
 
     protected:
-        virtual void set_default_descent_strategy() override { descent_strategy = 1; }
+        virtual void set_default_descent_strategy() override { descent_strategy = Solver::BFGS_STRATEGY; }
 
         using Superclass::descent_strategy_name;
         std::string descent_strategy_name(int descent_strategy) const override;

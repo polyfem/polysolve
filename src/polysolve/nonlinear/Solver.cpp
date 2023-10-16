@@ -92,7 +92,7 @@ namespace polysolve::nonlinear
     {
         TCriteria criteria = TCriteria::defaults();
         criteria.xDelta = solver_params["x_delta"];
-        // criteria.fDelta = solver_params["f_delta"];
+        criteria.fDelta = -1;
         criteria.gradNorm = solver_params["grad_norm"];
 
         criteria.xDelta *= characteristic_length;
@@ -235,7 +235,7 @@ namespace polysolve::nonlinear
             }
 
             // Use the maximum absolute displacement value divided by the timestep,
-            this->m_current.xDelta = descent_strategy == 2 ? NaN : delta_x_norm;
+            this->m_current.xDelta = descent_strategy == MAX_STRATEGY ? NaN : delta_x_norm;
             this->m_status = checkConvergence(this->m_stop, this->m_current);
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
@@ -250,7 +250,7 @@ namespace polysolve::nonlinear
             {
                 assert(this->m_status == cppoptlib::Status::Continue);
 
-                if (descent_strategy < 2) // 2 is the max, grad descent
+                if (descent_strategy < MAX_STRATEGY)
                 {
                     increase_descent_strategy();
                     m_logger.warn(
@@ -259,7 +259,7 @@ namespace polysolve::nonlinear
                 }
                 else
                 {
-                    assert(descent_strategy == 2);                   // failed on gradient descent
+                    assert(descent_strategy == MAX_STRATEGY);        // failed on gradient descent
                     this->m_status = cppoptlib::Status::UserDefined; // Line search failed on gradient descent, so quit!
                     log_and_throw_error(m_logger, "[{}] Line search failed on gradient descent; stopping", name());
                 }

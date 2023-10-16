@@ -23,14 +23,13 @@ namespace polysolve::nonlinear
 
     void GradientDescent::increase_descent_strategy()
     {
-        this->descent_strategy = 3;
-        // assert(this->descent_strategy <= 1);
+        this->descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY;
     }
 
     void GradientDescent::reset(const int ndof)
     {
         Superclass::reset(ndof);
-        this->descent_strategy = 1;
+        this->descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY;
     }
 
     void GradientDescent::compute_update_direction(

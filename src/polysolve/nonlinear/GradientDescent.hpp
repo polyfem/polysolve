@@ -21,7 +21,7 @@ namespace polysolve::nonlinear
         std::string name() const override { return "GradientDescent"; }
 
     protected:
-        virtual void set_default_descent_strategy() override { descent_strategy = 1; }
+        virtual void set_default_descent_strategy() override { descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY; }
 
         using Superclass::descent_strategy_name;
         std::string descent_strategy_name(int descent_strategy_) const override;

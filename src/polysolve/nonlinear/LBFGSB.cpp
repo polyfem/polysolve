@@ -17,9 +17,9 @@ namespace polysolve::nonlinear
     {
         switch (descent_strategy)
         {
-        case 1:
+        case Solver::LBFGS_STRATEGY:
             return "L-BFGS-B";
-        case 2:
+        case Solver::GRADIENT_DESCENT_STRATEGY:
             return "gradient descent";
         default:
             throw std::invalid_argument("invalid descent strategy");
@@ -31,6 +31,8 @@ namespace polysolve::nonlinear
         this->descent_strategy++;
 
         m_bfgs.reset(m_prev_x.size(), m_history_size);
+
+        assert(this->descent_strategy <= MAX_STRATEGY);
     }
 
     void LBFGSB::reset(const int ndof)
@@ -47,7 +49,7 @@ namespace polysolve::nonlinear
         m_prev_grad.resize(ndof);
 
         // Use gradient descent for first iteration
-        this->descent_strategy = 1;
+        this->descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY;
     }
 
     void LBFGSB::compute_update_direction(
@@ -68,7 +70,7 @@ namespace polysolve::nonlinear
 
         TVector cauchy_point(x.size()), vecc;
         std::vector<int> newact_set, fv_set;
-        if (this->descent_strategy == 2)
+        if (this->descent_strategy == Solver::GRADIENT_DESCENT_STRATEGY)
         {
             // Use gradient descent in the first iteration or if the previous iteration failed
             // direction = -grad;
@@ -107,17 +109,17 @@ namespace polysolve::nonlinear
             reset_history(x.size());
             increase_descent_strategy();
             m_logger.log(
-                this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug,
+                this->descent_strategy == Solver::MAX_STRATEGY ? spdlog::level::warn : spdlog::level::debug,
                 "nan in direction {} (||∇f||={}); reverting to {}",
                 direction.dot(grad), this->descent_strategy_name());
             return compute_update_direction(objFunc, x, grad, direction);
         }
-        else if (grad.squaredNorm() != 0 && this->descent_strategy == 1 && direction.dot(grad) > -grad.norm() * direction.norm() * 1e-6)
+        else if (grad.squaredNorm() != 0 && this->descent_strategy == Solver::LBFGS_STRATEGY && direction.dot(grad) > -grad.norm() * direction.norm() * 1e-6)
         {
             reset_history(x.size());
             increase_descent_strategy();
             m_logger.log(
-                this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug,
+                this->descent_strategy == Solver::MAX_STRATEGY ? spdlog::level::warn : spdlog::level::debug,
                 "L-BFGS direction is not a descent direction (Δx⋅g={}); reverting to {}",
                 direction.dot(grad), this->descent_strategy_name());
             return compute_update_direction(objFunc, x, grad, direction);

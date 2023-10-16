@@ -22,7 +22,7 @@ namespace polysolve::nonlinear
     {
         switch (descent_strategy)
         {
-        case 1:
+        case Solver::MMA_STRATEGY:
             return "MMA";
         default:
             throw std::invalid_argument("invalid descent strategy");
@@ -31,7 +31,7 @@ namespace polysolve::nonlinear
 
     void MMA::increase_descent_strategy()
     {
-        assert(this->descent_strategy <= 1);
+        assert(this->descent_strategy <= Solver::MAX_STRATEGY);
         this->descent_strategy++;
     }
 

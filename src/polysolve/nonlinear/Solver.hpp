@@ -22,6 +22,19 @@ namespace polysolve::nonlinear
 
     class Solver : public cppoptlib::ISolver<Problem, /*Ord=*/-1>
     {
+    protected:
+        static const int NEWTON_STRATEGY = 0;
+        static const int REGULARIZED_NEWTON_STRATEGY = 1;
+
+        static const int BFGS_STRATEGY = 1;
+        static const int LBFGS_STRATEGY = 1;
+
+        static const int MMA_STRATEGY = 2;
+
+        static const int GRADIENT_DESCENT_STRATEGY = 2;
+
+        static const int MAX_STRATEGY = GRADIENT_DESCENT_STRATEGY;
+
     public:
         // Static constructor
         //

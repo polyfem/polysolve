@@ -45,7 +45,7 @@ namespace polysolve::nonlinear
         virtual void set_default_descent_strategy() override
         {
             reg_weight = 0;
-            descent_strategy = force_psd_projection ? 1 : 0;
+            descent_strategy = force_psd_projection ? Solver::REGULARIZED_NEWTON_STRATEGY : Solver::NEWTON_STRATEGY;
         }
         void increase_descent_strategy() override;
 
@@ -65,7 +65,7 @@ namespace polysolve::nonlinear
 
         spdlog::level::level_enum log_level() const
         {
-            return this->descent_strategy == 2 ? spdlog::level::warn : spdlog::level::debug;
+            return this->descent_strategy == Solver::MAX_STRATEGY ? spdlog::level::warn : spdlog::level::debug;
         }
 
         // ====================================================================

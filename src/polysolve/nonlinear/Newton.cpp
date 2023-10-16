@@ -24,13 +24,13 @@ namespace polysolve::nonlinear
     {
         switch (descent_strategy)
         {
-        case 0:
+        case Solver::NEWTON_STRATEGY:
             return "Newton";
-        case 1:
+        case Solver::REGULARIZED_NEWTON_STRATEGY:
             if (reg_weight == 0)
                 return "projected Newton";
             return fmt::format("projected Newton w/ regularization weight={}", reg_weight);
-        case 2:
+        case Solver::GRADIENT_DESCENT_STRATEGY:
             return "gradient descent";
         default:
             throw std::invalid_argument("invalid descent strategy");
@@ -41,11 +41,11 @@ namespace polysolve::nonlinear
 
     void Newton::increase_descent_strategy()
     {
-        if (this->descent_strategy == 1 && reg_weight < reg_weight_max)
+        if (this->descent_strategy == Solver::REGULARIZED_NEWTON_STRATEGY && reg_weight < reg_weight_max)
             reg_weight = std::clamp(reg_weight_inc * reg_weight, reg_weight_min, reg_weight_max);
         else
             this->descent_strategy++;
-        assert(this->descent_strategy <= 2);
+        assert(this->descent_strategy <= Solver::MAX_STRATEGY);
     }
 
     // =======================================================================
@@ -54,7 +54,7 @@ namespace polysolve::nonlinear
     {
         Superclass::reset(ndof);
         reg_weight = 0;
-        this->descent_strategy = 0;
+        descent_strategy = force_psd_projection ? Solver::REGULARIZED_NEWTON_STRATEGY : Solver::NEWTON_STRATEGY;
         internal_solver_info = json::array();
     }
 
@@ -66,15 +66,15 @@ namespace polysolve::nonlinear
         const TVector &grad,
         TVector &direction)
     {
-        if (this->descent_strategy == 2)
+        if (this->descent_strategy == Solver::GRADIENT_DESCENT_STRATEGY)
         {
             direction = -grad;
             return;
         }
 
-        if (this->descent_strategy == 1)
+        if (this->descent_strategy == Solver::REGULARIZED_NEWTON_STRATEGY)
             objFunc.set_project_to_psd(true);
-        else if (this->descent_strategy == 0)
+        else if (this->descent_strategy == Solver::NEWTON_STRATEGY)
             objFunc.set_project_to_psd(false);
         else
             assert(false);

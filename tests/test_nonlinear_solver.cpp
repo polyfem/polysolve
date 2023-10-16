@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 #include "autodiff.h"
 #include <polysolve/nonlinear/Solver.hpp>
+#include <polysolve/nonlinear/BoxConstraintSolver.hpp>
 #include <polysolve/nonlinear/Problem.hpp>
 #include <polysolve/Utils.hpp>
 #include <polysolve/Types.hpp>
@@ -246,8 +247,6 @@ TEST_CASE("non-linear", "[solver]")
     json solver_params, linear_solver_params;
     solver_params["line_search"] = {};
     solver_params["max_iterations"] = 1000;
-    solver_params["f_delta"] = 0;
-    solver_params["grad_norm"] = 1e-7;
 
     const double characteristic_length = 1;
 
@@ -325,14 +324,9 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
     solver_params["box_constraints"] = {};
     solver_params["box_constraints"]["bounds"] = std::vector<double>({{0, 4}});
     solver_params["box_constraints"]["max_change"] = 4;
-    solver_params["x_delta"] = 0;
-    solver_params["f_delta"] = 0;
 
-    solver_params["grad_norm"] = 1e-7;
     solver_params["max_iterations"] = 1000;
-    solver_params["line_search"]["use_grad_norm_tol"] = 0;
-    solver_params["first_grad_norm_tol"] = 1e-10;
-    solver_params["line_search"]["method"] = "backtracking";
+    solver_params["line_search"] = {};
 
     const double characteristic_length = 1;
 
@@ -343,10 +337,10 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
     {
         solver_params["solver"] = "L-BFGS-B";
 
-        auto solver = Solver::create(solver_params,
-                                     linear_solver_params,
-                                     characteristic_length,
-                                     *logger);
+        auto solver = BoxConstraintSolver::create(solver_params,
+                                                  linear_solver_params,
+                                                  characteristic_length,
+                                                  *logger);
 
         for (const auto &ls : line_search::LineSearch::available_methods())
         {

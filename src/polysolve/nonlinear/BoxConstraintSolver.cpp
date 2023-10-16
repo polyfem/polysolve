@@ -3,16 +3,44 @@
 #include "LBFGSB.hpp"
 #include "MMA.hpp"
 
+#include <jse/jse.h>
+
+#include <fstream>
+
 namespace polysolve::nonlinear
 {
 
     // Static constructor
-    std::unique_ptr<Solver> BoxConstraintSolver::create(const std::string &solver,
-                                                        const json &solver_params,
-                                                        const json &linear_solver_params,
-                                                        const double characteristic_length,
-                                                        spdlog::logger &logger)
+    std::unique_ptr<Solver> BoxConstraintSolver::create(
+        const json &solver_params_in,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const bool strict_validation)
     {
+        json solver_params = solver_params_in; // mutable copy
+
+        json rules;
+        jse::JSE jse;
+
+        jse.strict = strict_validation;
+        const std::string input_spec = POLYSOLVE_NON_LINEAR_SPEC;
+        std::ifstream file(input_spec);
+
+        if (file.is_open())
+            file >> rules;
+        else
+            log_and_throw_error(logger, "unable to open {} rules", input_spec);
+
+        const bool valid_input = jse.verify_json(solver_params, rules);
+
+        if (!valid_input)
+            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
+
+        solver_params = jse.inject_defaults(solver_params, rules);
+
+        const std::string solver = solver_params["solver"];
+
         if (solver == "LBFGSB" || solver == "L-BFGS-B")
         {
             return std::make_unique<LBFGSB>(solver_params, characteristic_length, logger);

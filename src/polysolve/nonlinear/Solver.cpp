@@ -92,7 +92,7 @@ namespace polysolve::nonlinear
     {
         TCriteria criteria = TCriteria::defaults();
         criteria.xDelta = solver_params["x_delta"];
-        criteria.fDelta = solver_params["f_delta"];
+        // criteria.fDelta = solver_params["f_delta"];
         criteria.gradNorm = solver_params["grad_norm"];
 
         criteria.xDelta *= characteristic_length;
@@ -183,9 +183,10 @@ namespace polysolve::nonlinear
             }
 
             this->m_current.fDelta = std::abs(old_energy - energy); // / std::abs(old_energy);
-            this->m_status = checkConvergence(this->m_stop, this->m_current);
-            if (this->m_status != cppoptlib::Status::Continue)
-                break;
+            // the change in the function dosent matter
+            // this->m_status = checkConvergence(this->m_stop, this->m_current);
+            // if (this->m_status != cppoptlib::Status::Continue)
+            //     break;
 
             ///////////// gradient
             {

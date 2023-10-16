@@ -5,7 +5,6 @@
         "type": "object",
         "optional": [
             "solver",
-            "f_delta",
             "x_delta",
             "grad_norm",
             "first_grad_norm_tol",
@@ -31,13 +30,6 @@
             "L-BFGS-B"
         ],
         "doc": "Nonlinear solver type"
-    },
-    {
-        "pointer": "/f_delta",
-        "default": 1e-20,
-        "type": "float",
-        "min": 0,
-        "doc": "Stopping criterion: minimal change of the energy f for the iterations to continue."
     },
     {
         "pointer": "/x_delta",

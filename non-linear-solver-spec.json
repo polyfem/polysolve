@@ -159,13 +159,13 @@
     },
     {
         "pointer": "/line_search/min_step_size",
-        "default": 1e-5,
+        "default": 1e-10,
         "type": "float",
         "doc": "Mimimum step size"
     },
     {
         "pointer": "/line_search/max_step_size_iter",
-        "default": 15,
+        "default": 30,
         "type": "int",
         "doc": "Number of iterations"
     },

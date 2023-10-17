@@ -54,8 +54,8 @@ namespace polysolve::nonlinear
 
     std::vector<std::string> BoxConstraintSolver::available_solvers()
     {
-        return {{"L-BFGS-B",
-                 "MMA"}};
+        return {"L-BFGS-B",
+                "MMA"};
     }
 
     BoxConstraintSolver::BoxConstraintSolver(const json &solver_params,

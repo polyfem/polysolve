@@ -78,11 +78,11 @@ namespace polysolve::nonlinear
 
     std::vector<std::string> Solver::available_solvers()
     {
-        return {{"BFGS",
-                 "DenseNewton",
-                 "Newton",
-                 "GradientDescent",
-                 "L-BFGS"}};
+        return {"BFGS",
+                "DenseNewton",
+                "Newton",
+                "GradientDescent",
+                "L-BFGS"};
     }
 
     Solver::Solver(const json &solver_params,

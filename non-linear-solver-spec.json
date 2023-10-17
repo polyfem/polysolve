@@ -28,7 +28,8 @@
             "GradientDescent",
             "L-BFGS",
             "BFGS",
-            "L-BFGS-B"
+            "L-BFGS-B",
+            "MMA"
         ],
         "doc": "Nonlinear solver type"
     },
@@ -158,7 +159,7 @@
     },
     {
         "pointer": "/line_search/method",
-        "default": "backtracking",
+        "default": "Backtracking",
         "type": "string",
         "options": [
             "Armijo",

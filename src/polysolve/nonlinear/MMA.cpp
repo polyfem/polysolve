@@ -62,7 +62,7 @@ namespace polysolve::nonlinear
         }
         std::stringstream ss;
         ss << g.transpose();
-        m_logger.info("Constraint values are {}", ss.str());
+        m_logger.trace("Constraint values are {}", ss.str());
         auto y = x;
         mma->Update(y.data(), grad.data(), g.data(), dg.data(), lower_bound.data(), upper_bound.data());
         direction = y - x;

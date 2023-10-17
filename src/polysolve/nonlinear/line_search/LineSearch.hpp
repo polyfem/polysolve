@@ -29,8 +29,6 @@ namespace polysolve::nonlinear::line_search
 
         static std::vector<std::string> available_methods();
 
-        void set_min_step_size(const double min_step_size_) { min_step_size = min_step_size_; };
-
         void reset_times()
         {
             iterations = 0;
@@ -39,6 +37,21 @@ namespace polysolve::nonlinear::line_search
             ccd_time = 0;
             constraint_set_update_time = 0;
             classical_line_search_time = 0;
+        }
+
+        void set_is_final_strategy(const bool val)
+        {
+            is_final_strategy = val;
+        }
+
+        inline double current_min_step_size() const
+        {
+            return is_final_strategy ? min_step_size_final : min_step_size;
+        }
+
+        inline int current_max_step_size_iter() const
+        {
+            return is_final_strategy ? max_step_size_iter_final : max_step_size_iter;
         }
 
         int iterations; ///< total number of backtracking iterations done
@@ -50,9 +63,15 @@ namespace polysolve::nonlinear::line_search
 
         double use_grad_norm_tol = -1;
 
-    protected:
+    private:
         double min_step_size;
         int max_step_size_iter;
+        double min_step_size_final;
+        int max_step_size_iter_final;
+
+        bool is_final_strategy;
+
+    protected:
         int cur_iter = 0;
         spdlog::logger &m_logger;
 

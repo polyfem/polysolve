@@ -65,6 +65,10 @@ namespace polysolve::nonlinear::line_search
     {
         min_step_size = params["line_search"]["min_step_size"];
         max_step_size_iter = params["line_search"]["max_step_size_iter"];
+
+        min_step_size_final = params["line_search"]["min_step_size_final"];
+        max_step_size_iter_final = params["line_search"]["max_step_size_iter_final"];
+
         default_init_step_size = params["line_search"]["default_init_step_size"];
         step_ratio = params["line_search"]["step_ratio"];
     }
@@ -155,12 +159,12 @@ namespace polysolve::nonlinear::line_search
 
         const double descent_step_size = step_size;
 
-        if (cur_iter >= max_step_size_iter || step_size <= min_step_size)
+        if (cur_iter >= current_max_step_size_iter() || step_size <= current_min_step_size())
         {
-            m_logger.warn(
-                "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g}  use_grad_norm={} iter={:d})",
-                old_energy, cur_energy, starting_step_size,
-                step_size, delta_x.norm(), use_grad_norm, cur_iter);
+            m_logger.log(is_final_strategy ? spdlog::level::warn : spdlog::level::debug,
+                         "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g}  use_grad_norm={} iter={:d})",
+                         old_energy, cur_energy, starting_step_size,
+                         step_size, delta_x.norm(), use_grad_norm, cur_iter);
             objFunc.solution_changed(x);
 #ifndef NDEBUG
             // tolerance for rounding error due to multithreading
@@ -193,7 +197,7 @@ namespace polysolve::nonlinear::line_search
         TVector new_x = x + step_size * delta_x;
 
         // Find step that does not result in nan or infinite energy
-        while (step_size > min_step_size && cur_iter < max_step_size_iter)
+        while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
             // Compute the new energy value without contacts
             const double energy = objFunc.value(new_x);
@@ -211,11 +215,11 @@ namespace polysolve::nonlinear::line_search
             cur_iter++;
         }
 
-        if (cur_iter >= max_step_size_iter || step_size <= min_step_size)
+        if (cur_iter >= current_max_step_size_iter() || step_size <= current_min_step_size())
         {
-            m_logger.error(
-                "Line search failed to find a valid finite energy step (cur_iter={:d} step_size={:g})!",
-                cur_iter, step_size);
+            m_logger.log(is_final_strategy ? spdlog::level::err : spdlog::level::debug,
+                         "Line search failed to find a valid finite energy step (cur_iter={:d} step_size={:g})!",
+                         cur_iter, step_size);
             return std::nan("");
         }
 
@@ -235,7 +239,8 @@ namespace polysolve::nonlinear::line_search
         double max_step_size = objFunc.max_step_size(x, new_x);
         if (max_step_size == 0)
         {
-            m_logger.error("Line search failed because CCD produced a stepsize of zero!");
+            m_logger.log(is_final_strategy ? spdlog::level::err : spdlog::level::debug,
+                         "Line search failed because CCD produced a stepsize of zero!");
             objFunc.line_search_end();
             return std::nan("");
         }

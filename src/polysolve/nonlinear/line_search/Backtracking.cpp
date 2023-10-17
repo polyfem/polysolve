@@ -29,7 +29,7 @@ namespace polysolve::nonlinear::line_search
         // Find step that reduces the energy
         double cur_energy = std::nan("");
         bool is_step_valid = false;
-        while (step_size > min_step_size && cur_iter < max_step_size_iter)
+        while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
             iterations++;
 

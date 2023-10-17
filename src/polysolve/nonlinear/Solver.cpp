@@ -163,6 +163,8 @@ namespace polysolve::nonlinear
 
         do
         {
+            m_line_search->set_is_final_strategy(descent_strategy == MAX_STRATEGY);
+
             this->m_current.xDelta = NaN;
             this->m_current.fDelta = NaN;
             this->m_current.gradNorm = NaN;

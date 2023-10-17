@@ -130,6 +130,8 @@
             "use_grad_norm_tol",
             "min_step_size",
             "max_step_size_iter",
+            "min_step_size_final",
+            "max_step_size_iter_final",
             "default_init_step_size",
             "step_ratio",
             "Armijo"
@@ -157,15 +159,27 @@
     },
     {
         "pointer": "/line_search/min_step_size",
-        "default": 1e-20,
+        "default": 1e-5,
         "type": "float",
         "doc": "Mimimum step size"
     },
     {
         "pointer": "/line_search/max_step_size_iter",
-        "default": 100,
+        "default": 15,
         "type": "int",
         "doc": "Number of iterations"
+    },
+    {
+        "pointer": "/line_search/min_step_size_final",
+        "default": 1e-20,
+        "type": "float",
+        "doc": "Mimimum step size for last descent strategy"
+    },
+    {
+        "pointer": "/line_search/max_step_size_iter_final",
+        "default": 100,
+        "type": "int",
+        "doc": "Number of iterations for last descent strategy"
     },
     {
         "pointer": "/line_search/default_init_step_size",

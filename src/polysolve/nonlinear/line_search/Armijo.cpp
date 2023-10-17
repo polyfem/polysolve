@@ -40,10 +40,7 @@ namespace polysolve::nonlinear::line_search
         const double cache = c * grad.dot(searchDir);
         valid = objFunc.is_step_valid(x, x1);
 
-        // max_step_size should return a collision free step
-        // assert(objFunc.is_step_collision_free(x, x1));
-
-        while ((std::isinf(f) || std::isnan(f) || f > f_in + alpha * cache || !valid) && alpha > min_step_size && cur_iter <= max_step_size_iter)
+        while ((std::isinf(f) || std::isnan(f) || f > f_in + alpha * cache || !valid) && alpha > current_min_step_size() && cur_iter <= current_max_step_size_iter())
         {
             alpha *= step_ratio;
             x1 = x + alpha * searchDir;

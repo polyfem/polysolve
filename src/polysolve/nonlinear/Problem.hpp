@@ -40,5 +40,15 @@ namespace polysolve::nonlinear
         virtual void solution_changed(const TVector &new_x) {}
 
         virtual bool stop(const TVector &x) { return false; }
+
+        void sample_along_direction(
+            const Problem::TVector &x,
+            const Problem::TVector &direction,
+            const double start,
+            const double end,
+            const int num_samples,
+            Eigen::VectorXd &alphas,
+            Eigen::VectorXd &fs,
+            Eigen::VectorXi &valid);
     };
 } // namespace polysolve::nonlinear

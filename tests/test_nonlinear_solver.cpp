@@ -138,6 +138,8 @@ class Rosenbrock : public AnalyticTestProblem
 
         return res;
     }
+
+public:
     std::string name() override { return "Rosenbrock"; }
 
     int size() override { return 10; }
@@ -175,6 +177,7 @@ class Sphere : public AnalyticTestProblem
         return res;
     }
 
+public:
     std::string name() override { return "Sphere"; }
     int size() override { return 10; }
 
@@ -210,6 +213,7 @@ class Beale : public AnalyticTestProblem
                (2.625 - x[0] + x[0] * x[1] * x[1] * x[1]) * (2.625 - x[0] + x[0] * x[1] * x[1] * x[1]);
     }
 
+public:
     std::string name() override { return "Beale"; }
     int size() override { return 2; }
 
@@ -365,5 +369,26 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
                 x.array() += 3;
             }
         }
+    }
+}
+
+TEST_CASE("sample", "[solver]")
+{
+
+    Rosenbrock rb;
+
+    Eigen::VectorXd alphas;
+    Eigen::VectorXd fs;
+    Eigen::VectorXi valid;
+
+    Eigen::VectorXd dir(rb.size());
+    dir.setOnes();
+    for (int i = 0; i < N_RANDOM; ++i)
+    {
+        rb.sample_along_direction(rb.solutions()[0], dir, 0, 1, 10, alphas, fs, valid);
+        dir.setRandom();
+
+        for (int i = 1; i < fs.size(); ++i)
+            CHECK(fs[0] <= fs[i]);
     }
 }

@@ -167,8 +167,6 @@ namespace polysolve::nonlinear
         StopWatch stop_watch("non-linear solver", this->total_time, m_logger);
         stop_watch.start();
 
-        objFunc.save_to_file(x);
-
         m_logger.debug(
             "Starting {} solve f₀={:g} ‖∇f₀‖={:g} "
             "(stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
@@ -320,8 +318,6 @@ namespace polysolve::nonlinear
                 this->m_status = cppoptlib::Status::IterationLimit;
 
             update_solver_info(energy);
-
-            objFunc.save_to_file(x);
 
             // reset the tolerance, since in the first iter it might be smaller
             this->m_stop.gradNorm = g_norm_tol;

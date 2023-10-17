@@ -339,34 +339,39 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
 
     for (auto &prob : problems)
     {
-        solver_params["solver"] = "L-BFGS-B";
-
-        auto solver = BoxConstraintSolver::create(solver_params,
-                                                  linear_solver_params,
-                                                  characteristic_length,
-                                                  *logger);
-
-        for (const auto &ls : line_search::LineSearch::available_methods())
+        for (auto solver_name : BoxConstraintSolver::available_solvers())
         {
-            if (ls == "none")
-                continue;
-            solver_params["line_search"]["method"] = ls;
+            solver_params["solver"] = solver_name;
 
-            QuadraticProblem::TVector x(prob->size());
-            x.setConstant(3);
+            auto solver = BoxConstraintSolver::create(solver_params,
+                                                      linear_solver_params,
+                                                      characteristic_length,
+                                                      *logger);
 
-            for (int i = 0; i < N_RANDOM; ++i)
+            for (const auto &ls : line_search::LineSearch::available_methods())
             {
-                solver->minimize(*prob, x);
+                if (ls == "None" && solver_name != "MMA")
+                    continue;
+                if (solver_name == "MMA" && ls != "None")
+                    continue;
+                solver_params["line_search"]["method"] = ls;
 
-                INFO("solver: " + solver_params["solver"].get<std::string>() + " LS: " + ls);
+                QuadraticProblem::TVector x(prob->size());
+                x.setConstant(3);
 
-                Eigen::VectorXd gradv;
-                prob->gradient(x, gradv);
-                CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                for (int i = 0; i < N_RANDOM; ++i)
+                {
+                    solver->minimize(*prob, x);
 
-                x.setRandom();
-                x.array() += 3;
+                    INFO("solver: " + solver_params["solver"].get<std::string>() + " LS: " + ls);
+
+                    Eigen::VectorXd gradv;
+                    prob->gradient(x, gradv);
+                    CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+
+                    x.setRandom();
+                    x.array() += 3;
+                }
             }
         }
     }

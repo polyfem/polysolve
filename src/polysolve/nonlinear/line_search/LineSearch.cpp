@@ -40,7 +40,7 @@ namespace polysolve::nonlinear::line_search
         {
             return std::make_shared<MoreThuente>(params, logger);
         }
-        else if (name == "none")
+        else if (name == "none" || name == "None")
         {
             return std::make_shared<NoLineSearch>(params, logger);
         }
@@ -53,11 +53,11 @@ namespace polysolve::nonlinear::line_search
 
     std::vector<std::string> LineSearch::available_methods()
     {
-        return {{"armijo",
-                 "armijo_alt",
-                 "backtracking",
-                 "more_thuente",
-                 "none"}};
+        return {{"Armijo",
+                 "ArmijoAlt",
+                 "Backtracking",
+                 "MoreThuente",
+                 "None"}};
     }
 
     LineSearch::LineSearch(const json &params, spdlog::logger &logger)

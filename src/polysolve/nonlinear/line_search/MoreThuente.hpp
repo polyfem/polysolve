@@ -13,6 +13,8 @@ namespace polysolve::nonlinear::line_search
 
         MoreThuente(const json &params, spdlog::logger &logger);
 
+        virtual std::string name() override { return "MoreThuente"; }
+
     protected:
         double compute_descent_step_size(
             const TVector &x,

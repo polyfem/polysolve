@@ -63,6 +63,8 @@ namespace polysolve::nonlinear::line_search
 
         double use_grad_norm_tol = -1;
 
+        virtual std::string name() = 0;
+
     private:
         double min_step_size;
         int max_step_size_iter;

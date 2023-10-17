@@ -168,9 +168,10 @@ namespace polysolve::nonlinear
         stop_watch.start();
 
         m_logger.debug(
-            "Starting {} solve f₀={:g} ‖∇f₀‖={:g} "
+            "Starting {} with {} solve f₀={:g} ‖∇f₀‖={:g} "
             "(stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
-            name(), objFunc.value(x), this->m_current.gradNorm, this->m_stop.iterations,
+            name(), m_line_search->name(),
+            objFunc.value(x), this->m_current.gradNorm, this->m_stop.iterations,
             this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
         update_solver_info(objFunc.value(x));
@@ -194,7 +195,7 @@ namespace polysolve::nonlinear
             {
                 this->m_status = cppoptlib::Status::UserDefined;
                 m_error_code = ErrorCode::NAN_ENCOUNTERED;
-                log_and_throw_error(m_logger, "[{}] f(x) is nan or inf; stopping", name());
+                log_and_throw_error(m_logger, "[{}][{}] f(x) is nan or inf; stopping", name(), m_line_search->name());
                 break;
             }
 
@@ -215,7 +216,7 @@ namespace polysolve::nonlinear
             {
                 this->m_status = cppoptlib::Status::UserDefined;
                 m_error_code = ErrorCode::NAN_ENCOUNTERED;
-                log_and_throw_error(m_logger, "[{}] Gradient is nan; stopping", name());
+                log_and_throw_error(m_logger, "[{}][{}] Gradient is nan; stopping", name(), m_line_search->name());
                 break;
             }
             this->m_current.gradNorm = grad_norm;
@@ -234,8 +235,9 @@ namespace polysolve::nonlinear
             {
                 increase_descent_strategy();
                 m_logger.debug(
-                    "[{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
-                    name(), delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad), descent_strategy_name());
+                    "[{}][{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
+                    name(), m_line_search->name(),
+                    delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad), descent_strategy_name());
                 this->m_status = cppoptlib::Status::Continue;
                 continue;
             }
@@ -245,7 +247,7 @@ namespace polysolve::nonlinear
             {
                 increase_descent_strategy();
                 this->m_status = cppoptlib::Status::UserDefined;
-                m_logger.debug("[{}] Δx is nan; reverting to {}", name(), descent_strategy_name());
+                m_logger.debug("[{}][{}] Δx is nan; reverting to {}", name(), m_line_search->name(), descent_strategy_name());
                 this->m_status = cppoptlib::Status::Continue;
                 continue;
             }
@@ -277,7 +279,7 @@ namespace polysolve::nonlinear
                 {
                     assert(descent_strategy == MAX_STRATEGY);        // failed on gradient descent
                     this->m_status = cppoptlib::Status::UserDefined; // Line search failed on gradient descent, so quit!
-                    log_and_throw_error(m_logger, "[{}] Line search failed on gradient descent; stopping", name());
+                    log_and_throw_error(m_logger, "[{}][{}] Line search failed on gradient descent; stopping", name(), m_line_search->name());
                 }
             }
 
@@ -304,14 +306,15 @@ namespace polysolve::nonlinear
             {
                 this->m_status = cppoptlib::Status::UserDefined;
                 m_error_code = ErrorCode::SUCCESS;
-                m_logger.debug("[{}] Objective decided to stop", name());
+                m_logger.debug("[{}][{}] Objective decided to stop", name(), m_line_search->name());
             }
 
             objFunc.post_step(this->m_current.iterations, x);
 
             m_logger.debug(
-                "[{}] iter={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g} rate={:g} ‖step‖={:g}",
-                name(), this->m_current.iterations, energy, this->m_current.fDelta,
+                "[{}][{}] iter={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g} rate={:g} ‖step‖={:g}",
+                name(), m_line_search->name(),
+                this->m_current.iterations, energy, this->m_current.fDelta,
                 this->m_current.gradNorm, this->m_current.xDelta, delta_x.dot(grad), rate, step);
 
             if (++this->m_current.iterations >= this->m_stop.iterations)
@@ -331,14 +334,15 @@ namespace polysolve::nonlinear
         // -----------
 
         if (!allow_out_of_iterations && this->m_status == cppoptlib::Status::IterationLimit)
-            log_and_throw_error(m_logger, "[{}] Reached iteration limit (limit={})", name(), this->m_stop.iterations);
+            log_and_throw_error(m_logger, "[{}][{}] Reached iteration limit (limit={})", name(), m_line_search->name(), this->m_stop.iterations);
         if (this->m_status == cppoptlib::Status::UserDefined && m_error_code != ErrorCode::SUCCESS)
-            log_and_throw_error(m_logger, "[{}] Failed to find minimizer", name());
+            log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", name(), m_line_search->name());
 
         double tot_time = stop_watch.getElapsedTimeInSec();
         m_logger.info(
-            "[{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} ftol={})",
-            name(), this->m_status, tot_time, this->m_current.iterations,
+            "[{}][{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} ftol={})",
+            name(), m_line_search->name(),
+            this->m_status, tot_time, this->m_current.iterations,
             old_energy, this->m_current.fDelta, this->m_current.gradNorm, this->m_current.xDelta, this->m_stop.fDelta);
 
         log_times();

@@ -9,7 +9,8 @@ namespace polysolve::nonlinear
              spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger)
     {
-        this->m_line_search = nullptr;
+        if (m_line_search->name() != "None")
+            log_and_throw_error(m_logger, "Invalid linesearch for MMA; MMA requires 'None' linesearch, instead got {}", m_line_search->name());
     }
 
     void MMA::reset(const int ndof)

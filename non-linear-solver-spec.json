@@ -161,11 +161,11 @@
         "default": "backtracking",
         "type": "string",
         "options": [
-            "armijo",
-            "armijo_alt",
-            "backtracking",
-            "more_thuente",
-            "none"
+            "Armijo",
+            "ArmijoAlt",
+            "Backtracking",
+            "MoreThuente",
+            "None"
         ],
         "doc": "Line-search type"
     },

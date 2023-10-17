@@ -120,7 +120,8 @@ namespace polysolve::nonlinear
 
         std::shared_ptr<line_search::LineSearch> m_line_search;
 
-        int descent_strategy; // 0, newton, 1 spd, 2 gradiant
+        int descent_strategy;
+        std::vector<int> m_iter_per_strategy;
 
         // ====================================================================
         //                            Solver info

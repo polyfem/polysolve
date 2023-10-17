@@ -9,6 +9,7 @@
             "grad_norm",
             "first_grad_norm_tol",
             "max_iterations",
+            "iterations_per_strategy",
             "line_search",
             "allow_out_of_iterations",
             "LBFGS",
@@ -56,6 +57,23 @@
         "default": 500,
         "type": "int",
         "doc": "Maximum number of iterations for a nonlinear solve."
+    },
+    {
+        "pointer": "/iterations_per_strategy",
+        "default": 5,
+        "type": "int",
+        "doc": "Number of iterations for every substrategy before reset."
+    },
+    {
+        "pointer": "/iterations_per_strategy",
+        "type": "list",
+        "doc": "Number of iterations for every substrategy before reset."
+    },
+    {
+        "pointer": "/iterations_per_strategy/*",
+        "default": 5,
+        "type": "int",
+        "doc": "Number of iterations for every substrategy before reset."
     },
     {
         "pointer": "/allow_out_of_iterations",

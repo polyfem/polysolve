@@ -110,6 +110,20 @@ namespace polysolve::nonlinear
         use_grad_norm_tol *= characteristic_length;
         first_grad_norm_tol *= characteristic_length;
 
+        m_iter_per_strategy.resize(MAX_STRATEGY + 1);
+
+        if (solver_params["iterations_per_strategy"].is_array())
+        {
+            m_iter_per_strategy.resize(MAX_STRATEGY + 1);
+            if (solver_params["iterations_per_strategy"].size() != m_iter_per_strategy.size())
+                log_and_throw_error(m_logger, "Invalit iter_per_strategy size: {}!={}", solver_params["iterations_per_strategy"].size(), m_iter_per_strategy.size());
+
+            for (int i = 0; i < m_iter_per_strategy.size(); ++i)
+                m_iter_per_strategy[i] = solver_params["iterations_per_strategy"][i];
+        }
+        else
+            m_iter_per_strategy.resize(MAX_STRATEGY + 1, solver_params["iterations_per_strategy"].get<int>());
+
         set_line_search(solver_params);
     }
 
@@ -128,6 +142,8 @@ namespace polysolve::nonlinear
     {
         constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
 
+        int previous_strategy = descent_strategy;
+        int current_strategy_iter = 0;
         // ---------------------------
         // Initialize the minimization
         // ---------------------------
@@ -270,12 +286,20 @@ namespace polysolve::nonlinear
             x += rate * delta_x;
             old_energy = energy;
 
+            // Reset this for the next iterations
+            // if the strategy got changed, we start counting
+            if (descent_strategy != previous_strategy)
+                current_strategy_iter = 0;
+            // if we did enoug lower strategy, we revert back to normal
+            if (current_strategy_iter >= m_iter_per_strategy[descent_strategy])
+                set_default_descent_strategy();
+
+            previous_strategy = descent_strategy;
+            ++current_strategy_iter;
+
             // -----------
             // Post update
             // -----------
-
-            set_default_descent_strategy(); // Reset this for the next iterations
-
             const double step = (rate * delta_x).norm();
 
             if (objFunc.stop(x))

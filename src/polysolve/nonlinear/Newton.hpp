@@ -17,8 +17,6 @@ namespace polysolve::nonlinear
                const double characteristic_length,
                spdlog::logger &logger);
 
-        std::string name() const override { return "Newton"; }
-
     protected:
         virtual double solve_linear_system(Problem &objFunc,
                                            const TVector &x, const TVector &grad,

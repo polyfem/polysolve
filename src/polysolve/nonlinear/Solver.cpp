@@ -402,7 +402,7 @@ namespace polysolve::nonlinear
 
         if (m_line_search)
         {
-            solver_info["line_search_iterations"] = m_line_search->iterations;
+            solver_info["line_search_iterations"] = m_line_search->iterations();
 
             solver_info["time_checking_for_nan_inf"] =
                 m_line_search->checking_for_nan_inf_time / per_iteration;

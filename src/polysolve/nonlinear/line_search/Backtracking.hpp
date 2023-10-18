@@ -15,7 +15,7 @@ namespace polysolve::nonlinear::line_search
 
         virtual std::string name() override { return "Backtracking"; }
 
-    protected:
+    public:
         double compute_descent_step_size(
             const TVector &x,
             const TVector &delta_x,

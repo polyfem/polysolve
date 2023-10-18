@@ -31,8 +31,6 @@ namespace polysolve::nonlinear::line_search
         bool is_step_valid = false;
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
-            iterations++;
-
             TVector new_x = x + step_size * delta_x;
 
             try
@@ -44,7 +42,7 @@ namespace polysolve::nonlinear::line_search
             {
                 m_logger.warn("Failed to take step due to \"{}\", reduce step size...", e.what());
 
-                step_size /= 2.0;
+                step_size *= step_ratio;
                 this->cur_iter++;
                 continue;
             }
@@ -63,7 +61,7 @@ namespace polysolve::nonlinear::line_search
 
             if (!std::isfinite(cur_energy) || cur_energy >= old_energy || !is_step_valid)
             {
-                step_size /= 2.0;
+                step_size *= step_ratio;
                 // max_step_size should return a collision free step
                 // assert(objFunc.is_step_collision_free(x, new_x));
             }

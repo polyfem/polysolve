@@ -1,6 +1,7 @@
 #pragma once
 
 #include "LineSearch.hpp"
+#include "Backtracking.hpp"
 
 namespace polysolve::nonlinear::line_search
 {
@@ -20,8 +21,11 @@ namespace polysolve::nonlinear::line_search
             const TVector &x,
             const TVector &delta_x,
             Problem &objFunc,
-            const bool,
-            const double,
+            const bool use_grad_norm,
+            const double old_energy,
             const double starting_step_size) override;
+
+    private:
+        Backtracking after_check;
     };
 } // namespace polysolve::nonlinear::line_search

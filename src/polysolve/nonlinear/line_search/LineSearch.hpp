@@ -31,7 +31,6 @@ namespace polysolve::nonlinear::line_search
 
         void reset_times()
         {
-            iterations = 0;
             checking_for_nan_inf_time = 0;
             broad_phase_ccd_time = 0;
             ccd_time = 0;
@@ -54,7 +53,6 @@ namespace polysolve::nonlinear::line_search
             return is_final_strategy ? max_step_size_iter_final : max_step_size_iter;
         }
 
-        int iterations; ///< total number of backtracking iterations done
         double checking_for_nan_inf_time;
         double broad_phase_ccd_time;
         double ccd_time;
@@ -65,6 +63,8 @@ namespace polysolve::nonlinear::line_search
 
         virtual std::string name() = 0;
 
+        inline int iterations() const { return cur_iter; }
+
     private:
         double min_step_size;
         int max_step_size_iter;
@@ -73,11 +73,12 @@ namespace polysolve::nonlinear::line_search
 
         bool is_final_strategy;
 
+        double default_init_step_size;
+
     protected:
-        int cur_iter = 0;
+        int cur_iter;
         spdlog::logger &m_logger;
 
-        double default_init_step_size;
         double step_ratio;
 
         virtual double compute_descent_step_size(

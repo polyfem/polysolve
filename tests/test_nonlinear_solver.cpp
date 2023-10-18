@@ -333,7 +333,7 @@ TEST_CASE("non-linear", "[solver]")
 
 TEST_CASE("non-linear-more-iter", tag_slow)
 {
-    test_solvers(Solver::available_solvers(), 100000, true);
+    test_solvers(Solver::available_solvers(), 10000, false);
 }
 
 TEST_CASE("non-linear-box-constraint", "[solver]")

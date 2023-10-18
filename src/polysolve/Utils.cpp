@@ -5,38 +5,14 @@
 namespace polysolve
 {
 
-    StopWatch::StopWatch(spdlog::logger &logger)
-        : m_logger(logger)
-    {
-        start();
-    }
-
     StopWatch::StopWatch(const std::string &name, spdlog::logger &logger)
         : m_name(name), m_logger(logger)
     {
         start();
     }
 
-    StopWatch::StopWatch(double &total_time, spdlog::logger &logger)
-        : m_total_time(&total_time), m_logger(logger)
-    {
-        start();
-    }
-
-    StopWatch::StopWatch(Timing &timing, spdlog::logger &logger)
-        : m_total_time(&timing.time), m_count(&timing.count), m_logger(logger)
-    {
-        start();
-    }
-
     StopWatch::StopWatch(const std::string &name, double &total_time, spdlog::logger &logger)
         : m_name(name), m_total_time(&total_time), m_logger(logger)
-    {
-        start();
-    }
-
-    StopWatch::StopWatch(const std::string &name, Timing &timing, spdlog::logger &logger)
-        : m_name(name), m_total_time(&timing.time), m_count(&timing.count), m_logger(logger)
     {
         start();
     }
@@ -95,17 +71,4 @@ namespace polysolve
         return I;
     }
 
-    bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian)
-    {
-        for (int k = 0; k < hessian.outerSize(); ++k)
-        {
-            for (polysolve::StiffnessMatrix::InnerIterator it(hessian, k); it; ++it)
-            {
-                if (std::isnan(it.value()))
-                    return true;
-            }
-        }
-
-        return false;
-    }
 } // namespace polysolve

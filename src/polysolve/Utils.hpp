@@ -29,12 +29,8 @@ namespace polysolve
         using clock = std::chrono::steady_clock;
 
     public:
-        StopWatch(spdlog::logger &logger);
         StopWatch(const std::string &name, spdlog::logger &logger);
-        StopWatch(double &total_time, spdlog::logger &logger);
-        StopWatch(Timing &timing, spdlog::logger &logger);
         StopWatch(const std::string &name, double &total_time, spdlog::logger &logger);
-        StopWatch(const std::string &name, Timing &timing, spdlog::logger &logger);
 
         virtual ~StopWatch();
 
@@ -63,6 +59,5 @@ namespace polysolve
     }
 
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
-    bool has_hessian_nans(const polysolve::StiffnessMatrix &hessian);
 
 } // namespace polysolve

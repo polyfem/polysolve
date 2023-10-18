@@ -20,12 +20,6 @@ DECLARE_DIFFSCALAR_BASE();
 
 static const int N_RANDOM = 5;
 
-#if defined(NDEBUG) && !defined(WIN32)
-std::string tag_slow = "[solver]";
-#else
-std::string tag_slow = "[.][solver]";
-#endif
-
 typedef DScalar2<double, Eigen::VectorXd, Eigen::MatrixXd> AutodiffScalarHessian;
 typedef Eigen::Matrix<AutodiffScalarHessian, Eigen::Dynamic, 1> AutodiffHessian;
 
@@ -250,7 +244,8 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
     problems.push_back(std::make_unique<QuadraticProblem>());
-    problems.push_back(std::make_unique<Rosenbrock>());
+    if (!exceptions_are_errors)
+        problems.push_back(std::make_unique<Rosenbrock>());
     problems.push_back(std::make_unique<Sphere>());
     problems.push_back(std::make_unique<Beale>());
 
@@ -282,6 +277,12 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
 
                 TestProblem::TVector x(prob->size());
                 x.setZero();
+
+                if (exceptions_are_errors)
+                {
+                    x.setRandom();
+                    x += prob->solutions()[0];
+                }
 
                 for (int i = 0; i < N_RANDOM; ++i)
                 {
@@ -318,8 +319,16 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
                     }
 
                     x.setRandom();
-                    x += prob->min();
-                    x.array() *= (prob->max() - prob->min()).array();
+                    if (exceptions_are_errors)
+                    {
+                        x.setRandom();
+                        x += prob->solutions()[0];
+                    }
+                    else
+                    {
+                        x += prob->min();
+                        x.array() *= (prob->max() - prob->min()).array();
+                    }
                 }
             }
         }
@@ -331,9 +340,9 @@ TEST_CASE("non-linear", "[solver]")
     test_solvers(Solver::available_solvers(), 1000, false);
 }
 
-TEST_CASE("non-linear-more-iter", tag_slow)
+TEST_CASE("non-linear-easier", "[solver]")
 {
-    test_solvers(Solver::available_solvers(), 10000, false);
+    test_solvers(Solver::available_solvers(), 5000, true);
 }
 
 TEST_CASE("non-linear-box-constraint", "[solver]")

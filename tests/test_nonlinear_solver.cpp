@@ -20,6 +20,12 @@ DECLARE_DIFFSCALAR_BASE();
 
 static const int N_RANDOM = 5;
 
+#if defined(NDEBUG) && !defined(WIN32)
+std::string tag_slow = "[solver]";
+#else
+std::string tag_slow = "[.][solver]";
+#endif
+
 typedef DScalar2<double, Eigen::VectorXd, Eigen::MatrixXd> AutodiffScalarHessian;
 typedef Eigen::Matrix<AutodiffScalarHessian, Eigen::Dynamic, 1> AutodiffHessian;
 
@@ -240,7 +246,7 @@ public:
     }
 };
 
-TEST_CASE("non-linear", "[solver]")
+void test_solvers(const std::vector<std::string> &solvers, const int iters, const bool exceptions_are_errors)
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
     problems.push_back(std::make_unique<QuadraticProblem>());
@@ -250,7 +256,7 @@ TEST_CASE("non-linear", "[solver]")
 
     json solver_params, linear_solver_params;
     solver_params["line_search"] = {};
-    solver_params["max_iterations"] = 1000;
+    solver_params["max_iterations"] = iters;
 
     const double characteristic_length = 1;
 
@@ -259,7 +265,7 @@ TEST_CASE("non-linear", "[solver]")
     TestProblem::TVector g;
     for (auto &prob : problems)
     {
-        for (auto solver_name : Solver::available_solvers())
+        for (auto solver_name : solvers)
         {
             if (solver_name == "BFGS" || solver_name == "DenseNewton")
                 linear_solver_params["solver"] = "Eigen::LDLT";
@@ -270,7 +276,7 @@ TEST_CASE("non-linear", "[solver]")
 
             for (const auto &ls : line_search::LineSearch::available_methods())
             {
-                if (ls == "none")
+                if (exceptions_are_errors && ls == "None")
                     continue;
                 solver_params["line_search"]["method"] = ls;
 
@@ -302,9 +308,13 @@ TEST_CASE("non-linear", "[solver]")
                     }
                     catch (const std::exception &)
                     {
-                        // INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
-                        // CHECK(false);
-                        break;
+                        if (exceptions_are_errors)
+                        {
+                            INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
+                            CHECK(false);
+                        }
+                        else
+                            break;
                     }
 
                     x.setRandom();
@@ -314,6 +324,16 @@ TEST_CASE("non-linear", "[solver]")
             }
         }
     }
+}
+
+TEST_CASE("non-linear", "[solver]")
+{
+    test_solvers(Solver::available_solvers(), 1000, false);
+}
+
+TEST_CASE("non-linear-more-iter", tag_slow)
+{
+    test_solvers(Solver::available_solvers(), 100000, true);
 }
 
 TEST_CASE("non-linear-box-constraint", "[solver]")

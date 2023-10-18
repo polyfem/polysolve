@@ -271,7 +271,7 @@ namespace polysolve::nonlinear
                 if (descent_strategy < MAX_STRATEGY)
                 {
                     increase_descent_strategy();
-                    m_logger.warn(
+                    m_logger.debug(
                         "[{}] Line search failed; reverting to {}", name(), descent_strategy_name());
                     continue;
                 }

@@ -97,6 +97,8 @@ namespace polysolve::linear
         // Constructor requires a solver name used for finding parameters in the json file passed to set_parameters
         EigenDenseSolver(const std::string &name) { m_Name = name; }
 
+        bool is_dense() const override { return true; }
+
     public:
         // Get info on the last solve step
         virtual void get_info(json &params) const override;

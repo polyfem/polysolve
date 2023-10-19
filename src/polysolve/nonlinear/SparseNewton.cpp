@@ -16,6 +16,7 @@ namespace polysolve::nonlinear
                      logger)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
+        assert(!linear_solver->is_dense());
     }
 
     double SparseNewton::solve_linear_system(Problem &objFunc,

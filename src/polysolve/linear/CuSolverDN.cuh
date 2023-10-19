@@ -42,6 +42,8 @@ namespace polysolve::linear
         // Factorize system matrix (dense, preferred)
         virtual void factorize_dense(const Eigen::MatrixXd &A) override;
 
+        bool is_dense() const override { return true; }
+
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
 

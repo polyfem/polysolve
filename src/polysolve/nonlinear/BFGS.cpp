@@ -12,6 +12,7 @@ namespace polysolve::nonlinear
         : Superclass(solver_params, characteristic_length, logger)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
+        assert(linear_solver->is_dense());
     }
 
     std::string BFGS::descent_strategy_name(int descent_strategy) const

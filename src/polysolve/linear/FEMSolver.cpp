@@ -103,6 +103,7 @@ namespace polysolve::linear
         const bool remove_zero_cols,
         const bool skip_last_cols)
     {
+        assert(!solver.is_dense());
         // Let Γ be the set of Dirichlet dofs.
         // To implement nonzero Dirichlet boundary conditions, we seek to replace
         // the linear system Au = f with a new system Ãx = g, where

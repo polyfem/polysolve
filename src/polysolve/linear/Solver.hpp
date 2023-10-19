@@ -91,6 +91,9 @@ namespace polysolve::linear
         // Factorize system matrix of a dense matrix
         virtual void factorize_dense(const Eigen::MatrixXd &A) {}
 
+        // If solver uses dense matrices
+        virtual bool is_dense() const { return false; }
+
         //
         // @brief         { Solve the linear system Ax = b }
         //

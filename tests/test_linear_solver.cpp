@@ -106,6 +106,8 @@ TEST_CASE("all", "[solver]")
     Eigen::SparseMatrix<double> A;
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
+    json solver_info;
+    Eigen::MatrixXd A_dense(A);
 
     auto solvers = Solver::available_solvers();
     for (const auto &s : solvers)
@@ -130,13 +132,22 @@ TEST_CASE("all", "[solver]")
         Eigen::VectorXd x(b.size());
         x.setZero();
 
-        solver->analyze_pattern(A, A.rows());
-        solver->factorize(A);
+        if (solver->is_dense())
+        {
+            solver->analyze_pattern_dense(A, A.rows());
+            solver->factorize_dense(A);
+        }
+        else
+        {
+            solver->analyze_pattern(A, A.rows());
+            solver->factorize(A);
+        }
+
         solver->solve(b, x);
 
         REQUIRE(solver->name() == s);
 
-        // solver->get_info(solver_info);
+        solver->get_info(solver_info);
 
         // std::cout<<"Solver error: "<<x<<std::endl;
         const double err = (A * x - b).norm();

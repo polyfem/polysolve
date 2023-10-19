@@ -431,6 +431,12 @@ TEST_CASE("saddle_point_test", "[solver]")
     solver->factorize(A);
     Eigen::VectorXd x(A.rows());
     solver->solve(b, x);
+
+    json solver_info;
+    solver->get_info(solver_info);
+
+    REQUIRE(solver->name() == "SaddlePointSolver");
+
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }

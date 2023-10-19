@@ -281,7 +281,7 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
                 if (exceptions_are_errors)
                 {
                     x.setRandom();
-                    x /= 50;
+                    x /= 10;
                     x += prob->solutions()[0];
                 }
 
@@ -323,7 +323,7 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
                     if (exceptions_are_errors)
                     {
                         x.setRandom();
-                        x /= 50;
+                        x /= 10;
                         x += prob->solutions()[0];
                     }
                     else

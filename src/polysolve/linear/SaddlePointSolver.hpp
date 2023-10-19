@@ -43,7 +43,7 @@ namespace polysolve::linear
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
 
         // Name of the solver type (for debugging purposes)
-        virtual std::string name() const override { return "SaddleProblemSolver"; }
+        virtual std::string name() const override { return "SaddlePointSolver"; }
 
     private:
         StiffnessMatrix Ain_;

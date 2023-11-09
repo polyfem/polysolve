@@ -308,166 +308,163 @@ namespace polysolve::nonlinear
                 m_logger.debug("[{}] Line search failed; reverting to {}", name(), descent_strategy_name());
                 continue;
             }
-        }
 
-        x += rate * delta_x;
-        old_energy = energy;
+            x += rate * delta_x;
+            old_energy = energy;
 
-        // Reset this for the next iterations
-        // if the strategy got changed, we start counting
-        if (m_descent_strategy != previous_strategy)
-            current_strategy_iter = 0;
-        // if we did enoug lower strategy, we revert back to normal
-        if (current_strategy_iter >= m_iter_per_strategy[m_descent_strategy])
-        {
-            m_descent_strategy = 0;
-            for (auto &s : m_strategies)
-                s->reset(x.size());
-        }
+            // Reset this for the next iterations
+            // if the strategy got changed, we start counting
+            if (m_descent_strategy != previous_strategy)
+                current_strategy_iter = 0;
+            // if we did enoug lower strategy, we revert back to normal
+            if (current_strategy_iter >= m_iter_per_strategy[m_descent_strategy])
+            {
+                m_descent_strategy = 0;
+                for (auto &s : m_strategies)
+                    s->reset(x.size());
+            }
 
-        previous_strategy = m_descent_strategy;
-        ++current_strategy_iter;
+            previous_strategy = m_descent_strategy;
+            ++current_strategy_iter;
+
+            // -----------
+            // Post update
+            // -----------
+            const double step = (rate * delta_x).norm();
+
+            if (objFunc.stop(x))
+            {
+                this->m_status = cppoptlib::Status::UserDefined;
+                m_error_code = ErrorCode::SUCCESS;
+                m_logger.debug("[{}][{}] Objective decided to stop", name(), m_line_search->name());
+            }
+
+            objFunc.post_step(this->m_current.iterations, x);
+
+            m_logger.debug(
+                "[{}][{}] iter={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g} rate={:g} ‖step‖={:g}",
+                name(), m_line_search->name(),
+                this->m_current.iterations, energy, this->m_current.fDelta,
+                this->m_current.gradNorm, this->m_current.xDelta, delta_x.dot(grad), rate, step);
+
+            if (++this->m_current.iterations >= this->m_stop.iterations)
+                this->m_status = cppoptlib::Status::IterationLimit;
+
+            update_solver_info(energy);
+
+            // reset the tolerance, since in the first iter it might be smaller
+            this->m_stop.gradNorm = g_norm_tol;
+        } while (objFunc.callback(this->m_current, x) && (this->m_status == cppoptlib::Status::Continue));
+
+        stop_watch.stop();
 
         // -----------
-        // Post update
+        // Log results
         // -----------
-        const double step = (rate * delta_x).norm();
 
-        if (objFunc.stop(x))
-        {
-            this->m_status = cppoptlib::Status::UserDefined;
-            m_error_code = ErrorCode::SUCCESS;
-            m_logger.debug("[{}][{}] Objective decided to stop", name(), m_line_search->name());
-        }
+        if (!allow_out_of_iterations && this->m_status == cppoptlib::Status::IterationLimit)
+            log_and_throw_error(m_logger, "[{}][{}] Reached iteration limit (limit={})", name(), m_line_search->name(), this->m_stop.iterations);
+        if (this->m_status == cppoptlib::Status::UserDefined && m_error_code != ErrorCode::SUCCESS)
+            log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", name(), m_line_search->name());
 
-        objFunc.post_step(this->m_current.iterations, x);
-
-        m_logger.debug(
-            "[{}][{}] iter={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g} rate={:g} ‖step‖={:g}",
+        double tot_time = stop_watch.getElapsedTimeInSec();
+        m_logger.info(
+            "[{}][{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} ftol={})",
             name(), m_line_search->name(),
-            this->m_current.iterations, energy, this->m_current.fDelta,
-            this->m_current.gradNorm, this->m_current.xDelta, delta_x.dot(grad), rate, step);
+            this->m_status, tot_time, this->m_current.iterations,
+            old_energy, this->m_current.fDelta, this->m_current.gradNorm, this->m_current.xDelta, this->m_stop.fDelta);
 
-        if (++this->m_current.iterations >= this->m_stop.iterations)
-            this->m_status = cppoptlib::Status::IterationLimit;
-
-        update_solver_info(energy);
-
-        // reset the tolerance, since in the first iter it might be smaller
-        this->m_stop.gradNorm = g_norm_tol;
+        log_times();
+        update_solver_info(objFunc.value(x));
     }
-    while (objFunc.callback(this->m_current, x) && (this->m_status == cppoptlib::Status::Continue))
-        ;
 
-    stop_watch.stop();
-
-    // -----------
-    // Log results
-    // -----------
-
-    if (!allow_out_of_iterations && this->m_status == cppoptlib::Status::IterationLimit)
-        log_and_throw_error(m_logger, "[{}][{}] Reached iteration limit (limit={})", name(), m_line_search->name(), this->m_stop.iterations);
-    if (this->m_status == cppoptlib::Status::UserDefined && m_error_code != ErrorCode::SUCCESS)
-        log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", name(), m_line_search->name());
-
-    double tot_time = stop_watch.getElapsedTimeInSec();
-    m_logger.info(
-        "[{}][{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} ftol={})",
-        name(), m_line_search->name(),
-        this->m_status, tot_time, this->m_current.iterations,
-        old_energy, this->m_current.fDelta, this->m_current.gradNorm, this->m_current.xDelta, this->m_stop.fDelta);
-
-    log_times();
-    update_solver_info(objFunc.value(x));
-}
-
-void Solver::reset(const int ndof)
-{
-    this->m_current.reset();
-    m_descent_strategy = 0;
-    m_error_code = ErrorCode::SUCCESS;
-
-    const std::string line_search_name = solver_info["line_search"];
-    solver_info = json();
-    solver_info["line_search"] = line_search_name;
-    solver_info["iterations"] = 0;
-
-    for (auto &s : m_strategies)
-        s->reset(ndof);
-
-    reset_times();
-}
-
-void Solver::reset_times()
-{
-    total_time = 0;
-    grad_time = 0;
-    line_search_time = 0;
-    obj_fun_time = 0;
-    constraint_set_update_time = 0;
-    if (m_line_search)
+    void Solver::reset(const int ndof)
     {
-        m_line_search->reset_times();
+        this->m_current.reset();
+        m_descent_strategy = 0;
+        m_error_code = ErrorCode::SUCCESS;
+
+        const std::string line_search_name = solver_info["line_search"];
+        solver_info = json();
+        solver_info["line_search"] = line_search_name;
+        solver_info["iterations"] = 0;
+
+        for (auto &s : m_strategies)
+            s->reset(ndof);
+
+        reset_times();
     }
-    for (auto &s : m_strategies)
-        s->reset_times();
-}
 
-void Solver::update_solver_info(const double energy)
-{
-    solver_info["status"] = this->status();
-    solver_info["error_code"] = m_error_code;
-    solver_info["energy"] = energy;
-    const auto &crit = this->criteria();
-    solver_info["iterations"] = crit.iterations;
-    solver_info["xDelta"] = crit.xDelta;
-    solver_info["fDelta"] = crit.fDelta;
-    solver_info["gradNorm"] = crit.gradNorm;
-    solver_info["condition"] = crit.condition;
-
-    double per_iteration = crit.iterations ? crit.iterations : 1;
-
-    solver_info["total_time"] = total_time;
-    solver_info["time_grad"] = grad_time / per_iteration;
-    solver_info["time_line_search"] = line_search_time / per_iteration;
-    solver_info["time_constraint_set_update"] = constraint_set_update_time / per_iteration;
-    solver_info["time_obj_fun"] = obj_fun_time / per_iteration;
-
-    for (auto &s : m_strategies)
-        s->update_solver_info(solver_info, per_iteration);
-
-    if (m_line_search)
+    void Solver::reset_times()
     {
-        solver_info["line_search_iterations"] = m_line_search->iterations();
-
-        solver_info["time_checking_for_nan_inf"] =
-            m_line_search->checking_for_nan_inf_time / per_iteration;
-        solver_info["time_broad_phase_ccd"] =
-            m_line_search->broad_phase_ccd_time / per_iteration;
-        solver_info["time_ccd"] = m_line_search->ccd_time / per_iteration;
-        // Remove double counting
-        solver_info["time_classical_line_search"] =
-            (m_line_search->classical_line_search_time
-             - m_line_search->constraint_set_update_time)
-            / per_iteration;
-        solver_info["time_line_search_constraint_set_update"] =
-            m_line_search->constraint_set_update_time / per_iteration;
+        total_time = 0;
+        grad_time = 0;
+        line_search_time = 0;
+        obj_fun_time = 0;
+        constraint_set_update_time = 0;
+        if (m_line_search)
+        {
+            m_line_search->reset_times();
+        }
+        for (auto &s : m_strategies)
+            s->reset_times();
     }
-}
 
-void Solver::log_times()
-{
-    m_logger.debug(
-        "[{}] grad {:.3g}s, "
-        "line_search {:.3g}s, constraint_set_update {:.3g}s, "
-        "obj_fun {:.3g}s, checking_for_nan_inf {:.3g}s, "
-        "broad_phase_ccd {:.3g}s, ccd {:.3g}s, "
-        "classical_line_search {:.3g}s",
-        fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"),
-        grad_time, line_search_time,
-        constraint_set_update_time + (m_line_search ? m_line_search->constraint_set_update_time : 0),
-        obj_fun_time, m_line_search ? m_line_search->checking_for_nan_inf_time : 0,
-        m_line_search ? m_line_search->broad_phase_ccd_time : 0, m_line_search ? m_line_search->ccd_time : 0,
-        m_line_search ? m_line_search->classical_line_search_time : 0);
-}
+    void Solver::update_solver_info(const double energy)
+    {
+        solver_info["status"] = this->status();
+        solver_info["error_code"] = m_error_code;
+        solver_info["energy"] = energy;
+        const auto &crit = this->criteria();
+        solver_info["iterations"] = crit.iterations;
+        solver_info["xDelta"] = crit.xDelta;
+        solver_info["fDelta"] = crit.fDelta;
+        solver_info["gradNorm"] = crit.gradNorm;
+        solver_info["condition"] = crit.condition;
+
+        double per_iteration = crit.iterations ? crit.iterations : 1;
+
+        solver_info["total_time"] = total_time;
+        solver_info["time_grad"] = grad_time / per_iteration;
+        solver_info["time_line_search"] = line_search_time / per_iteration;
+        solver_info["time_constraint_set_update"] = constraint_set_update_time / per_iteration;
+        solver_info["time_obj_fun"] = obj_fun_time / per_iteration;
+
+        for (auto &s : m_strategies)
+            s->update_solver_info(solver_info, per_iteration);
+
+        if (m_line_search)
+        {
+            solver_info["line_search_iterations"] = m_line_search->iterations();
+
+            solver_info["time_checking_for_nan_inf"] =
+                m_line_search->checking_for_nan_inf_time / per_iteration;
+            solver_info["time_broad_phase_ccd"] =
+                m_line_search->broad_phase_ccd_time / per_iteration;
+            solver_info["time_ccd"] = m_line_search->ccd_time / per_iteration;
+            // Remove double counting
+            solver_info["time_classical_line_search"] =
+                (m_line_search->classical_line_search_time
+                 - m_line_search->constraint_set_update_time)
+                / per_iteration;
+            solver_info["time_line_search_constraint_set_update"] =
+                m_line_search->constraint_set_update_time / per_iteration;
+        }
+    }
+
+    void Solver::log_times()
+    {
+        m_logger.debug(
+            "[{}] grad {:.3g}s, "
+            "line_search {:.3g}s, constraint_set_update {:.3g}s, "
+            "obj_fun {:.3g}s, checking_for_nan_inf {:.3g}s, "
+            "broad_phase_ccd {:.3g}s, ccd {:.3g}s, "
+            "classical_line_search {:.3g}s",
+            fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"),
+            grad_time, line_search_time,
+            constraint_set_update_time + (m_line_search ? m_line_search->constraint_set_update_time : 0),
+            obj_fun_time, m_line_search ? m_line_search->checking_for_nan_inf_time : 0,
+            m_line_search ? m_line_search->broad_phase_ccd_time : 0, m_line_search ? m_line_search->ccd_time : 0,
+            m_line_search ? m_line_search->classical_line_search_time : 0);
+    }
 } // namespace polysolve::nonlinear

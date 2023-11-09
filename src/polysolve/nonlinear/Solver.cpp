@@ -58,6 +58,10 @@ namespace polysolve::nonlinear
             solver->add_strategy(std::make_unique<BFGS>(
                 solver_params, linear_solver_params,
                 characteristic_length, logger));
+            // add twice for the resetted history
+            solver->add_strategy(std::make_unique<BFGS>(
+                solver_params, linear_solver_params,
+                characteristic_length, logger));
         }
         else if (solver_name == "DenseNewton" || solver_name == "dense_newton")
         {
@@ -73,6 +77,9 @@ namespace polysolve::nonlinear
         }
         else if (solver_name == "LBFGS" || solver_name == "L-BFGS")
         {
+            solver->add_strategy(std::make_unique<LBFGS>(
+                solver_params, characteristic_length, logger));
+            // add twice for the resetted history
             solver->add_strategy(std::make_unique<LBFGS>(
                 solver_params, characteristic_length, logger));
         }
@@ -245,7 +252,7 @@ namespace polysolve::nonlinear
             //
             bool ok = m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, delta_x);
 
-            if (!ok || (m_strategies[m_descent_strategy]->is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0))
+            if (!ok || std::isnan(grad_norm) || (m_strategies[m_descent_strategy]->is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0))
             {
                 ++m_descent_strategy;
                 if (m_descent_strategy >= m_strategies.size())

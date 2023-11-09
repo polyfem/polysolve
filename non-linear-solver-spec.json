@@ -1,0 +1,256 @@
+[
+    {
+        "pointer": "/",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "solver",
+            "x_delta",
+            "grad_norm",
+            "first_grad_norm_tol",
+            "max_iterations",
+            "iterations_per_strategy",
+            "line_search",
+            "allow_out_of_iterations",
+            "LBFGS",
+            "Newton",
+            "box_constraints"
+        ],
+        "doc": "Settings for nonlinear solver. Interior-loop linear solver settings are defined in the solver/linear section."
+    },
+    {
+        "pointer": "/solver",
+        "default": "newton",
+        "type": "string",
+        "options": [
+            "Newton",
+            "DenseNewton",
+            "GradientDescent",
+            "L-BFGS",
+            "BFGS",
+            "L-BFGS-B",
+            "MMA"
+        ],
+        "doc": "Nonlinear solver type"
+    },
+    {
+        "pointer": "/x_delta",
+        "default": 0,
+        "type": "float",
+        "min": 0,
+        "doc": "Stopping criterion: minimal change of the variables x for the iterations to continue. Computed as the L2 norm of x divide by the time step."
+    },
+    {
+        "pointer": "/grad_norm",
+        "default": 1e-08,
+        "type": "float",
+        "min": 0,
+        "doc": "Stopping criterion: Minimal gradient norm for the iterations to continue."
+    },
+    {
+        "pointer": "/first_grad_norm_tol",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Minimal gradient norm for the iterations to not start, assume we already are at a minimum."
+    },
+    {
+        "pointer": "/max_iterations",
+        "default": 500,
+        "type": "int",
+        "doc": "Maximum number of iterations for a nonlinear solve."
+    },
+    {
+        "pointer": "/iterations_per_strategy",
+        "default": 5,
+        "type": "int",
+        "doc": "Number of iterations for every substrategy before reset."
+    },
+    {
+        "pointer": "/iterations_per_strategy",
+        "type": "list",
+        "doc": "Number of iterations for every substrategy before reset."
+    },
+    {
+        "pointer": "/iterations_per_strategy/*",
+        "default": 5,
+        "type": "int",
+        "doc": "Number of iterations for every substrategy before reset."
+    },
+    {
+        "pointer": "/allow_out_of_iterations",
+        "default": false,
+        "type": "bool",
+        "doc": "If false (default), an exception will be thrown when the nonlinear solver reaches the maximum number of iterations."
+    },
+    {
+        "pointer": "/LBFGS",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "history_size"
+        ],
+        "doc": "Options for LBFGS."
+    },
+    {
+        "pointer": "/LBFGS/history_size",
+        "default": 6,
+        "type": "int",
+        "doc": "The number of corrections to approximate the inverse Hessian matrix."
+    },
+    {
+        "pointer": "/Newton",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc",
+            "reg_weight_dec",
+            "force_psd_projection"
+        ],
+        "doc": "Options for Newton."
+    },
+    {
+        "pointer": "/Newton/reg_weight_min",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Minimum regulariztion weight."
+    },
+    {
+        "pointer": "/Newton/reg_weight_max",
+        "default": 1e8,
+        "type": "float",
+        "doc": "Maximum regulariztion weight."
+    },
+    {
+        "pointer": "/Newton/reg_weight_inc",
+        "default": 10,
+        "type": "float",
+        "doc": "Regulariztion weight increment."
+    },
+    {
+        "pointer": "/Newton/reg_weight_dec",
+        "default": 2,
+        "type": "float",
+        "doc": "Regulariztion weight decrement."
+    },
+    {
+        "pointer": "/Newton/force_psd_projection",
+        "default": false,
+        "type": "bool",
+        "doc": "Force the Hessian to be PSD when using second order solvers (i.e., Newton's method)."
+    },
+    {
+        "pointer": "/line_search",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "method",
+            "use_grad_norm_tol",
+            "min_step_size",
+            "max_step_size_iter",
+            "min_step_size_final",
+            "max_step_size_iter_final",
+            "default_init_step_size",
+            "step_ratio",
+            "Armijo"
+        ],
+        "doc": "Settings for line-search in the nonlinear solver"
+    },
+    {
+        "pointer": "/line_search/method",
+        "default": "Backtracking",
+        "type": "string",
+        "options": [
+            "Armijo",
+            "ArmijoAlt",
+            "Backtracking",
+            "MoreThuente",
+            "None"
+        ],
+        "doc": "Line-search type"
+    },
+    {
+        "pointer": "/line_search/use_grad_norm_tol",
+        "default": 1e-6,
+        "type": "float",
+        "doc": "When the energy is smaller than use_grad_norm_tol, line-search uses norm of gradient instead of energy"
+    },
+    {
+        "pointer": "/line_search/min_step_size",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Mimimum step size"
+    },
+    {
+        "pointer": "/line_search/max_step_size_iter",
+        "default": 30,
+        "type": "int",
+        "doc": "Number of iterations"
+    },
+    {
+        "pointer": "/line_search/min_step_size_final",
+        "default": 1e-20,
+        "type": "float",
+        "doc": "Mimimum step size for last descent strategy"
+    },
+    {
+        "pointer": "/line_search/max_step_size_iter_final",
+        "default": 100,
+        "type": "int",
+        "doc": "Number of iterations for last descent strategy"
+    },
+    {
+        "pointer": "/line_search/default_init_step_size",
+        "default": 1,
+        "type": "float",
+        "doc": "Initial step size"
+    },
+    {
+        "pointer": "/line_search/step_ratio",
+        "default": 0.5,
+        "type": "float",
+        "doc": "Ratio used to decrease the step"
+    },
+    {
+        "pointer": "/line_search/Armijo",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "c"
+        ],
+        "doc": "Options for Armijo."
+    },
+    {
+        "pointer": "/line_search/Armijo/c",
+        "default": 0.5,
+        "type": "float",
+        "doc": "Armijo c parameter."
+    },
+    {
+        "pointer": "/box_constraints",
+        "type": "object",
+        "optional": [
+            "bounds",
+            "max_change"
+        ],
+        "default": null
+    },
+    {
+        "pointer": "/box_constraints/bounds",
+        "default": [],
+        "type": "list",
+        "doc": "Box constraints on optimization variables."
+    },
+    {
+        "pointer": "/box_constraints/bounds/*",
+        "type": "float",
+        "doc": "Box constraint values on optimization variables."
+    },
+    {
+        "pointer": "/box_constraints/max_change",
+        "default": -1,
+        "type": "float",
+        "doc": "Maximum change of optimization variables in one iteration, only for solvers with box constraints. Negative value to disable this constraint."
+    }
+]

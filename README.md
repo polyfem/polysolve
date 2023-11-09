@@ -15,10 +15,10 @@ This library contains a cross-platform Eigen wrapper for many different external
 
 ```c++
 const std::string solver_name = "Hypre"
-auto solver = LinearSolver::create(solver_name, "");
+auto solver = Solver::create(solver_name, "");
 
 // Configuration parameters like iteration or accuracy for iterative solvers
-// solver->setParameters(params);
+// solver->set_parameters(params);
 
 // System sparse matrix
 Eigen::SparseMatrix<double> A;
@@ -29,12 +29,12 @@ Eigen::VectorXd b;
 // Solution
 Eigen::VectorXd x(b.size());
 
-solver->analyzePattern(A, A.rows());
+solver->analyze_pattern(A, A.rows());
 solver->factorize(A);
 solver->solve(b, x);
 ```
 
-You can use `LinearSolver::availableSolvers()` to obtain the list of available solvers.
+You can use `Solver::available_solvers()` to obtain the list of available solvers.
 
 ## Parameters
 

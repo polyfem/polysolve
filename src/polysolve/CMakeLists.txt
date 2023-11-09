@@ -1,22 +1,8 @@
 set(SOURCES
-    FEMSolver.cpp
-    FEMSolver.hpp
-    LbfgsSolver.hpp
-    LinearSolver.cpp
-    LinearSolver.hpp
-    LinearSolverAMGCL.cpp
-    LinearSolverAMGCL.hpp
-    LinearSolverCuSolverDN.cu
-    LinearSolverCuSolverDN.cuh
-    LinearSolverEigen.hpp
-    LinearSolverEigen.tpp
-    LinearSolverHypre.cpp
-    LinearSolverHypre.hpp
-    LinearSolverPardiso.cpp
-    LinearSolverPardiso.hpp
-    SaddlePointSolver.cpp
-    SaddlePointSolver.hpp
+	Utils.hpp
+	Utils.cpp
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})
-target_sources(polysolve PRIVATE ${SOURCES})
+target_sources(polysolve_linear PRIVATE ${SOURCES})
+

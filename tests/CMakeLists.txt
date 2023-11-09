@@ -4,7 +4,8 @@
 
 set(test_sources
 	main.cpp
-	test_solver.cpp
+	test_linear_solver.cpp
+	test_nonlinear_solver.cpp
 )
 add_executable(unit_tests ${test_sources})
 
@@ -22,6 +23,10 @@ target_link_libraries(unit_tests PRIVATE polysolve::warnings)
 
 if(POLYSOLVE_WITH_SANITIZERS)
 	add_sanitizers(unit_tests)
+endif()
+
+if(POLYSOLVE_WITH_AMGCL)
+    target_compile_definitions(unit_tests PRIVATE -DPOLYSOLVE_WITH_AMGCL)
 endif()
 
 include(polyfem-data)

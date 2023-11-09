@@ -53,6 +53,8 @@ namespace polysolve::nonlinear
                const double characteristic_length,
                spdlog::logger &logger);
 
+        void set_strategies_iterations(const json &solver_params);
+
         virtual double compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const;
 
         std::string name() const { return m_name; }

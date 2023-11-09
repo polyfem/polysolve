@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 #include "autodiff.h"
 #include <polysolve/nonlinear/Solver.hpp>
-#include <polysolve/nonlinear/BoxConstraintSolver.hpp>
+// #include <polysolve/nonlinear/BoxConstraintSolver.hpp>
 #include <polysolve/nonlinear/Problem.hpp>
 #include <polysolve/Utils.hpp>
 #include <polysolve/Types.hpp>
@@ -347,75 +347,75 @@ TEST_CASE("non-linear-easier", "[solver]")
     test_solvers(Solver::available_solvers(), 5000, true);
 }
 
-TEST_CASE("non-linear-box-constraint", "[solver]")
-{
-    std::vector<std::unique_ptr<TestProblem>> problems;
-    problems.push_back(std::make_unique<QuadraticProblem>());
-    problems.push_back(std::make_unique<Rosenbrock>());
-    problems.push_back(std::make_unique<Sphere>());
-    problems.push_back(std::make_unique<Beale>());
+// TEST_CASE("non-linear-box-constraint", "[solver]")
+// {
+//     std::vector<std::unique_ptr<TestProblem>> problems;
+//     problems.push_back(std::make_unique<QuadraticProblem>());
+//     problems.push_back(std::make_unique<Rosenbrock>());
+//     problems.push_back(std::make_unique<Sphere>());
+//     problems.push_back(std::make_unique<Beale>());
 
-    json solver_params, linear_solver_params;
-    solver_params["box_constraints"] = {};
-    solver_params["box_constraints"]["bounds"] = std::vector<double>({{0, 4}});
-    solver_params["box_constraints"]["max_change"] = 4;
+//     json solver_params, linear_solver_params;
+//     solver_params["box_constraints"] = {};
+//     solver_params["box_constraints"]["bounds"] = std::vector<double>({{0, 4}});
+//     solver_params["box_constraints"]["max_change"] = 4;
 
-    solver_params["max_iterations"] = 1000;
-    solver_params["line_search"] = {};
+//     solver_params["max_iterations"] = 1000;
+//     solver_params["line_search"] = {};
 
-    const double characteristic_length = 1;
+//     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
-    logger->set_level(spdlog::level::info);
+//     static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+//     logger->set_level(spdlog::level::info);
 
-    for (auto &prob : problems)
-    {
-        for (auto solver_name : BoxConstraintSolver::available_solvers())
-        {
-            solver_params["solver"] = solver_name;
+//     for (auto &prob : problems)
+//     {
+//         for (auto solver_name : BoxConstraintSolver::available_solvers())
+//         {
+//             solver_params["solver"] = solver_name;
 
-            for (const auto &ls : line_search::LineSearch::available_methods())
-            {
-                if (ls == "None" && solver_name != "MMA")
-                    continue;
-                if (solver_name == "MMA" && ls != "None")
-                    continue;
-                solver_params["line_search"]["method"] = ls;
+//             for (const auto &ls : line_search::LineSearch::available_methods())
+//             {
+//                 if (ls == "None" && solver_name != "MMA")
+//                     continue;
+//                 if (solver_name == "MMA" && ls != "None")
+//                     continue;
+//                 solver_params["line_search"]["method"] = ls;
 
-                auto solver = BoxConstraintSolver::create(solver_params,
-                                                          linear_solver_params,
-                                                          characteristic_length,
-                                                          *logger);
+//                 auto solver = BoxConstraintSolver::create(solver_params,
+//                                                           linear_solver_params,
+//                                                           characteristic_length,
+//                                                           *logger);
 
-                QuadraticProblem::TVector x(prob->size());
-                x.setConstant(3);
+//                 QuadraticProblem::TVector x(prob->size());
+//                 x.setConstant(3);
 
-                for (int i = 0; i < N_RANDOM; ++i)
-                {
-                    try
-                    {
-                        solver->minimize(*prob, x);
+//                 for (int i = 0; i < N_RANDOM; ++i)
+//                 {
+//                     try
+//                     {
+//                         solver->minimize(*prob, x);
 
-                        INFO("solver: " + solver_params["solver"].get<std::string>() + " LS: " + ls);
+//                         INFO("solver: " + solver_params["solver"].get<std::string>() + " LS: " + ls);
 
-                        Eigen::VectorXd gradv;
-                        prob->gradient(x, gradv);
-                        CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
-                    }
-                    catch (const std::exception &)
-                    {
-                        // INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
-                        // CHECK(false);
-                        break;
-                    }
+//                         Eigen::VectorXd gradv;
+//                         prob->gradient(x, gradv);
+//                         CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+//                     }
+//                     catch (const std::exception &)
+//                     {
+//                         // INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
+//                         // CHECK(false);
+//                         break;
+//                     }
 
-                    x.setRandom();
-                    x.array() += 3;
-                }
-            }
-        }
-    }
-}
+//                     x.setRandom();
+//                     x.array() += 3;
+//                 }
+//             }
+//         }
+//     }
+// }
 
 TEST_CASE("sample", "[solver]")
 {

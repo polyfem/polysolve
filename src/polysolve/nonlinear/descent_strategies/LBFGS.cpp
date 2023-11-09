@@ -14,46 +14,21 @@ namespace polysolve::nonlinear
         m_history_size = solver_params["LBFGS"]["history_size"];
     }
 
-    std::string LBFGS::descent_strategy_name(int descent_strategy) const
-    {
-        switch (descent_strategy)
-        {
-        case Solver::LBFGS_STRATEGY:
-            return "L-BFGS";
-        case Solver::GRADIENT_DESCENT_STRATEGY:
-            return "gradient descent";
-        default:
-            throw std::invalid_argument("invalid descent strategy");
-        }
-    }
-
-    void LBFGS::increase_descent_strategy()
-    {
-        if (this->descent_strategy == Solver::LBFGS_STRATEGY)
-            this->descent_strategy++;
-
-        m_bfgs.reset(m_prev_x.size(), m_history_size);
-
-        assert(this->descent_strategy <= Solver::MAX_STRATEGY);
-    }
-
     void LBFGS::reset(const int ndof)
     {
         Superclass::reset(ndof);
 
         m_bfgs.reset(ndof, m_history_size);
-
-        // Use gradient descent for first iteration
-        this->descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY;
+        m_prev_x.resize(0);
     }
 
-    void LBFGS::compute_update_direction(
+    bool LBFGS::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
         TVector &direction)
     {
-        if (this->descent_strategy == Solver::GRADIENT_DESCENT_STRATEGY)
+        if (m_prev_x.size() == 0)
         {
             // Use gradient descent in the first iteration or if the previous iteration failed
             direction = -grad;
@@ -73,5 +48,7 @@ namespace polysolve::nonlinear
 
         m_prev_x = x;
         m_prev_grad = grad;
+
+        return true;
     }
 } // namespace polysolve::nonlinear

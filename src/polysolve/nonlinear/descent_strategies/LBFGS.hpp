@@ -2,19 +2,17 @@
 
 #pragma once
 
-#include "Solver.hpp"
+#include "DescentStrategy.hpp"
 #include <polysolve/Utils.hpp>
 
 #include <LBFGSpp/BFGSMat.h>
 
 namespace polysolve::nonlinear
 {
-    class LBFGS : public Solver
+    class LBFGS : public DescentStrategy
     {
     public:
-        using Superclass = Solver;
-        using typename Superclass::Scalar;
-        using typename Superclass::TVector;
+        using Superclass = DescentStrategy;
 
         LBFGS(const json &solver_params,
               const double characteristic_length,
@@ -22,22 +20,16 @@ namespace polysolve::nonlinear
 
         std::string name() const override { return "L-BFGS"; }
 
-    protected:
-        void set_default_descent_strategy() override { descent_strategy = Solver::LBFGS_STRATEGY; }
-
-        using Superclass::descent_strategy_name;
-        std::string descent_strategy_name(int descent_strategy) const override;
-
-        void increase_descent_strategy() override;
-
+    public:
         void reset(const int ndof) override;
 
-        void compute_update_direction(
+        bool compute_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,
             TVector &direction) override;
 
+    private:
         LBFGSpp::BFGSMat<Scalar> m_bfgs; // Approximation to the Hessian matrix
 
         /// The number of corrections to approximate the inverse Hessian matrix.

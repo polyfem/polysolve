@@ -100,25 +100,29 @@ namespace polysolve::nonlinear
         const TVector &grad,
         TVector &direction)
     {
-        // solve_linear_system will increase descent_strategy if needed
-        const double residual = solve_linear_system(objFunc, x, grad, direction);
+        const double residual =
+            is_sparse ? //
+                solve_sparse_linear_system(objFunc, x, grad, direction)
+                      : solve_dense_linear_system(objFunc, x, grad, direction);
 
-        return check_direction(residual, grad, direction);
-    }
+        if (std::isnan(residual) || residual > m_residual_tolerance * m_characteristic_length)
+        {
+            m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (||∇f||={})",
+                           name(), residual, m_residual_tolerance * m_characteristic_length, grad.norm());
 
-    // =======================================================================
-
-    // =======================================================================
-    double Newton::solve_linear_system(Problem &objFunc,
-                                       const TVector &x,
-                                       const TVector &grad,
-                                       TVector &direction)
-    {
-        if (is_sparse)
-            return solve_sparse_linear_system(objFunc, x, grad, direction);
+            return false;
+        }
         else
-            return solve_dense_linear_system(objFunc, x, grad, direction);
+        {
+            m_logger.trace("linear solve residual {}", residual);
+        }
+
+        return true;
     }
+
+    // =======================================================================
+
+    // =======================================================================
 
     double Newton::solve_sparse_linear_system(Problem &objFunc,
                                               const TVector &x,
@@ -272,27 +276,6 @@ namespace polysolve::nonlinear
         reg_weight *= reg_weight_inc;
         return reg_weight < reg_weight_max;
     }
-    // =======================================================================
-
-    bool Newton::check_direction(
-        const double residual, const TVector &grad, const TVector &direction)
-    {
-        // gradient descent, check descent direction
-        if (std::isnan(residual) || residual > m_residual_tolerance * m_characteristic_length)
-        {
-            m_logger.debug("[{}] large (or nan) linear solve residual {} (||∇f||={})",
-                           name(), residual, grad.norm());
-
-            return false;
-        }
-        else
-        {
-            m_logger.trace("linear solve residual {}", residual);
-        }
-
-        return true;
-    }
-
     // =======================================================================
 
     void Newton::update_solver_info(json &solver_info, const double per_iteration)

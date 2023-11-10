@@ -28,17 +28,12 @@ namespace polysolve::nonlinear
         std::string name() const override { return internal_name() + "Newton"; }
 
     private:
-        double solve_linear_system(Problem &objFunc,
-                                   const TVector &x, const TVector &grad,
-                                   TVector &direction);
         double solve_sparse_linear_system(Problem &objFunc,
                                           const TVector &x, const TVector &grad,
                                           TVector &direction);
         double solve_dense_linear_system(Problem &objFunc,
                                          const TVector &x, const TVector &grad,
                                          TVector &direction);
-
-        bool check_direction(const double residual, const TVector &grad, const TVector &direction);
 
         json internal_solver_info = json::array();
 

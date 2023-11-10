@@ -19,7 +19,7 @@ namespace polysolve::nonlinear
                 characteristic_length, logger));
 
         const bool use_psd_projection = solver_params["Newton"]["use_psd_projection"];
-        if (!use_psd_projection)
+        if (use_psd_projection)
             res.push_back(std::make_unique<ProjectedNewton>(
                 sparse,
                 solver_params, linear_solver_params,

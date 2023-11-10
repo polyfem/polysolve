@@ -1,4 +1,6 @@
 set(SOURCES
+	BoxConstraintSolver.cpp
+	BoxConstraintSolver.hpp
 	Solver.hpp
 	Solver.cpp
 	Problem.hpp

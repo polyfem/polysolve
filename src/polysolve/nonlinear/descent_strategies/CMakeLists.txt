@@ -16,4 +16,4 @@ target_sources(polysolve PRIVATE ${SOURCES})
 # ###############################################################################
 # Subfolders
 # ###############################################################################
-# add_subdirectory(box_constraints)
+add_subdirectory(box_constraints)

@@ -1,8 +1,7 @@
 set(SOURCES
 	LBFGSB.cpp
 	LBFGSB.hpp
-	BoxConstraintSolver.cpp
-	BoxConstraintSolver.hpp
+	BoxedDescentStrategy.hpp
 	MMA.hpp
 	MMA.cpp
 	MMAAux.hpp

@@ -83,6 +83,22 @@ namespace polysolve::nonlinear
 
         void add_strategy(const std::shared_ptr<DescentStrategy> &s) { m_strategies.push_back(s); }
 
+        const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
+
+    protected:
+        virtual bool compute_update_direction(
+            Problem &objFunc,
+            const TVector &x,
+            const TVector &grad,
+            TVector &direction)
+        {
+            return m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, direction);
+        }
+
+        int m_descent_strategy;
+
+        spdlog::logger &m_logger;
+
     private:
         // ====================================================================
         //                        Solver parameters
@@ -105,7 +121,6 @@ namespace polysolve::nonlinear
         std::shared_ptr<line_search::LineSearch> m_line_search;
         std::vector<std::shared_ptr<DescentStrategy>> m_strategies;
 
-        int m_descent_strategy;
         std::vector<int> m_iter_per_strategy;
 
         // ====================================================================
@@ -127,8 +142,6 @@ namespace polysolve::nonlinear
         double obj_fun_time;
 
         ErrorCode m_error_code;
-
-        spdlog::logger &m_logger;
 
         // ====================================================================
         //                                 END

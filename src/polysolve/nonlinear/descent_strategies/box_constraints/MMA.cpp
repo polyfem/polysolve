@@ -9,8 +9,6 @@ namespace polysolve::nonlinear
              spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger)
     {
-        if (m_line_search->name() != "None")
-            log_and_throw_error(m_logger, "Invalid linesearch for MMA; MMA requires 'None' linesearch, instead got {}", m_line_search->name());
     }
 
     void MMA::reset(const int ndof)
@@ -19,32 +17,14 @@ namespace polysolve::nonlinear
         mma.reset();
     }
 
-    std::string MMA::descent_strategy_name(int descent_strategy) const
-    {
-        switch (descent_strategy)
-        {
-        case Solver::MMA_STRATEGY:
-            return "MMA";
-        default:
-            throw std::invalid_argument("invalid descent strategy");
-        }
-    }
-
-    void MMA::increase_descent_strategy()
-    {
-        assert(this->descent_strategy <= Solver::MAX_STRATEGY);
-        this->descent_strategy++;
-    }
-
-    void MMA::compute_update_direction(
+    bool MMA::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
+        const TVector &lower_bound,
+        const TVector &upper_bound,
         TVector &direction)
     {
-        TVector lower_bound = Superclass::get_lower_bound(x);
-        TVector upper_bound = Superclass::get_upper_bound(x);
-
         const int m = constraints_.size();
 
         if (!mma)
@@ -68,14 +48,12 @@ namespace polysolve::nonlinear
         direction = y - x;
 
         // maybe remove me
-        if (std::isnan(direction.squaredNorm()))
-        {
-            log_and_throw_error(m_logger, "nan in direction.");
-        }
         // else if (grad.squaredNorm() != 0 && direction.dot(grad) > 0)
         // {
         //     polyfem::logger().error("Direction is not a descent direction, stop.");
         //     throw std::runtime_error("Direction is not a descent direction, stop.");
         // }
+
+        return true;
     }
 } // namespace polysolve::nonlinear

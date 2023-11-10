@@ -250,7 +250,7 @@ namespace polysolve::nonlinear
             // ------------------------
             // Compute a Δx to update the variable
             //
-            bool ok = m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, delta_x);
+            bool ok = compute_update_direction(objFunc, x, grad, delta_x);
 
             if (!ok || std::isnan(grad_norm) || (m_strategies[m_descent_strategy]->is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0))
             {

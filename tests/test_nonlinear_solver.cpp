@@ -291,6 +291,8 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
                                                  linear_solver_params,
                                                  characteristic_length,
                                                  *logger);
+                    REQUIRE(solver->name() == solver_name);
+
                     try
                     {
                         solver->minimize(*prob, x);
@@ -388,6 +390,7 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
                                                           characteristic_length,
                                                           *logger);
 
+                REQUIRE(solver->name() == solver_name);
                 QuadraticProblem::TVector x(prob->size());
                 x.setConstant(3);
 
@@ -420,7 +423,6 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
 
 TEST_CASE("sample", "[solver]")
 {
-
     Rosenbrock rb;
 
     Eigen::VectorXd alphas;

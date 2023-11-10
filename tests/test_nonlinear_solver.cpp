@@ -340,6 +340,7 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
 TEST_CASE("non-linear", "[solver]")
 {
     test_solvers(Solver::available_solvers(), 1000, false);
+    // test_solvers({"L-BFGS"}, 1000, false);
 }
 
 TEST_CASE("non-linear-easier", "[solver]")

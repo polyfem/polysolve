@@ -58,10 +58,6 @@ namespace polysolve::nonlinear
             solver->add_strategy(std::make_unique<BFGS>(
                 solver_params, linear_solver_params,
                 characteristic_length, logger));
-            // add twice for the resetted history
-            solver->add_strategy(std::make_unique<BFGS>(
-                solver_params, linear_solver_params,
-                characteristic_length, logger));
         }
         else if (solver_name == "DenseNewton" || solver_name == "dense_newton")
         {
@@ -77,9 +73,6 @@ namespace polysolve::nonlinear
         }
         else if (solver_name == "LBFGS" || solver_name == "L-BFGS")
         {
-            solver->add_strategy(std::make_unique<LBFGS>(
-                solver_params, characteristic_length, logger));
-            // add twice for the resetted history
             solver->add_strategy(std::make_unique<LBFGS>(
                 solver_params, characteristic_length, logger));
         }
@@ -324,7 +317,7 @@ namespace polysolve::nonlinear
             if (m_descent_strategy != previous_strategy)
                 current_strategy_iter = 0;
             // if we did enoug lower strategy, we revert back to normal
-            if (current_strategy_iter >= m_iter_per_strategy[m_descent_strategy])
+            if (m_descent_strategy != 0 && current_strategy_iter >= m_iter_per_strategy[m_descent_strategy])
             {
                 m_descent_strategy = 0;
                 for (auto &s : m_strategies)

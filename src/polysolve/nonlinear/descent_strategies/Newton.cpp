@@ -18,17 +18,22 @@ namespace polysolve::nonlinear
                 solver_params, linear_solver_params,
                 characteristic_length, logger));
 
-        // TODO disable regularization?
-        res.push_back(std::make_unique<RegularizedNewton>(
-            sparse,
-            solver_params, linear_solver_params,
-            characteristic_length, logger));
+        const double reg_weight_min = solver_params["Newton"]["reg_weight_min"];
+        if (reg_weight_min > 0)
+            res.push_back(std::make_unique<RegularizedNewton>(
+                sparse,
+                solver_params, linear_solver_params,
+                characteristic_length, logger));
 
-        // TODO disable projection?
-        res.push_back(std::make_unique<ProjectedNewton>(
-            sparse,
-            solver_params, linear_solver_params,
-            characteristic_length, logger));
+        const bool use_psd_projection = solver_params["Newton"]["use_psd_projection"];
+        if (!use_psd_projection)
+            res.push_back(std::make_unique<ProjectedNewton>(
+                sparse,
+                solver_params, linear_solver_params,
+                characteristic_length, logger));
+
+        if (res.empty())
+            log_and_throw_error(logger, "Newton needs to have at least one of force_psd_projection=false, reg_weight_min>0, or use_psd_projection=true");
 
         return res;
     }
@@ -42,6 +47,8 @@ namespace polysolve::nonlinear
         : Superclass(solver_params, characteristic_length, logger),
           is_sparse(sparse), m_characteristic_length(characteristic_length)
     {
+        m_residual_tolerance = solver_params["Newton"]["residual_tolerance"];
+
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
         assert(linear_solver->is_dense() == !sparse);
     }
@@ -67,7 +74,8 @@ namespace polysolve::nonlinear
         reg_weight_min = solver_params["Newton"]["reg_weight_min"];
         reg_weight_max = solver_params["Newton"]["reg_weight_max"];
         reg_weight_inc = solver_params["Newton"]["reg_weight_inc"];
-        reg_weight_dec = solver_params["Newton"]["reg_weight_dec"];
+
+        reg_weight = reg_weight_min;
     }
 
     // =======================================================================
@@ -81,7 +89,7 @@ namespace polysolve::nonlinear
     void RegularizedNewton::reset(const int ndof)
     {
         Superclass::reset(ndof);
-        reg_weight = 0;
+        reg_weight = reg_weight_min;
     }
 
     // =======================================================================
@@ -259,13 +267,18 @@ namespace polysolve::nonlinear
     }
     // =======================================================================
 
+    bool RegularizedNewton::handle_error()
+    {
+        reg_weight *= reg_weight_inc;
+        return reg_weight < reg_weight_max;
+    }
     // =======================================================================
 
     bool Newton::check_direction(
         const double residual, const TVector &grad, const TVector &direction)
     {
         // gradient descent, check descent direction
-        if (std::isnan(residual) || residual > std::max(1e-8 * grad.norm(), 1e-5) * m_characteristic_length)
+        if (std::isnan(residual) || residual > m_residual_tolerance * m_characteristic_length)
         {
             m_logger.debug("[{}] large (or nan) linear solve residual {} (||∇f||={})",
                            name(), residual, grad.norm());
@@ -275,14 +288,6 @@ namespace polysolve::nonlinear
         else
         {
             m_logger.trace("linear solve residual {}", residual);
-        }
-
-        // do this check here because we need to repeat the solve without resetting reg_weight
-        if (grad.norm() != 0 && grad.dot(direction) >= 0)
-        {
-            m_logger.debug("[{}] direction is not a descent direction (‖g‖={:g}; ‖Δx‖={:g}; Δx⋅g={:g}≥0)",
-                           name(), grad.norm(), direction.norm(), direction.dot(grad));
-            return false;
         }
 
         return true;

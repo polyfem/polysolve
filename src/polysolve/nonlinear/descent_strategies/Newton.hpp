@@ -43,6 +43,7 @@ namespace polysolve::nonlinear
         json internal_solver_info = json::array();
 
         const double m_characteristic_length;
+        double m_residual_tolerance;
         const bool is_sparse;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
@@ -111,14 +112,14 @@ namespace polysolve::nonlinear
         std::string name() const override { return internal_name() + "RegularizedNewton"; }
 
         void reset(const int ndof) override;
+        bool handle_error() override;
 
     private:
         double reg_weight_min; // needs to be greater than zero
         double reg_weight_max;
         double reg_weight_inc;
-        double reg_weight_dec;
 
-        double reg_weight = 0; ///< Regularization Coefficients
+        double reg_weight; ///< Regularization Coefficients
     protected:
         void compute_hessian(Problem &objFunc,
                              const TVector &x,

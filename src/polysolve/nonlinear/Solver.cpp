@@ -247,7 +247,8 @@ namespace polysolve::nonlinear
 
             if (!ok || std::isnan(grad_norm) || (m_strategies[m_descent_strategy]->is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0))
             {
-                ++m_descent_strategy;
+                if (!m_strategies[m_descent_strategy]->handle_error())
+                    ++m_descent_strategy;
                 if (m_descent_strategy >= m_strategies.size())
                 {
                     this->m_status = cppoptlib::Status::UserDefined;
@@ -267,7 +268,8 @@ namespace polysolve::nonlinear
             const double delta_x_norm = delta_x.norm();
             if (std::isnan(delta_x_norm))
             {
-                ++m_descent_strategy;
+                if (!m_strategies[m_descent_strategy]->handle_error())
+                    ++m_descent_strategy;
 
                 if (m_descent_strategy >= m_strategies.size())
                 {
@@ -297,8 +299,8 @@ namespace polysolve::nonlinear
             if (std::isnan(rate))
             {
                 assert(this->m_status == cppoptlib::Status::Continue);
-
-                ++m_descent_strategy;
+                if (!m_strategies[m_descent_strategy]->handle_error())
+                    ++m_descent_strategy;
                 if (m_descent_strategy >= m_strategies.size())
                 {
                     this->m_status = cppoptlib::Status::UserDefined; // Line search failed on gradient descent, so quit!

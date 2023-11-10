@@ -27,6 +27,7 @@ namespace polysolve::nonlinear
         virtual void update_solver_info(json &solver_info, const double per_iteration) {}
 
         virtual bool is_direction_descent() { return true; }
+        virtual bool handle_error() { return false; }
 
         virtual bool compute_update_direction(
             Problem &objFunc,

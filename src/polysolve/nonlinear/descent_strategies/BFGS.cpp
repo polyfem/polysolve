@@ -49,7 +49,7 @@ namespace polysolve::nonlinear
             }
             catch (const std::runtime_error &err)
             {
-                m_logger.warn("Unable to factorize Hessian: \"{}\";", err.what());
+                m_logger.debug("Unable to factorize Hessian: \"{}\";", err.what());
                 return false;
             }
 

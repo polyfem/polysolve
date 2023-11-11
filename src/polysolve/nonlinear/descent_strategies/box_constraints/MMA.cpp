@@ -17,7 +17,7 @@ namespace polysolve::nonlinear
         mma.reset();
     }
 
-    bool MMA::compute_update_direction(
+    bool MMA::compute_boxed_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,

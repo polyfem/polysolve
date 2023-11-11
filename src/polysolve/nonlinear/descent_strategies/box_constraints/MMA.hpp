@@ -29,7 +29,7 @@ namespace polysolve::nonlinear
     public:
         void reset(const int ndof) override;
 
-        bool compute_update_direction(
+        bool compute_boxed_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,

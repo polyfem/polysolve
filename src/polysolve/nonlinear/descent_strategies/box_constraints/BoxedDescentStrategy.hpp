@@ -16,7 +16,7 @@ namespace polysolve::nonlinear
 
         virtual ~BoxedDescentStrategy() {}
 
-        virtual bool compute_update_direction(
+        virtual bool compute_boxed_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,

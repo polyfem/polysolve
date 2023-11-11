@@ -124,7 +124,7 @@ namespace polysolve::nonlinear
         const TVector lower_bound = get_lower_bound(x);
         const TVector upper_bound = get_upper_bound(x);
 
-        return m_strategies[m_descent_strategy]->compute_update_direction(
+        return m_strategies[m_descent_strategy]->compute_boxed_update_direction(
             objFunc, x, grad,
             lower_bound, upper_bound,
             direction);

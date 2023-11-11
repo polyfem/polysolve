@@ -37,9 +37,9 @@ namespace polysolve::nonlinear
 
         json internal_solver_info = json::array();
 
+        const bool is_sparse;
         const double m_characteristic_length;
         double m_residual_tolerance;
-        const bool is_sparse;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
 

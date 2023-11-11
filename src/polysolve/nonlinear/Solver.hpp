@@ -104,6 +104,8 @@ namespace polysolve::nonlinear
         //                        Solver parameters
         // ====================================================================
 
+        std::string m_name;
+
         double use_grad_norm_tol;
         double first_grad_norm_tol;
 
@@ -126,8 +128,6 @@ namespace polysolve::nonlinear
         // ====================================================================
         //                            Solver info
         // ====================================================================
-
-        std::string m_name;
 
         void update_solver_info(const double energy);
         void reset_times();

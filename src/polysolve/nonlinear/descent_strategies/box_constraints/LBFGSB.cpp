@@ -30,7 +30,7 @@ namespace polysolve::nonlinear
         m_prev_grad.resize(ndof);
     }
 
-    bool LBFGSB::compute_update_direction(
+    bool LBFGSB::compute_boxed_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,

@@ -13,6 +13,7 @@
             "line_search",
             "allow_out_of_iterations",
             "LBFGS",
+            "LBFGSB",
             "Newton",
             "box_constraints"
         ],
@@ -93,6 +94,21 @@
     },
     {
         "pointer": "/LBFGS/history_size",
+        "default": 6,
+        "type": "int",
+        "doc": "The number of corrections to approximate the inverse Hessian matrix."
+    },
+    {
+        "pointer": "/LBFGSB",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "history_size"
+        ],
+        "doc": "Options for the boxed LBFGS."
+    },
+    {
+        "pointer": "/LBFGSB/history_size",
         "default": 6,
         "type": "int",
         "doc": "The number of corrections to approximate the inverse Hessian matrix."

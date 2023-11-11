@@ -12,7 +12,8 @@ namespace polysolve::nonlinear
         : Superclass(solver_params, characteristic_length, logger)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
-        assert(linear_solver->is_dense());
+        if (!linear_solver->is_dense())
+            log_and_throw_error(logger, "BFGS linear solver must be dense, instead got {}", linear_solver->name());
     }
 
     void BFGS::reset(const int ndof)

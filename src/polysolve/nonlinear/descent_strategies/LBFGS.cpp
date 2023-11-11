@@ -12,6 +12,8 @@ namespace polysolve::nonlinear
                      logger)
     {
         m_history_size = solver_params["LBFGS"]["history_size"];
+        if (m_history_size <= 0)
+            log_and_throw_error(logger, "LBFGS history_size must be >=1, instead got {}", m_history_size);
     }
 
     void LBFGS::reset(const int ndof)

@@ -50,7 +50,11 @@ namespace polysolve::nonlinear
         m_residual_tolerance = solver_params["Newton"]["residual_tolerance"];
 
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
-        assert(linear_solver->is_dense() == !sparse);
+        if (linear_solver->is_dense() == sparse)
+            log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
+
+        if (m_residual_tolerance <= 0)
+            log_and_throw_error(logger, "Newton residual_tolerance must be > 0, instead got {}", m_residual_tolerance);
     }
 
     ProjectedNewton::ProjectedNewton(
@@ -76,6 +80,15 @@ namespace polysolve::nonlinear
         reg_weight_inc = solver_params["Newton"]["reg_weight_inc"];
 
         reg_weight = reg_weight_min;
+
+        if (reg_weight_min <= 0)
+            log_and_throw_error(logger, "Newton reg_weight_min must be  > 0, instead got {}", reg_weight_min);
+
+        if (reg_weight_inc <= 1)
+            log_and_throw_error(logger, "Newton reg_weight_inc must be  > 1, instead got {}", reg_weight_inc);
+
+        if (reg_weight_max <= reg_weight_min)
+            log_and_throw_error(logger, "Newton reg_weight_max must be  > {}, instead got {}", reg_weight_min, reg_weight_max);
     }
 
     // =======================================================================

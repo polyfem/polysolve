@@ -1,7 +1,7 @@
 #include "BoxConstraintSolver.hpp"
 
-#include "LBFGSB.hpp"
-#include "MMA.hpp"
+#include "descent_strategies/box_constraints/LBFGSB.hpp"
+#include "descent_strategies/box_constraints/MMA.hpp"
 
 #include <jse/jse.h>
 
@@ -39,17 +39,28 @@ namespace polysolve::nonlinear
 
         solver_params = jse.inject_defaults(solver_params, rules);
 
-        const std::string solver = solver_params["solver"];
+        const std::string solver_name = solver_params["solver"];
 
-        if (solver == "LBFGSB" || solver == "L-BFGS-B")
+        auto solver = std::make_unique<BoxConstraintSolver>(solver_name, solver_params, characteristic_length, logger);
+
+        if (solver_name == "LBFGSB" || solver_name == "L-BFGS-B")
         {
-            return std::make_unique<LBFGSB>(solver_params, characteristic_length, logger);
+            solver->add_strategy(std::make_unique<LBFGSB>(
+                solver_params, characteristic_length, logger));
         }
-        else if (solver == "MMA")
+        else if (solver_name == "MMA")
         {
-            return std::make_unique<MMA>(solver_params, characteristic_length, logger);
+            if (solver->line_search()->name() != "None")
+                log_and_throw_error(logger, "Invalid linesearch for MMA; MMA requires 'None' linesearch, instead got {}", solver->line_search()->name());
+
+            solver->add_strategy(std::make_unique<MMA>(
+                solver_params, characteristic_length, logger));
         }
-        throw std::runtime_error("Unrecognized solver type: " + solver);
+        else
+            throw std::runtime_error("Unrecognized solver type: " + solver_name);
+
+        solver->set_strategies_iterations(solver_params);
+        return solver;
     }
 
     std::vector<std::string> BoxConstraintSolver::available_solvers()
@@ -58,10 +69,11 @@ namespace polysolve::nonlinear
                 "MMA"};
     }
 
-    BoxConstraintSolver::BoxConstraintSolver(const json &solver_params,
+    BoxConstraintSolver::BoxConstraintSolver(const std::string &name,
+                                             const json &solver_params,
                                              const double characteristic_length,
                                              spdlog::logger &logger)
-        : Superclass(solver_params, characteristic_length, logger)
+        : Superclass(name, solver_params, characteristic_length, logger)
     {
         json box_constraint_params = solver_params["box_constraints"];
         if (box_constraint_params["max_change"] > 0)
@@ -101,6 +113,21 @@ namespace polysolve::nonlinear
                 }
             }
         }
+    }
+
+    bool BoxConstraintSolver::compute_update_direction(
+        Problem &objFunc,
+        const TVector &x,
+        const TVector &grad,
+        TVector &direction)
+    {
+        const TVector lower_bound = get_lower_bound(x);
+        const TVector upper_bound = get_upper_bound(x);
+
+        return m_strategies[m_descent_strategy]->compute_boxed_update_direction(
+            objFunc, x, grad,
+            lower_bound, upper_bound,
+            direction);
     }
 
     double BoxConstraintSolver::compute_grad_norm(const Eigen::VectorXd &x,

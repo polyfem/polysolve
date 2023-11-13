@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Solver.hpp"
+#include "DescentStrategy.hpp"
 #include <polysolve/Utils.hpp>
 
 #include <polysolve/linear/Solver.hpp>
@@ -11,12 +11,10 @@
 
 namespace polysolve::nonlinear
 {
-    class BFGS : public Solver
+    class BFGS : public DescentStrategy
     {
     public:
-        using Superclass = Solver;
-        using typename Superclass::Scalar;
-        using typename Superclass::TVector;
+        using Superclass = DescentStrategy;
 
         BFGS(const json &solver_params,
              const json &linear_solver_params,
@@ -25,29 +23,21 @@ namespace polysolve::nonlinear
 
         std::string name() const override { return "BFGS"; }
 
-    protected:
-        virtual void set_default_descent_strategy() override { descent_strategy = Solver::BFGS_STRATEGY; }
+        void reset(const int ndof) override;
 
-        using Superclass::descent_strategy_name;
-        std::string descent_strategy_name(int descent_strategy) const override;
+        virtual bool compute_update_direction(
+            Problem &objFunc,
+            const TVector &x,
+            const TVector &grad,
+            TVector &direction) override;
 
-        void increase_descent_strategy() override;
-
-    protected:
+    private:
         TVector m_prev_x;    // Previous x
         TVector m_prev_grad; // Previous gradient
 
         Eigen::MatrixXd hess;
 
-        void reset(const int ndof) override;
-
         void reset_history(const int ndof);
-
-        virtual void compute_update_direction(
-            Problem &objFunc,
-            const TVector &x,
-            const TVector &grad,
-            TVector &direction) override;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
     };

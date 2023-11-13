@@ -2,19 +2,17 @@
 
 #pragma once
 
+#include "BoxedDescentStrategy.hpp"
 #include <polysolve/Utils.hpp>
-#include "BoxConstraintSolver.hpp"
 
 #include <LBFGSpp/BFGSMat.h>
 
 namespace polysolve::nonlinear
 {
-    class LBFGSB : public BoxConstraintSolver
+    class LBFGSB : public BoxedDescentStrategy
     {
     public:
-        using Superclass = BoxConstraintSolver;
-        using typename Superclass::Scalar;
-        using typename Superclass::TVector;
+        using Superclass = BoxedDescentStrategy;
 
         LBFGSB(const json &solver_params,
                const double characteristic_length,
@@ -22,15 +20,7 @@ namespace polysolve::nonlinear
 
         std::string name() const override { return "L-BFGS-B"; }
 
-    protected:
-        virtual void set_default_descent_strategy() override { descent_strategy = Solver::LBFGS_STRATEGY; }
-
-        using Superclass::descent_strategy_name;
-        std::string descent_strategy_name(int descent_strategy) const override;
-
-        void increase_descent_strategy() override;
-
-    protected:
+    private:
         LBFGSpp::BFGSMat<Scalar, true> m_bfgs; // Approximation to the Hessian matrix
 
         /// The number of corrections to approximate the inverse Hessian matrix.
@@ -45,14 +35,17 @@ namespace polysolve::nonlinear
         TVector m_prev_x;    // Previous x
         TVector m_prev_grad; // Previous gradient
 
-        void reset(const int ndof) override;
-
         void reset_history(const int ndof);
 
-        virtual void compute_update_direction(
+    public:
+        void reset(const int ndof) override;
+
+        bool compute_boxed_update_direction(
             Problem &objFunc,
             const TVector &x,
             const TVector &grad,
+            const TVector &lower_bound,
+            const TVector &upper_bound,
             TVector &direction) override;
     };
 } // namespace polysolve::nonlinear

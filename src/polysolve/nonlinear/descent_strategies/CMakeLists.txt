@@ -1,10 +1,13 @@
 set(SOURCES
-	BoxConstraintSolver.cpp
-	BoxConstraintSolver.hpp
-	Solver.hpp
-	Solver.cpp
-	Problem.hpp
-	Problem.cpp
+	DescentStrategy.hpp
+	LBFGS.hpp
+	LBFGS.cpp
+	BFGS.cpp
+	BFGS.hpp
+	GradientDescent.cpp
+	GradientDescent.hpp
+	Newton.hpp
+	Newton.cpp
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})
@@ -13,5 +16,4 @@ target_sources(polysolve PRIVATE ${SOURCES})
 # ###############################################################################
 # Subfolders
 # ###############################################################################
-add_subdirectory(descent_strategies)
-add_subdirectory(line_search)
+add_subdirectory(box_constraints)

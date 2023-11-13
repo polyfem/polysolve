@@ -12,30 +12,8 @@ namespace polysolve::nonlinear
         : Superclass(solver_params, characteristic_length, logger)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
-        assert(linear_solver->is_dense());
-    }
-
-    std::string BFGS::descent_strategy_name(int descent_strategy) const
-    {
-        switch (descent_strategy)
-        {
-        case Solver::BFGS_STRATEGY:
-            return "BFGS";
-        case Solver::GRADIENT_DESCENT_STRATEGY:
-            return "gradient descent";
-        default:
-            throw std::invalid_argument("invalid descent strategy");
-        }
-    }
-
-    void BFGS::increase_descent_strategy()
-    {
-        if (this->descent_strategy == Solver::BFGS_STRATEGY)
-            this->descent_strategy++;
-
-        assert(m_prev_x.size() > 0);
-        reset_history(m_prev_x.size());
-        assert(this->descent_strategy <= Solver::MAX_STRATEGY);
+        if (!linear_solver->is_dense())
+            log_and_throw_error(logger, "BFGS linear solver must be dense, instead got {}", linear_solver->name());
     }
 
     void BFGS::reset(const int ndof)
@@ -46,22 +24,19 @@ namespace polysolve::nonlinear
 
     void BFGS::reset_history(const int ndof)
     {
-        m_prev_x.resize(ndof);
+        m_prev_x.resize(0);
         m_prev_grad.resize(ndof);
 
         hess.setIdentity(ndof, ndof);
-
-        // Use gradient descent for first iteration
-        this->descent_strategy = Solver::GRADIENT_DESCENT_STRATEGY;
     }
 
-    void BFGS::compute_update_direction(
+    bool BFGS::compute_update_direction(
         Problem &objFunc,
         const TVector &x,
         const TVector &grad,
         TVector &direction)
     {
-        if (this->descent_strategy == Solver::GRADIENT_DESCENT_STRATEGY)
+        if (m_prev_x.size() == 0)
         {
             direction = -grad;
         }
@@ -75,13 +50,8 @@ namespace polysolve::nonlinear
             }
             catch (const std::runtime_error &err)
             {
-                increase_descent_strategy();
-
-                // warn if using gradient descent
-                m_logger.warn("Unable to factorize Hessian: \"{}\"; reverting to {}",
-                              err.what(), this->descent_strategy_name());
-                compute_update_direction(objFunc, x, grad, direction);
-                return;
+                m_logger.debug("Unable to factorize Hessian: \"{}\";", err.what());
+                return false;
             }
 
             TVector y = grad - m_prev_grad;
@@ -96,5 +66,7 @@ namespace polysolve::nonlinear
 
         m_prev_x = x;
         m_prev_grad = grad;
+
+        return true;
     }
 } // namespace polysolve::nonlinear

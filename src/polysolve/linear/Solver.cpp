@@ -47,23 +47,26 @@ namespace polysolve::linear
 {
     using polysolve::StiffnessMatrix;
 
-    void Solver::patch_input_json(json &rules, json &params, spdlog::logger &logger)
+    void Solver::apply_default_solver(json &rules, const std::string &prefix)
     {
         // set default wrt availability
         for (int i = 0; i < rules.size(); i++)
         {
-            if (rules[i]["pointer"] == "/solver")
+            if (rules[i]["pointer"] == prefix + "/solver")
             {
                 rules[i]["default"] = default_solver();
                 rules[i]["options"] = available_solvers();
             }
-            else if (rules[i]["pointer"] == "/precond")
+            else if (rules[i]["pointer"] == prefix + "/precond")
             {
                 rules[i]["default"] = default_precond();
                 rules[i]["options"] = available_preconds();
             }
         }
+    }
 
+    void Solver::select_valid_solver(json &params, spdlog::logger &logger)
+    {
         // if solver is an array, pick the first available
         const auto lin_solver_ptr = "/solver"_json_pointer;
         if (params.contains(lin_solver_ptr) && params[lin_solver_ptr].is_array())
@@ -122,7 +125,8 @@ namespace polysolve::linear
         else
             log_and_throw_error(logger, "unable to open {} rules", input_spec);
 
-        patch_input_json(rules, params, logger);
+        apply_default_solver(rules);
+        select_valid_solver(params, logger);
 
         const bool valid_input = jse.verify_json(params, rules);
 

@@ -47,22 +47,8 @@ namespace polysolve::linear
 {
     using polysolve::StiffnessMatrix;
 
-    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation)
+    void Solver::patch_input_json(json &rules, json &params, spdlog::logger &logger)
     {
-        json params = params_in; // mutable copy
-
-        json rules;
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        const std::string input_spec = POLYSOLVE_LINEAR_SPEC;
-        std::ifstream file(input_spec);
-
-        if (file.is_open())
-            file >> rules;
-        else
-            log_and_throw_error(logger, "unable to open {} rules", input_spec);
-
         // set default wrt availability
         for (int i = 0; i < rules.size(); i++)
         {
@@ -118,6 +104,25 @@ namespace polysolve::linear
                 params[lin_solver_ptr] = Solver::default_solver();
             }
         }
+    }
+
+    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation)
+    {
+        json params = params_in; // mutable copy
+
+        json rules;
+        jse::JSE jse;
+
+        jse.strict = strict_validation;
+        const std::string input_spec = POLYSOLVE_LINEAR_SPEC;
+        std::ifstream file(input_spec);
+
+        if (file.is_open())
+            file >> rules;
+        else
+            log_and_throw_error(logger, "unable to open {} rules", input_spec);
+
+        patch_input_json(rules, params, logger);
 
         const bool valid_input = jse.verify_json(params, rules);
 

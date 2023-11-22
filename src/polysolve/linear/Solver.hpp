@@ -45,6 +45,19 @@ namespace polysolve::linear
         // Virtual destructor
         virtual ~Solver() = default;
 
+        /// Sets the default paramters to the rules (solver and precond are cmake dependent)
+        static void apply_default_solver(json &rules, const std::string &prefix = "");
+
+        /// Selects the correct solver based on params using the fallback or the list of solvers if necessary
+        static void select_valid_solver(json &params, spdlog::logger &logger);
+
+        // Static constructor
+        //
+        // @param[in]  params   Parameter of the solver, including name and preconditioner
+        // @param[in]  logger   Logger used for error
+        // @param[in]  strict_validation    strict validation of the input paraams
+        // @param[out] a pointer to a linear solver
+        //
         static std::unique_ptr<Solver> create(const json &params,
                                               spdlog::logger &logger,
                                               const bool strict_validation = true);

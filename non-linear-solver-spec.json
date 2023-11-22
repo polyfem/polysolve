@@ -21,7 +21,7 @@
     },
     {
         "pointer": "/solver",
-        "default": "newton",
+        "default": "Newton",
         "type": "string",
         "options": [
             "Newton",

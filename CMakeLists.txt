@@ -174,8 +174,9 @@ if(POLYSOLVE_LARGE_INDEX)
     target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_LARGE_INDEX)
 endif()
 
-target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_LINEAR_SPEC="${CMAKE_SOURCE_DIR}/linear-solver-spec.json")
-target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_NON_LINEAR_SPEC="${CMAKE_SOURCE_DIR}/non-linear-solver-spec.json")
+target_compile_definitions(polysolve_linear PRIVATE POLYSOLVE_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/linear-solver-spec.json")
+target_compile_definitions(polysolve PRIVATE POLYSOLVE_NON_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/non-linear-solver-spec.json")
+target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_JSON_SPEC_DIR="${PROJECT_SOURCE_DIR}")
 
 
 ################################################################################

@@ -78,40 +78,12 @@ namespace polysolve::nonlinear
         json box_constraint_params = solver_params["box_constraints"];
         if (box_constraint_params["max_change"] > 0)
             max_change_val_ = box_constraint_params["max_change"];
-        // todo
-        // else
-        //     nlohmann::adl_serializer<Eigen::VectorXd>::from_json(box_constraint_params["max_change"], max_change_);
+        else
+            max_change_ = box_constraint_params["max_change"];
 
-        if (box_constraint_params.contains("bounds"))
+        if (box_constraint_params.contains("bounds") && box_constraint_params["bounds"].is_array() && box_constraint_params["bounds"].size() == 2)
         {
-            if (box_constraint_params["bounds"].is_string())
-            {
-                if (std::filesystem::is_regular_file(box_constraint_params["bounds"].get<std::string>()))
-                {
-                    // todo
-                    // polyfem::io::read_matrix(box_constraint_params["bounds"].get<std::string>(), bounds_);
-                    assert(bounds_.cols() == 2);
-                }
-            }
-            else if (box_constraint_params["bounds"].is_array() && box_constraint_params["bounds"].size() == 2)
-            {
-                if (box_constraint_params["bounds"][0].is_number())
-                {
-                    bounds_.setZero(1, 2);
-                    bounds_ << box_constraint_params["bounds"][0], box_constraint_params["bounds"][1];
-                }
-                else if (box_constraint_params["bounds"][0].is_array())
-                {
-                    bounds_.setZero(box_constraint_params["bounds"][0].size(), 2);
-                    Eigen::VectorXd tmp;
-                    // todo
-                    // nlohmann::adl_serializer<Eigen::VectorXd>::from_json(box_constraint_params["bounds"][0], tmp);
-                    bounds_.col(0) = tmp;
-                    // todo
-                    // nlohmann::adl_serializer<Eigen::VectorXd>::from_json(box_constraint_params["bounds"][1], tmp);
-                    bounds_.col(1) = tmp;
-                }
-            }
+            bounds_ = box_constraint_params["bounds"];
         }
     }
 
@@ -149,8 +121,8 @@ namespace polysolve::nonlinear
                                                          bool consider_max_change) const
     {
         Eigen::VectorXd min;
-        if (bounds_.rows() == x.size())
-            min = bounds_.col(0);
+        if (bounds_.cols() == x.size())
+            min = bounds_.row(0);
         else if (bounds_.size() == 2)
             min = Eigen::VectorXd::Constant(x.size(), 1, bounds_(0));
         else
@@ -166,8 +138,8 @@ namespace polysolve::nonlinear
                                                          bool consider_max_change) const
     {
         Eigen::VectorXd max;
-        if (bounds_.rows() == x.size())
-            max = bounds_.col(1);
+        if (bounds_.cols() == x.size())
+            max = bounds_.row(1);
         else if (bounds_.size() == 2)
             max = Eigen::VectorXd::Constant(x.size(), 1, bounds_(1));
         else

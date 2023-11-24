@@ -267,6 +267,16 @@
     },
     {
         "pointer": "/box_constraints/bounds/*",
+        "type": "list",
+        "doc": "Box constraint values on optimization variables."
+    },
+    {
+        "pointer": "/box_constraints/bounds/*/*",
+        "type": "float",
+        "doc": "Box constraint values on optimization variables."
+    },
+    {
+        "pointer": "/box_constraints/bounds/*",
         "type": "float",
         "doc": "Box constraint values on optimization variables."
     },
@@ -275,5 +285,15 @@
         "default": -1,
         "type": "float",
         "doc": "Maximum change of optimization variables in one iteration, only for solvers with box constraints. Negative value to disable this constraint."
+    },
+    {
+        "pointer": "/box_constraints/max_change",
+        "type": "list",
+        "doc": "Maximum change of optimization variables in one iteration, only for solvers with box constraints."
+    },
+    {
+        "pointer": "/box_constraints/max_change/*",
+        "type": "float",
+        "doc": "Maximum change of every optimization variable in one iteration, only for solvers with box constraints."
     }
 ]

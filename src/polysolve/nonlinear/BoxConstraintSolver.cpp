@@ -164,4 +164,11 @@ namespace polysolve::nonlinear
         return Eigen::VectorXd();
     }
 
+    void BoxConstraintSolver::add_constraint(const std::shared_ptr<Problem> &constraint)
+    {  
+        for (auto& strategy : m_strategies)
+            if (strategy->name() == "MMA")
+                std::dynamic_pointer_cast<MMA>(strategy)->add_constraint(constraint);
+    }
+
 } // namespace polysolve::nonlinear

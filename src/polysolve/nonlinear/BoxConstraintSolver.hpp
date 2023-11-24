@@ -43,6 +43,8 @@ namespace polysolve::nonlinear
             m_strategies.push_back(s);
         }
 
+        void add_constraint(const std::shared_ptr<Problem> &constraint);
+
     protected:
         bool compute_update_direction(
             Problem &objFunc,

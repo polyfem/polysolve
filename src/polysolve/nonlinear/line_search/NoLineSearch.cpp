@@ -15,6 +15,7 @@ namespace polysolve::nonlinear::line_search
         const double,
         const double starting_step_size)
     {
+        objFunc.solution_changed(x + delta_x * starting_step_size);
         return starting_step_size;
     }
 } // namespace polysolve::nonlinear::line_search

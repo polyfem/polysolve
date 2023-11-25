@@ -8,7 +8,7 @@
 #include <polysolve/linear/Solver.hpp>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
-
+#include <polysolve/JSONUtils.hpp>
 #include <catch2/catch.hpp>
 
 //////////////////////////////////////////////////////////////////////////
@@ -240,6 +240,18 @@ public:
     }
 };
 
+
+class InequalityConstraint : public Problem
+{
+public:
+    InequalityConstraint(const double upper_bound): upper_bound_(upper_bound) {}
+    double value(const TVector &x) override { return x(0) - upper_bound_; }
+    void gradient(const TVector &x, TVector &gradv) override { gradv.setZero(x.size()); gradv(0) = 1; }
+    void hessian(const TVector &x, THessian &hessian) override {}
+private:
+    const double upper_bound_;
+};
+
 void test_solvers(const std::vector<std::string> &solvers, const int iters, const bool exceptions_are_errors)
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
@@ -382,7 +394,7 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
                 if (ls == "None" && solver_name != "MMA")
                     continue;
                 if (solver_name == "MMA" && ls != "None")
-                    continue;
+                     continue;
                 solver_params["line_search"]["method"] = ls;
 
                 auto solver = BoxConstraintSolver::create(solver_params,
@@ -417,6 +429,136 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
                     x.array() += 3;
                 }
             }
+        }
+    }
+}
+
+TEST_CASE("non-linear-box-constraint-input", "[solver]")
+{
+    std::vector<std::unique_ptr<TestProblem>> problems;
+    problems.push_back(std::make_unique<QuadraticProblem>());
+
+    json solver_params, linear_solver_params;
+    solver_params["box_constraints"] = {};
+
+    solver_params["max_iterations"] = 1000;
+    solver_params["line_search"] = {};
+
+    const double characteristic_length = 1;
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger2");
+    logger->set_level(spdlog::level::err);
+
+    for (auto &prob : problems)
+    {
+        for (auto solver_name : BoxConstraintSolver::available_solvers())
+        {
+            solver_params["solver"] = solver_name;
+
+            for (const auto &ls : line_search::LineSearch::available_methods())
+            {
+                if (ls == "None" && solver_name != "MMA")
+                    continue;
+                if (solver_name == "MMA" && ls != "None")
+                     continue;
+                solver_params["line_search"]["method"] = ls;
+
+                QuadraticProblem::TVector x(prob->size());
+                x.setConstant(3);
+
+                Eigen::MatrixXd bounds(2, x.size());
+                bounds.row(0).array() = 0;
+                bounds.row(1).array() = 4;
+                solver_params["box_constraints"]["bounds"] = bounds;
+                Eigen::MatrixXd max_change(1, x.size());
+                max_change.array() = 4;
+                solver_params["box_constraints"]["max_change"] = 4;
+
+                auto solver = BoxConstraintSolver::create(solver_params,
+                                                          linear_solver_params,
+                                                          characteristic_length,
+                                                          *logger);
+                REQUIRE(solver->name() == solver_name);
+
+                try
+                {
+                    solver->minimize(*prob, x);
+
+                    INFO("solver: " + solver_params["solver"].get<std::string>() + " LS: " + ls);
+
+                    Eigen::VectorXd gradv;
+                    prob->gradient(x, gradv);
+                    CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                }
+                catch (const std::exception &)
+                {
+                    // INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
+                    // CHECK(false);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("MMA", "[solver]")
+{
+    std::vector<std::unique_ptr<TestProblem>> problems;
+    problems.push_back(std::make_unique<QuadraticProblem>());
+    problems.push_back(std::make_unique<Rosenbrock>());
+    problems.push_back(std::make_unique<Sphere>());
+    problems.push_back(std::make_unique<Beale>());
+
+    json solver_params, linear_solver_params;
+    solver_params["box_constraints"] = {};
+    solver_params["box_constraints"]["bounds"] = std::vector<double>({{0, 4}});
+    solver_params["box_constraints"]["max_change"] = 4;
+
+    solver_params["max_iterations"] = 1000;
+    solver_params["line_search"] = {};
+
+    const double characteristic_length = 1;
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    logger->set_level(spdlog::level::info);
+
+    for (auto &prob : problems)
+    {
+        solver_params["solver"] = "MMA";
+        solver_params["line_search"]["method"] = "None";
+
+        auto solver = BoxConstraintSolver::create(solver_params,
+                                                    linear_solver_params,
+                                                    characteristic_length,
+                                                    *logger);
+
+        auto c = std::make_shared<InequalityConstraint>(solver_params["box_constraints"]["bounds"][1]);
+        dynamic_cast<BoxConstraintSolver&>(*solver).add_constraint(c);
+
+        QuadraticProblem::TVector x(prob->size());
+        x.setConstant(3);
+
+        for (int i = 0; i < N_RANDOM; ++i)
+        {
+            try
+            {
+                solver->minimize(*prob, x);
+
+                INFO("solver: " + solver_params["solver"].get<std::string>());
+
+                Eigen::VectorXd gradv;
+                prob->gradient(x, gradv);
+                CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+            }
+            catch (const std::exception &)
+            {
+                // INFO("solver: " + solver_name + " LS: " + ls + " problem " + prob->name());
+                // CHECK(false);
+                break;
+            }
+
+            x.setRandom();
+            x.array() += 3;
         }
     }
 }

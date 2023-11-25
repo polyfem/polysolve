@@ -14,7 +14,7 @@ namespace polysolve::nonlinear
             const double characteristic_length,
             spdlog::logger &logger);
 
-        void set_constraints(const std::vector<std::shared_ptr<Problem>> &constraints) { constraints_ = constraints; }
+        void add_constraint(const std::shared_ptr<Problem> &constraint) { constraints_.push_back(constraint); }
 
         std::string name() const override { return "MMA"; }
 

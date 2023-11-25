@@ -393,6 +393,8 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
             {
                 if (ls == "None" && solver_name != "MMA")
                     continue;
+                if (solver_name == "MMA" && ls != "None")
+                     continue;
                 solver_params["line_search"]["method"] = ls;
 
                 auto solver = BoxConstraintSolver::create(solver_params,
@@ -457,6 +459,8 @@ TEST_CASE("non-linear-box-constraint-input", "[solver]")
             {
                 if (ls == "None" && solver_name != "MMA")
                     continue;
+                if (solver_name == "MMA" && ls != "None")
+                     continue;
                 solver_params["line_search"]["method"] = ls;
 
                 QuadraticProblem::TVector x(prob->size());

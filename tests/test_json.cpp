@@ -16,7 +16,9 @@ TEST_CASE("json_to_eigen", "[json]")
             [1, 2, 3],
             [[1, 2, 3]],
             [[1], [2], [3]],
-            [[1, 2], [3, 4]]
+            [[1, 2], [3, 4]],
+            [],
+            1
         ]
     )");
 
@@ -55,6 +57,14 @@ TEST_CASE("json_to_eigen", "[json]")
     c = input[3];
     REQUIRE(c.rows() == 2);
     REQUIRE(c.cols() == 2);
+
+    // empty json array
+    c = input[4];
+    REQUIRE(c.size() == 0);
+    
+    // single number
+    c = input[5];
+    REQUIRE(c(0) == 1);
 }
 
 TEST_CASE("eigen_to_json", "[json]")

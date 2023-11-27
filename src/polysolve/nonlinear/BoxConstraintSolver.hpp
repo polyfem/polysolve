@@ -56,7 +56,6 @@ namespace polysolve::nonlinear
         Eigen::MatrixXd bounds_;
         std::vector<std::shared_ptr<BoxedDescentStrategy>> m_strategies;
 
-        double max_change_val_ = 0;
         Eigen::VectorXd max_change_;
     };
 

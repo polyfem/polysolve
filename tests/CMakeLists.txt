@@ -6,6 +6,7 @@ set(test_sources
 	main.cpp
 	test_linear_solver.cpp
 	test_nonlinear_solver.cpp
+	test_json.cpp
 )
 add_executable(unit_tests ${test_sources})
 

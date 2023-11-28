@@ -2,14 +2,15 @@
 
 #include "Types.hpp"
 
+
 namespace nlohmann
 {
-	template <typename T, int nrows, int ncols, int maxdim1, int maxdim2>
-	struct adl_serializer<Eigen::Matrix<T, nrows, ncols, Eigen::ColMajor, maxdim1, maxdim2>>
+	template <typename T, int nrows, int ncols, int options, int maxdim1, int maxdim2>
+	struct adl_serializer<Eigen::Matrix<T, nrows, ncols, options, maxdim1, maxdim2>>
 	{
-		static void to_json(json &j, const Eigen::Matrix<T, nrows, ncols, Eigen::ColMajor, maxdim1, maxdim2> &matrix)
+		static void to_json(json &j, const Eigen::Matrix<T, nrows, ncols, options, maxdim1, maxdim2> &matrix)
 		{
-			if (matrix.rows() > 1)
+			if (matrix.rows() > 1 && matrix.cols() > 1)
 			{
 				for (int row = 0; row < matrix.rows(); ++row)
 				{
@@ -21,39 +22,56 @@ namespace nlohmann
 					j.push_back(column);
 				}
 			}
-			else if (matrix.rows() == 1)
+			else
 			{
 				j = json::array();
-				for (int col = 0; col < matrix.cols(); ++col)
+				for (int i = 0; i < matrix.size(); ++i)
 				{
-					j.push_back(matrix(0, col));
+					j.push_back(matrix(i));
 				}
 			}
 		}
 
-		static void from_json(const json &j, Eigen::Matrix<T, nrows, ncols, Eigen::ColMajor, maxdim1, maxdim2> &matrix)
+		static void from_json(const json &j, Eigen::Matrix<T, nrows, ncols, options, maxdim1, maxdim2> &matrix)
 		{
-			using Scalar = typename Eigen::Matrix<T, nrows, ncols, Eigen::ColMajor, maxdim1, maxdim2>::Scalar;
-			assert(j.size() > 0);
-			assert(nrows >= j.size() || nrows == -1);
-			assert(j.at(0).is_number() || ncols == -1 || ncols >= j.at(0).size());
-			
-			const int n_cols = j.at(0).is_number() ? 1 : j.at(0).size();
-			if (nrows == -1 || ncols == -1)
-				matrix.setZero(j.size(), n_cols);
-			
-			for (std::size_t row = 0; row < j.size(); ++row)
+			using Scalar = typename Eigen::Matrix<T, nrows, ncols, options, maxdim1, maxdim2>::Scalar;
+
+			if (j.is_number())
 			{
-				const auto& jrow = j.at(row);
-				if (jrow.is_number())
-					matrix(row) = jrow;
-				else
-					for (std::size_t col = 0; col < jrow.size(); ++col)
-					{
-						const auto& value = jrow.at(col);
-						matrix(row, col) = value.get<Scalar>();
-					}
+				matrix.resize(1, 1);
+				matrix(0, 0) = j.get<Scalar>();
 			}
+			else if (j.is_array())
+			{
+				if (j.size() == 0) // empty array
+					matrix.resize(0, 0);
+				else if (j.at(0).is_number()) // 1D array
+				{
+					assert(nrows == -1 || ncols == -1); // at least one dimension can be resized
+					if (ncols == -1)
+						matrix.setZero(1, j.size());
+					else
+						matrix.setZero(j.size(), 1);
+					
+					for (int i = 0; i < j.size(); i++)
+						matrix(i) = j.at(i).get<Scalar>();
+				}
+				else // 2D array
+				{
+					matrix.setZero(j.size(), j.at(0).size());
+					
+					for (int r = 0; r < matrix.rows(); r++)
+					{
+						const auto& jrow = j.at(r);
+						for (int c = 0; c < matrix.cols(); c++)
+						{
+							matrix(r, c) = jrow.at(c).get<Scalar>();
+						}
+					}
+				}
+			}
+			else
+				assert(false);
 		}
 	};
 } // namespace nlohmann

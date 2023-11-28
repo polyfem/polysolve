@@ -77,10 +77,7 @@ namespace polysolve::nonlinear
         : Superclass(name, solver_params, characteristic_length, logger)
     {
         json box_constraint_params = solver_params["box_constraints"];
-        if (box_constraint_params["max_change"].is_number())
-            max_change_val_ = box_constraint_params["max_change"];
-        else
-            max_change_ = box_constraint_params["max_change"];
+        max_change_ = box_constraint_params["max_change"];
 
         if (box_constraint_params.contains("bounds") && box_constraint_params["bounds"].is_array() && box_constraint_params["bounds"].size() == 2)
         {
@@ -122,10 +119,10 @@ namespace polysolve::nonlinear
                                                          bool consider_max_change) const
     {
         Eigen::VectorXd min;
-        if (bounds_.cols() == x.size())
-            min = bounds_.row(0);
-        else if (bounds_.size() == 2)
+        if (bounds_.size() == 2)
             min = Eigen::VectorXd::Constant(x.size(), 1, bounds_(0));
+        else if (bounds_.cols() == x.size())
+            min = bounds_.row(0);
         else
             log_and_throw_error(m_logger, "Invalid bounds!");
 
@@ -139,10 +136,10 @@ namespace polysolve::nonlinear
                                                          bool consider_max_change) const
     {
         Eigen::VectorXd max;
-        if (bounds_.cols() == x.size())
-            max = bounds_.row(1);
-        else if (bounds_.size() == 2)
+        if (bounds_.size() == 2)
             max = Eigen::VectorXd::Constant(x.size(), 1, bounds_(1));
+        else if (bounds_.cols() == x.size())
+            max = bounds_.row(1);
         else
             log_and_throw_error(m_logger, "Invalid bounds!");
 
@@ -156,8 +153,8 @@ namespace polysolve::nonlinear
     {
         if (max_change_.size() == x.size())
             return max_change_;
-        else if (max_change_val_ > 0)
-            return Eigen::VectorXd::Ones(x.size()) * max_change_val_;
+        else if (max_change_.size() == 1 && max_change_(0) > 0)
+            return Eigen::VectorXd::Ones(x.size()) * max_change_(0);
         else
             log_and_throw_error(m_logger, "Invalid max change!");
 

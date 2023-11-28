@@ -38,13 +38,13 @@ namespace nlohmann
 
 			if (j.is_number())
 			{
-				matrix.resize(1, 1);
+				matrix.resize((nrows == -1) ? 1 : nrows, (ncols == -1) ? 1 : ncols);
 				matrix(0, 0) = j.get<Scalar>();
 			}
 			else if (j.is_array())
 			{
 				if (j.size() == 0) // empty array
-					matrix.resize(0, 0);
+					matrix.setZero(std::max(0, nrows), std::max(0, ncols));
 				else if (j.at(0).is_number()) // 1D array
 				{
 					assert(nrows == -1 || ncols == -1); // at least one dimension can be resized

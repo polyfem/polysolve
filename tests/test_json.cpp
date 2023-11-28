@@ -59,9 +59,13 @@ TEST_CASE("json_to_eigen", "[json]")
     REQUIRE(c.cols() == 2);
 
     // empty json array
+    a = input[4];
+    REQUIRE(a.size() == 0);
+    b = input[4];
+    REQUIRE(b.size() == 0);
     c = input[4];
     REQUIRE(c.size() == 0);
-    
+
     // single number
     c = input[5];
     REQUIRE(c(0) == 1);

@@ -111,6 +111,7 @@ namespace polysolve::nonlinear
 
         const double characteristic_length;
 
+        int f_delta_step_tol;
         // ====================================================================
         //                           Solver state
         // ====================================================================

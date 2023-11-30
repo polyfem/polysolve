@@ -130,19 +130,16 @@ namespace polysolve::nonlinear
 
     void Solver::set_strategies_iterations(const json &solver_params)
     {
-        m_iter_per_strategy.resize(m_strategies.size() + 1);
-
         if (solver_params["iterations_per_strategy"].is_array())
         {
             m_iter_per_strategy.resize(m_strategies.size() + 1);
             if (solver_params["iterations_per_strategy"].size() != m_iter_per_strategy.size())
                 log_and_throw_error(m_logger, "Invalit iter_per_strategy size: {}!={}", solver_params["iterations_per_strategy"].size(), m_iter_per_strategy.size());
 
-            for (int i = 0; i < m_iter_per_strategy.size(); ++i)
-                m_iter_per_strategy[i] = solver_params["iterations_per_strategy"][i];
+            m_iter_per_strategy = solver_params["iterations_per_strategy"].get<std::vector<int>>();
         }
         else
-            m_iter_per_strategy.resize(m_strategies.size() + 1, solver_params["iterations_per_strategy"].get<int>());
+            m_iter_per_strategy.assign(m_strategies.size() + 1, solver_params["iterations_per_strategy"].get<int>());
     }
 
     double Solver::compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const

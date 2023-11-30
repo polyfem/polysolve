@@ -29,11 +29,6 @@ namespace polysolve::nonlinear::line_search
 
         static std::vector<std::string> available_methods();
 
-        void set_min_step_size(double min_step)
-        {
-            min_step_size = min_step;
-        }
-
         void reset_times()
         {
             checking_for_nan_inf_time = 0;

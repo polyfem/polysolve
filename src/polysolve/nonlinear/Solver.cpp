@@ -328,13 +328,15 @@ namespace polysolve::nonlinear
             // if we did enough lower strategy, we revert back to normal
             if (m_descent_strategy != 0 && current_strategy_iter >= m_iter_per_strategy[m_descent_strategy])
             {
+                const std::string prev_strategy_name = descent_strategy_name();
+
                 m_descent_strategy = 0;
                 for (auto &s : m_strategies)
                     s->reset(x.size());
 
                 m_logger.debug(
-                    "[{}][{}] Enough lower strategy; reverting to {}",
-                    name(), m_line_search->name(), descent_strategy_name());
+                    "[{}][{}] {} was successful for {} iterations; attempting {}",
+                    name(), m_line_search->name(), prev_strategy_name, current_strategy_iter, descent_strategy_name());
             }
 
             previous_strategy = m_descent_strategy;

@@ -372,6 +372,7 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
 
     json solver_params, linear_solver_params;
     solver_params["box_constraints"] = {};
+    solver_params["iterations_per_strategy"] = {5, 5};
     solver_params["box_constraints"]["bounds"] = std::vector<double>({{0, 4}});
     solver_params["box_constraints"]["max_change"] = 4;
 

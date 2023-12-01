@@ -224,7 +224,7 @@ namespace polysolve::nonlinear
 
             f_delta = std::abs(old_energy - energy);
             // stop based on f_delta only if the solver has taken over f_delta_step_tol steps with small f_delta
-            this->m_current.fDelta = (f_delta_step_cnt == f_delta_step_tol) ? f_delta : NaN;
+            this->m_current.fDelta = (f_delta_step_cnt >= f_delta_step_tol) ? f_delta : NaN;
 
             ///////////// gradient
             {

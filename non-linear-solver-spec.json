@@ -16,8 +16,7 @@
             "LBFGSB",
             "Newton",
             "box_constraints",
-            "f_delta",
-            "f_delta_step_tol"
+            "advanced"
         ],
         "doc": "Settings for nonlinear solver. Interior-loop linear solver settings are defined in the solver/linear section."
     },
@@ -299,14 +298,24 @@
         "doc": "Maximum change of every optimization variable in one iteration, only for solvers with box constraints."
     },
     {
-        "pointer": "/f_delta",
+        "pointer": "/advanced",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "f_delta",
+            "f_delta_step_tol"
+        ],
+        "doc": "Nonlinear solver advanced options"
+    },
+    {
+        "pointer": "/advanced/f_delta",
         "default": 0,
         "min": 0,
         "type": "float",
         "doc": "Dangerous Option: Quit the optimization if the solver reduces the energy by less than f_delta for consecutive f_delta_step_tol steps."
     },
     {
-        "pointer": "/f_delta_step_tol",
+        "pointer": "/advanced/f_delta_step_tol",
         "default": 100,
         "type": "int",
         "doc": "Dangerous Option: Quit the optimization if the solver reduces the energy by less than f_delta for consecutive f_delta_step_tol steps."

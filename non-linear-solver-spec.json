@@ -300,7 +300,8 @@
     },
     {
         "pointer": "/f_delta",
-        "default": -1,
+        "default": 0,
+        "min": 0,
         "type": "float",
         "doc": "Dangerous Option: Quit the optimization if the solver reduces the energy by less than f_delta for consecutive f_delta_step_tol steps."
     },

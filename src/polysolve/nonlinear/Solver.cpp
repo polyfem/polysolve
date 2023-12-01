@@ -106,26 +106,26 @@ namespace polysolve::nonlinear
         : m_logger(logger), m_name(name), characteristic_length(characteristic_length)
     {
         TCriteria criteria = TCriteria::defaults();
-        criteria.xDelta = solver_params["x_delta"].get<double>();
-        criteria.fDelta = solver_params["f_delta"].get<double>();
-        criteria.gradNorm = solver_params["grad_norm"].get<double>();
+        criteria.xDelta = solver_params["x_delta"];
+        criteria.fDelta = solver_params["f_delta"];
+        criteria.gradNorm = solver_params["grad_norm"];
 
         criteria.xDelta *= characteristic_length;
         criteria.fDelta *= characteristic_length;
         criteria.gradNorm *= characteristic_length;
 
-        criteria.iterations = solver_params["max_iterations"].get<int>();
+        criteria.iterations = solver_params["max_iterations"];
         // criteria.condition = solver_params["condition"];
         this->setStopCriteria(criteria);
 
-        use_grad_norm_tol = solver_params["line_search"]["use_grad_norm_tol"].get<double>();
+        use_grad_norm_tol = solver_params["line_search"]["use_grad_norm_tol"];
 
-        first_grad_norm_tol = solver_params["first_grad_norm_tol"].get<double>();
+        first_grad_norm_tol = solver_params["first_grad_norm_tol"];
 
         use_grad_norm_tol *= characteristic_length;
         first_grad_norm_tol *= characteristic_length;
 
-        f_delta_step_tol = solver_params["f_delta_step_tol"].get<int>();
+        f_delta_step_tol = solver_params["f_delta_step_tol"];
 
         set_line_search(solver_params);
     }
@@ -224,7 +224,7 @@ namespace polysolve::nonlinear
 
             f_delta = std::abs(old_energy - energy);
             // stop based on f_delta only if the solver has taken over f_delta_step_tol steps with small f_delta
-            this->m_current.fDelta = (f_delta_step_cnt > f_delta_step_tol) ? f_delta : NaN;
+            this->m_current.fDelta = (f_delta_step_cnt == f_delta_step_tol) ? f_delta : NaN;
 
             ///////////// gradient
             {
@@ -335,7 +335,7 @@ namespace polysolve::nonlinear
                     s->reset(x.size());
 
                 m_logger.debug(
-                    "[{}][{}] {} was successful for {} iterations; attempting {}",
+                    "[{}][{}] {} was successful for {} iterations; resetting to {}",
                     name(), m_line_search->name(), prev_strategy_name, current_strategy_iter, descent_strategy_name());
             }
 

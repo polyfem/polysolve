@@ -107,7 +107,7 @@ namespace polysolve::nonlinear
     {
         TCriteria criteria = TCriteria::defaults();
         criteria.xDelta = solver_params["x_delta"];
-        criteria.fDelta = solver_params["f_delta"];
+        criteria.fDelta = solver_params["advanced"]["f_delta"];
         criteria.gradNorm = solver_params["grad_norm"];
 
         criteria.xDelta *= characteristic_length;
@@ -125,7 +125,7 @@ namespace polysolve::nonlinear
         use_grad_norm_tol *= characteristic_length;
         first_grad_norm_tol *= characteristic_length;
 
-        f_delta_step_tol = solver_params["f_delta_step_tol"];
+        f_delta_step_tol = solver_params["advanced"]["f_delta_step_tol"];
 
         set_line_search(solver_params);
     }

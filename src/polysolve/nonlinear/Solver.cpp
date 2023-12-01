@@ -130,6 +130,7 @@ namespace polysolve::nonlinear
 
     void Solver::set_strategies_iterations(const json &solver_params)
     {
+        m_iter_per_strategy.assign(m_strategies.size() + 1, 1);
         if (solver_params["iterations_per_strategy"].is_array())
         {
             m_iter_per_strategy.resize(m_strategies.size() + 1);

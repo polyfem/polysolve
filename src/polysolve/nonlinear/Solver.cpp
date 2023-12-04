@@ -127,6 +127,8 @@ namespace polysolve::nonlinear
 
         f_delta_step_tol = solver_params["advanced"]["f_delta_step_tol"];
 
+        m_descent_strategy = 0;
+
         set_line_search(solver_params);
     }
 

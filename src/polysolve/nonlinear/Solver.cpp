@@ -196,7 +196,7 @@ namespace polysolve::nonlinear
 
         int f_delta_step_cnt = 0;
         double f_delta = 0;
-      
+
         do
         {
             m_line_search->set_is_final_strategy(m_descent_strategy == m_strategies.size() - 1);
@@ -389,7 +389,8 @@ namespace polysolve::nonlinear
 
         double tot_time = stop_watch.getElapsedTimeInSec();
         const bool succeeded = this->m_status == cppoptlib::Status::GradNormTolerance;
-        m_logger.log(succeeded ? spdlog::level::info : spdlog::level::err,
+        m_logger.log(
+            succeeded ? spdlog::level::info : spdlog::level::err,
             "[{}][{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})"
             " (stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
             name(), m_line_search->name(),

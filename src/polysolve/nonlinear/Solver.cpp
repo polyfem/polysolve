@@ -532,7 +532,7 @@ namespace polysolve::nonlinear
             double fd = (J2 - J1) / 2 / gradient_fd_eps;
             double analytic = direc.dot(grad);
 
-            match = abs(fd - analytic) < 1e-8 || abs(fd - analytic) < 1e-1 * abs(analytic);
+            match = abs(fd - analytic) < 1e-8 || abs(fd - analytic) < 1e-4 * abs(analytic);
 
             // Log error in either case to make it more visible in the logs.
             if (match)
@@ -540,6 +540,7 @@ namespace polysolve::nonlinear
             else
                 m_logger.error("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
         }
+        break;
         case FiniteDiffStrategy::FULL_DERIVATIVE:
         {
             Eigen::VectorXd grad_fd;
@@ -550,13 +551,14 @@ namespace polysolve::nonlinear
                 },
                 grad_fd, fd::AccuracyOrder::SECOND, gradient_fd_eps);
 
-            match = (grad - grad_fd).norm() < 1e-6;
+            match = (grad_fd - grad).norm() < 1e-8 || (grad_fd - grad).norm() < 1e-4 * (grad).norm();
 
             if (match)
                 m_logger.warn("step size: {}, all gradient components match finite difference", gradient_fd_eps);
             else
                 m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
         }
+        break;
         }
 
         objFunc.solution_changed(x);

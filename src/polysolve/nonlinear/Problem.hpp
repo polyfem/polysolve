@@ -39,6 +39,8 @@ namespace polysolve::nonlinear
 
         virtual void solution_changed(const TVector &new_x) {}
 
+        virtual void step_accepted(const TVector &new_x) {}
+
         virtual bool stop(const TVector &x) { return false; }
 
         void sample_along_direction(

@@ -14,6 +14,8 @@
 #include <spdlog/fmt/bundled/color.h>
 #include <spdlog/fmt/ostr.h>
 
+#include <finitediff.hpp>
+
 #include <iomanip>
 #include <fstream>
 
@@ -130,6 +132,9 @@ namespace polysolve::nonlinear
         m_descent_strategy = 0;
 
         set_line_search(solver_params);
+
+        gradient_fd = solver_params["advanced"]["gradient_fd"];
+        gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)
@@ -231,6 +236,12 @@ namespace polysolve::nonlinear
             {
                 POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
                 objFunc.gradient(x, grad);
+            }
+
+            if (gradient_fd)
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("verify gradient", grad_time, m_logger);
+                this->verify_gradient(objFunc, x, grad);
             }
 
             const double grad_norm = compute_grad_norm(x, grad);
@@ -494,5 +505,56 @@ namespace polysolve::nonlinear
             obj_fun_time, m_line_search ? m_line_search->checking_for_nan_inf_time : 0,
             m_line_search ? m_line_search->broad_phase_ccd_time : 0, m_line_search ? m_line_search->ccd_time : 0,
             m_line_search ? m_line_search->classical_line_search_time : 0);
+    }
+
+    void Solver::verify_gradient(Problem &objFunc, const TVector &x, const TVector &grad)
+    {
+        bool match = false;
+
+        switch (gradient_fd_strategy)
+        {
+        case FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE:
+        {
+            Eigen::VectorXd direc = grad.normalized();
+            Eigen::VectorXd x2 = x + direc * gradient_fd_eps;
+            Eigen::VectorXd x1 = x - direc * gradient_fd_eps;
+
+            objFunc.solution_changed(x2);
+            double J2 = objFunc.value(x2);
+
+            objFunc.solution_changed(x1);
+            double J1 = objFunc.value(x1);
+
+            double fd = (J2 - J1) / 2 / gradient_fd_eps;
+            double analytic = direc.dot(grad);
+
+            match = abs(fd - analytic) < 1e-8 || abs(fd - analytic) < 1e-1 * abs(analytic);
+
+            // Log error in either case to make it more visible in the logs.
+            if (match)
+                m_logger.warn("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
+            else
+                m_logger.error("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
+        }
+        case FiniteDiffStrategy::FULL_DERIVATIVE:
+        {
+            Eigen::VectorXd grad_fd;
+            fd::finite_gradient(
+                x, [&](const Eigen::VectorXd &x_) {
+                    objFunc.solution_changed(x_);
+                    return objFunc.value(x_);
+                },
+                grad_fd, fd::AccuracyOrder::SECOND, gradient_fd_eps);
+
+            match = (grad - grad_fd).norm() < 1e-6;
+
+            if (match)
+                m_logger.warn("step size: {}, all gradient components match finite difference", gradient_fd_eps);
+            else
+                m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
+        }
+        }
+
+        objFunc.solution_changed(x);
     }
 } // namespace polysolve::nonlinear

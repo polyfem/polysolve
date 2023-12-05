@@ -111,7 +111,7 @@ namespace polysolve::nonlinear
 
         bool gradient_fd;
         double gradient_fd_eps;
-        FiniteDiffStrategy gradient_fd_strategy = FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE;
+        FiniteDiffStrategy gradient_fd_strategy;
         virtual void verify_gradient(Problem &objFunc, const TVector &x, const TVector &grad) final;
 
     private:

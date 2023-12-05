@@ -135,6 +135,10 @@ namespace polysolve::nonlinear
 
         gradient_fd = solver_params["advanced"]["gradient_fd"];
         gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
+        if (solver_params["advanced"]["gradient_fd_components"])
+            gradient_fd_strategy = FiniteDiffStrategy::FULL_DERIVATIVE;
+        else
+            gradient_fd_strategy = FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE;
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)

@@ -326,12 +326,18 @@
         "pointer": "/advanced/gradient_fd",
         "default": false,
         "type": "bool",
-        "doc": "Expensive Option: For every iteration of the nonlinear solver, run finite difference to verify gradient."
+        "doc": "Expensive Option: For every iteration of the nonlinear solver, run finite difference to verify gradient of energy."
     },
     {
         "pointer": "/advanced/gradient_fd_eps",
         "default": 1e-7,
         "type": "float",
-        "doc": "Expensive Option: Eps for finite difference to verify gradient."
+        "doc": "Expensive Option: Eps for finite difference to verify gradient of energy."
+    },
+    {
+        "pointer": "/advanced/gradient_fd_components",
+        "default": false,
+        "type": "bool",
+        "doc": "Expensive Option: If true, run finite difference on gradient of energy component wise. Otherwise, use the directional derivative for finite difference. The component wise finite difference can be prohibitively expensive."
     }
 ]

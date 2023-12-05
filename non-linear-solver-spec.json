@@ -305,7 +305,8 @@
             "f_delta",
             "f_delta_step_tol",
             "gradient_fd",
-            "gradient_fd_eps"
+            "gradient_fd_eps",
+            "gradient_fd_components"
         ],
         "doc": "Nonlinear solver advanced options"
     },

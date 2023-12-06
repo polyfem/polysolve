@@ -190,6 +190,8 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
+        objFunc.post_step(this->m_current.iterations, x);
+
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
 
@@ -204,7 +206,6 @@ namespace polysolve::nonlinear
             this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
         update_solver_info(objFunc.value(x));
-        objFunc.step_accepted(this->m_current.iterations, x);
 
         int f_delta_step_cnt = 0;
         double f_delta = 0;
@@ -389,7 +390,6 @@ namespace polysolve::nonlinear
                 this->m_status = cppoptlib::Status::IterationLimit;
 
             update_solver_info(energy);
-            objFunc.step_accepted(this->m_current.iterations, x);
 
             // reset the tolerance, since in the first iter it might be smaller
             this->m_stop.gradNorm = g_norm_tol;

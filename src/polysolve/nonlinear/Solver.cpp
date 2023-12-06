@@ -21,6 +21,11 @@
 
 namespace polysolve::nonlinear
 {
+    NLOHMANN_JSON_SERIALIZE_ENUM(
+        FiniteDiffStrategy,
+        {{FiniteDiffStrategy::NONE, "None"},
+         {FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE, "DirectionalDerivative"},
+         {FiniteDiffStrategy::FULL_FINITE_DIFF, "FullFiniteDiff"}})
 
     // Static constructor
     std::unique_ptr<Solver> Solver::create(
@@ -133,12 +138,8 @@ namespace polysolve::nonlinear
 
         set_line_search(solver_params);
 
-        gradient_fd = solver_params["advanced"]["gradient_fd"];
+        gradient_fd_strategy = solver_params["advanced"]["apply_gradient_fd"];
         gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
-        if (solver_params["advanced"]["gradient_fd_components"])
-            gradient_fd_strategy = FiniteDiffStrategy::FULL_DERIVATIVE;
-        else
-            gradient_fd_strategy = FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE;
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)
@@ -243,7 +244,6 @@ namespace polysolve::nonlinear
                 objFunc.gradient(x, grad);
             }
 
-            if (gradient_fd)
             {
                 POLYSOLVE_SCOPED_STOPWATCH("verify gradient", grad_time, m_logger);
                 this->verify_gradient(objFunc, x, grad);
@@ -517,6 +517,8 @@ namespace polysolve::nonlinear
 
         switch (gradient_fd_strategy)
         {
+        case FiniteDiffStrategy::NONE:
+            return;
         case FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE:
         {
             Eigen::VectorXd direc = grad.normalized();
@@ -541,7 +543,7 @@ namespace polysolve::nonlinear
                 m_logger.error("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
         }
         break;
-        case FiniteDiffStrategy::FULL_DERIVATIVE:
+        case FiniteDiffStrategy::FULL_FINITE_DIFF:
         {
             Eigen::VectorXd grad_fd;
             fd::finite_gradient(

@@ -355,7 +355,7 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
     }
 }
 
-void test_solvers_gradient_fd(const bool gradient_fd_components)
+void test_solvers_gradient_fd(const bool full_fd)
 {
     std::unique_ptr<TestProblem> problem = std::make_unique<QuadraticProblem>();
     std::string solver_name = "L-BFGS";
@@ -363,8 +363,10 @@ void test_solvers_gradient_fd(const bool gradient_fd_components)
     json solver_params, linear_solver_params;
     solver_params["line_search"] = {};
     solver_params["max_iterations"] = 100;
-    solver_params["advanced"]["gradient_fd"] = true;
-    solver_params["advanced"]["gradient_fd_components"] = gradient_fd_components;
+    if (full_fd)
+        solver_params["advanced"]["apply_gradient_fd"] = "FullFiniteDiff";
+    else
+        solver_params["advanced"]["apply_gradient_fd"] = "DirectionalDerivative";
     solver_params["solver"] = solver_name;
 
     const double characteristic_length = 1;

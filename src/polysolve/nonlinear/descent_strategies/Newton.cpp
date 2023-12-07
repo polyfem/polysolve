@@ -243,8 +243,13 @@ namespace polysolve::nonlinear
                                             polysolve::StiffnessMatrix &hessian)
 
     {
-        objFunc.set_project_to_psd(true);
-        objFunc.hessian(x, hessian);
+        if (x.size() != x_cache.size() || x != x_cache)
+        {
+            objFunc.set_project_to_psd(true);
+            objFunc.hessian(x, hessian_cache);
+            x_cache = x;
+        }
+        hessian = hessian_cache;
         if (reg_weight > 0)
         {
             hessian += reg_weight * sparse_identity(hessian.rows(), hessian.cols());

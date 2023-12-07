@@ -205,6 +205,10 @@ target_link_libraries(polysolve_linear PUBLIC jse::jse)
 include(spdlog)
 target_link_libraries(polysolve_linear PUBLIC spdlog::spdlog)
 
+# finite-diff
+include(finite-diff)
+target_link_libraries(polysolve PUBLIC finitediff::finitediff)
+
 # Accelerate solver
 if(POLYSOLVE_WITH_ACCELERATE)
     include(CPM)
@@ -321,6 +325,7 @@ if(POLYSOLVE_WITH_CUSOLVER)
         message(WARNING "cuSOLVER not found, solver will not be available.")
     endif()
 endif()
+
 
 ################################################################################
 # Compiler options

@@ -15,6 +15,7 @@
             "LBFGS",
             "LBFGSB",
             "Newton",
+            "ADAM",
             "box_constraints",
             "advanced"
         ],
@@ -28,6 +29,7 @@
             "Newton",
             "DenseNewton",
             "GradientDescent",
+            "ADAM",
             "L-BFGS",
             "BFGS",
             "L-BFGS-B",
@@ -163,6 +165,42 @@
         "default": true,
         "type": "bool",
         "doc": "Use PSD as fallback using second order solvers (i.e., Newton's method)."
+    },
+    {
+        "pointer": "/ADAM",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/ADAM/alpha",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Parameter alpha for ADAM."
+    },
+    {
+        "pointer": "/ADAM/beta_1",
+        "default": 0.9,
+        "type": "float",
+        "doc": "Parameter beta_1 for ADAM."
+    },
+    {
+        "pointer": "/ADAM/beta_2",
+        "default": 0.999,
+        "type": "float",
+        "doc": "Parameter beta_2 for ADAM."
+    },
+    {
+        "pointer": "/ADAM/epsilon",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Parameter epsilon for ADAM."
     },
     {
         "pointer": "/line_search",

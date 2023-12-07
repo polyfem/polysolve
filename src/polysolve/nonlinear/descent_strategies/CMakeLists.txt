@@ -6,6 +6,8 @@ set(SOURCES
 	BFGS.hpp
 	GradientDescent.cpp
 	GradientDescent.hpp
+	ADAM.cpp
+	ADAM.hpp
 	Newton.hpp
 	Newton.cpp
 )

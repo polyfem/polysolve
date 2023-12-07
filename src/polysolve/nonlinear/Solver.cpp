@@ -1,6 +1,8 @@
 
 #include "Solver.hpp"
 
+#include "PoststepData.hpp"
+
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"
 #include "descent_strategies/GradientDescent.hpp"
@@ -191,7 +193,7 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
-        objFunc.post_step(this->m_current.iterations, x);
+        objFunc.post_step(PoststepData(this->m_current.iterations, x, grad));
 
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
@@ -371,7 +373,7 @@ namespace polysolve::nonlinear
                 m_logger.debug("[{}][{}] Objective decided to stop", name(), m_line_search->name());
             }
 
-            objFunc.post_step(this->m_current.iterations, x);
+            objFunc.post_step(PoststepData(this->m_current.iterations, x, grad));
 
             if (f_delta < this->m_stop.fDelta)
                 f_delta_step_cnt++;

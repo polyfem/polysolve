@@ -15,7 +15,7 @@
             "LBFGS",
             "LBFGSB",
             "Newton",
-            "SGD",
+            "StochasticGradientDescent",
             "box_constraints",
             "advanced"
         ],
@@ -167,7 +167,7 @@
         "doc": "Use PSD as fallback using second order solvers (i.e., Newton's method)."
     },
     {
-        "pointer": "/SGD",
+        "pointer": "/StochasticGradientDescent",
         "default": null,
         "type": "object",
         "optional": [
@@ -176,10 +176,10 @@
         "doc": "Options for Stochastic Gradient Descent."
     },
     {
-        "pointer": "/SGD/erase_component_probability",
+        "pointer": "/StochasticGradientDescent/erase_component_probability",
         "default": 0.3,
         "type": "float",
-        "doc": "Probability of erasing a component on the gradient for SGD."
+        "doc": "Probability of erasing a component on the gradient for StochasticGradientDescent."
     },
     {
         "pointer": "/line_search",

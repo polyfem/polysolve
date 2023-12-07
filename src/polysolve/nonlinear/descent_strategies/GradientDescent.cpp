@@ -10,7 +10,7 @@ namespace polysolve::nonlinear
         : Superclass(solver_params_, characteristic_length, logger), is_stochastic_(is_stochastic)
     {
         if (is_stochastic_)
-            erase_component_probability_ = solver_params_["SGD"]["erase_component_probability"];
+            erase_component_probability_ = solver_params_["StochasticGradientDescent"]["erase_component_probability"];
     }
 
     bool GradientDescent::compute_update_direction(

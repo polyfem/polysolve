@@ -21,6 +21,7 @@ namespace polysolve::nonlinear
         Superclass::reset(ndof);
         m_prev = Eigen::VectorXd::Zero(ndof);
         v_prev = Eigen::VectorXd::Zero(ndof);
+        t = 0;
     }
 
     bool ADAM::compute_update_direction(

@@ -2,7 +2,7 @@
 
 #include <polysolve/Types.hpp>
 
-#include "PoststepData.hpp"
+#include "PostStepData.hpp"
 
 #include <cppoptlib/problem.h>
 
@@ -35,7 +35,7 @@ namespace polysolve::nonlinear
 
         virtual void line_search_begin(const TVector &x0, const TVector &x1) {}
         virtual void line_search_end() {}
-        virtual void post_step(const PoststepData &data) {}
+        virtual void post_step(const PostStepData &data) {}
 
         virtual void set_project_to_psd(bool val) {}
 

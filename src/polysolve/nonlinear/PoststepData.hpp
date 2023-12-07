@@ -5,10 +5,10 @@
 namespace polysolve::nonlinear
 {
 
-    class PoststepData
+    class PostStepData
     {
     public:
-        PoststepData(const int iter_num,
+        PostStepData(const int iter_num,
                      const Eigen::VectorXd &x,
                      const Eigen::VectorXd &grad);
 

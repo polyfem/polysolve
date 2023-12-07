@@ -119,8 +119,8 @@ namespace polysolve::nonlinear
         this->setStopCriteria(criteria);
 
         use_grad_norm_tol = solver_params["line_search"]["use_grad_norm_tol"];
-
         first_grad_norm_tol = solver_params["first_grad_norm_tol"];
+        allow_out_of_iterations = solver_params["allow_out_of_iterations"];
 
         use_grad_norm_tol *= characteristic_length;
         first_grad_norm_tol *= characteristic_length;

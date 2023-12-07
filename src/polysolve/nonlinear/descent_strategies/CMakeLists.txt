@@ -6,8 +6,6 @@ set(SOURCES
 	BFGS.hpp
 	GradientDescent.cpp
 	GradientDescent.hpp
-	StochasticGradientDescent.cpp
-	StochasticGradientDescent.hpp
 	Newton.hpp
 	Newton.cpp
 )

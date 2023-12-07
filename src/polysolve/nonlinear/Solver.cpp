@@ -4,7 +4,6 @@
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"
 #include "descent_strategies/GradientDescent.hpp"
-#include "descent_strategies/StochasticGradientDescent.hpp"
 #include "descent_strategies/LBFGS.hpp"
 
 #include <polysolve/Utils.hpp>
@@ -86,8 +85,8 @@ namespace polysolve::nonlinear
         }
         else if (solver_name == "StochasticGradientDescent" || solver_name == "stochastic_gradient_descent")
         {
-            solver->add_strategy(std::make_unique<StochasticGradientDescent>(
-                solver_params, characteristic_length, logger));
+            solver->add_strategy(std::make_unique<GradientDescent>(
+                solver_params, true, characteristic_length, logger));
         }
         else if (solver_name == "GradientDescent" || solver_name == "gradient_descent")
         {
@@ -97,7 +96,7 @@ namespace polysolve::nonlinear
             throw std::runtime_error("Unrecognized solver type: " + solver_name);
 
         solver->add_strategy(std::make_unique<GradientDescent>(
-            solver_params, characteristic_length, logger));
+            solver_params, false, characteristic_length, logger));
 
         solver->set_strategies_iterations(solver_params);
         return solver;

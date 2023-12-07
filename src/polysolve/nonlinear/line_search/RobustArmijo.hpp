@@ -4,6 +4,7 @@
 
 namespace polysolve::nonlinear::line_search
 {
+    /// @brief Numerically robust Armijo line search algorithm of Longva et al. [2023]
     class RobustArmijo : public Armijo
     {
     public:

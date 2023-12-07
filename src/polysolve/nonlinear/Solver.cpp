@@ -538,7 +538,7 @@ namespace polysolve::nonlinear
 
             // Log error in either case to make it more visible in the logs.
             if (match)
-                m_logger.warn("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
+                m_logger.debug("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
             else
                 m_logger.error("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
         }
@@ -556,7 +556,7 @@ namespace polysolve::nonlinear
             match = (grad_fd - grad).norm() < 1e-8 || (grad_fd - grad).norm() < 1e-4 * (grad).norm();
 
             if (match)
-                m_logger.warn("step size: {}, all gradient components match finite difference", gradient_fd_eps);
+                m_logger.debug("step size: {}, all gradient components match finite difference", gradient_fd_eps);
             else
                 m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
         }

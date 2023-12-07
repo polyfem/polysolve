@@ -181,6 +181,8 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
+        objFunc.post_step(this->m_current.iterations, x);
+
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
 

@@ -33,7 +33,7 @@ namespace polysolve::nonlinear::line_search
             try
             {
                 POLYSOLVE_SCOPED_STOPWATCH("solution changed - constraint set update in LS", constraint_set_update_time, m_logger);
-                objFunc.solution_changed(x);
+                objFunc.solution_changed(new_x);
             }
             catch (const std::runtime_error &e)
             {

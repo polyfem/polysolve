@@ -1,5 +1,4 @@
-[
-    {
+[{
         "pointer": "/",
         "default": null,
         "type": "object",
@@ -188,6 +187,7 @@
         "options": [
             "Armijo",
             "ArmijoAlt",
+            "RobustArmijo",
             "Backtracking",
             "MoreThuente",
             "None"
@@ -247,8 +247,9 @@
     },
     {
         "pointer": "/line_search/Armijo/c",
-        "default": 0.5,
+        "default": 1e-4,
         "type": "float",
+        "min_value": 0,
         "doc": "Armijo c parameter."
     },
     {

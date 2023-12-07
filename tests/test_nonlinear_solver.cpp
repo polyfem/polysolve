@@ -240,14 +240,18 @@ public:
     }
 };
 
-
 class InequalityConstraint : public Problem
 {
 public:
-    InequalityConstraint(const double upper_bound): upper_bound_(upper_bound) {}
+    InequalityConstraint(const double upper_bound) : upper_bound_(upper_bound) {}
     double value(const TVector &x) override { return x(0) - upper_bound_; }
-    void gradient(const TVector &x, TVector &gradv) override { gradv.setZero(x.size()); gradv(0) = 1; }
+    void gradient(const TVector &x, TVector &gradv) override
+    {
+        gradv.setZero(x.size());
+        gradv(0) = 1;
+    }
     void hessian(const TVector &x, THessian &hessian) override {}
+
 private:
     const double upper_bound_;
 };
@@ -351,18 +355,18 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
     }
 }
 
-TEST_CASE("non-linear", "[solver]")
+TEST_CASE("nonlinear", "[solver]")
 {
     test_solvers(Solver::available_solvers(), 1000, false);
     // test_solvers({"L-BFGS"}, 1000, false);
 }
 
-TEST_CASE("non-linear-easier", "[solver]")
+TEST_CASE("nonlinear-easier", "[solver]")
 {
     test_solvers(Solver::available_solvers(), 5000, true);
 }
 
-TEST_CASE("non-linear-box-constraint", "[solver]")
+TEST_CASE("nonlinear-box-constraint", "[solver]")
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
     problems.push_back(std::make_unique<QuadraticProblem>());
@@ -395,7 +399,7 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
                 if (ls == "None" && solver_name != "MMA")
                     continue;
                 if (solver_name == "MMA" && ls != "None")
-                     continue;
+                    continue;
                 solver_params["line_search"]["method"] = ls;
 
                 auto solver = BoxConstraintSolver::create(solver_params,
@@ -434,7 +438,7 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
     }
 }
 
-TEST_CASE("non-linear-box-constraint-input", "[solver]")
+TEST_CASE("nonlinear-box-constraint-input", "[solver]")
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
     problems.push_back(std::make_unique<QuadraticProblem>());
@@ -461,7 +465,7 @@ TEST_CASE("non-linear-box-constraint-input", "[solver]")
                 if (ls == "None" && solver_name != "MMA")
                     continue;
                 if (solver_name == "MMA" && ls != "None")
-                     continue;
+                    continue;
                 solver_params["line_search"]["method"] = ls;
 
                 QuadraticProblem::TVector x(prob->size());
@@ -528,13 +532,11 @@ TEST_CASE("MMA", "[solver]")
         solver_params["solver"] = "MMA";
         solver_params["line_search"]["method"] = "None";
 
-        auto solver = BoxConstraintSolver::create(solver_params,
-                                                    linear_solver_params,
-                                                    characteristic_length,
-                                                    *logger);
+        auto solver = BoxConstraintSolver::create(
+            solver_params, linear_solver_params, characteristic_length, *logger);
 
         auto c = std::make_shared<InequalityConstraint>(solver_params["box_constraints"]["bounds"][1]);
-        dynamic_cast<BoxConstraintSolver&>(*solver).add_constraint(c);
+        dynamic_cast<BoxConstraintSolver &>(*solver).add_constraint(c);
 
         QuadraticProblem::TVector x(prob->size());
         x.setConstant(3);

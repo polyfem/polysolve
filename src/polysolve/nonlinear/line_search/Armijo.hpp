@@ -1,13 +1,13 @@
 #pragma once
 
-#include "LineSearch.hpp"
+#include "Backtracking.hpp"
 
 namespace polysolve::nonlinear::line_search
 {
-    class Armijo : public LineSearch
+    class Armijo : public Backtracking
     {
     public:
-        using Superclass = LineSearch;
+        using Superclass = Backtracking;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
@@ -16,15 +16,19 @@ namespace polysolve::nonlinear::line_search
         virtual std::string name() override { return "Armijo"; }
 
     protected:
-        double compute_descent_step_size(
-            const TVector &x,
+        virtual void init_compute_descent_step_size(
             const TVector &delta_x,
-            Problem &objFunc,
-            const bool use_grad_norm,
-            const double old_energy_in,
-            const double starting_step_size) override;
+            const TVector &old_grad) override;
 
-    private:
+        virtual bool criteria(
+            const TVector &delta_x,
+            const double old_energy,
+            const TVector &old_grad,
+            const double new_energy,
+            const TVector &new_grad,
+            const double step_size) const override;
+
         double c;
+        double armijo_criteria; ///< cached value: c * delta_x.dot(old_grad)
     };
 } // namespace polysolve::nonlinear::line_search

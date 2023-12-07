@@ -23,6 +23,7 @@ namespace polysolve::nonlinear::line_search
             Problem &objFunc,
             const bool use_grad_norm,
             const double old_energy,
+            const TVector &old_grad,
             const double starting_step_size) override;
 
     private:

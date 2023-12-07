@@ -184,7 +184,7 @@ namespace polysolve::nonlinear
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
 
-        StopWatch stop_watch("non-linear solver", this->total_time, m_logger);
+        StopWatch stop_watch("nonlinear solver", this->total_time, m_logger);
         stop_watch.start();
 
         m_logger.debug(

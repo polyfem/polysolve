@@ -2,6 +2,7 @@
 
 #include "Armijo.hpp"
 #include "Backtracking.hpp"
+#include "RobustArmijo.hpp"
 #include "CppOptArmijo.hpp"
 #include "MoreThuente.hpp"
 #include "NoLineSearch.hpp"
@@ -16,6 +17,8 @@
 
 namespace polysolve::nonlinear::line_search
 {
+    static constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
+
     std::shared_ptr<LineSearch> LineSearch::create(const json &params, spdlog::logger &logger)
     {
         const std::string name = params["line_search"]["method"];
@@ -26,6 +29,10 @@ namespace polysolve::nonlinear::line_search
         else if (name == "armijo_alt" || name == "ArmijoAlt")
         {
             return std::make_shared<CppOptArmijo>(params, logger);
+        }
+        else if (name == "robust_armijo" || name == "RobustArmijo")
+        {
+            return std::make_shared<RobustArmijo>(params, logger);
         }
         else if (name == "bisection" || name == "Bisection")
         {
@@ -55,6 +62,7 @@ namespace polysolve::nonlinear::line_search
     {
         return {{"Armijo",
                  "ArmijoAlt",
+                 "RobustArmijo",
                  "Backtracking",
                  "MoreThuente",
                  "None"}};
@@ -81,17 +89,25 @@ namespace polysolve::nonlinear::line_search
         // ----------------
         // Begin linesearch
         // ----------------
-        double old_energy, step_size;
+        double initial_energy, step_size;
+        TVector initial_grad;
         {
             POLYSOLVE_SCOPED_STOPWATCH("LS begin", m_logger);
 
             cur_iter = 0;
 
-            old_energy = objFunc.value(x);
-            if (std::isnan(old_energy))
+            initial_energy = objFunc.value(x);
+            if (std::isnan(initial_energy))
             {
                 m_logger.error("Original energy in line search is nan!");
-                return std::nan("");
+                return NaN;
+            }
+
+            objFunc.gradient(x, initial_grad);
+            if (!initial_grad.array().isFinite().all())
+            {
+                m_logger.error("Original gradient in line search is nan!");
+                return NaN;
             }
 
             step_size = default_init_step_size;
@@ -99,7 +115,6 @@ namespace polysolve::nonlinear::line_search
             // TODO: removed feature
             // objFunc.heuristic_max_step(delta_x);
         }
-        const double initial_energy = old_energy;
 
         // ----------------------------
         // Find finite energy step size
@@ -108,7 +123,7 @@ namespace polysolve::nonlinear::line_search
             POLYSOLVE_SCOPED_STOPWATCH("LS compute finite energy step size", checking_for_nan_inf_time, m_logger);
             step_size = compute_nan_free_step_size(x, delta_x, objFunc, step_size, step_ratio);
             if (std::isnan(step_size))
-                return std::nan("");
+                return NaN;
         }
 
         const double nan_free_step_size = step_size;
@@ -126,20 +141,16 @@ namespace polysolve::nonlinear::line_search
             m_logger.trace("Performing narrow-phase CCD");
             step_size = compute_collision_free_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
-                return std::nan("");
+                return NaN;
         }
 
         const double collision_free_step_size = step_size;
 
-        TVector grad(x.rows());
-        objFunc.gradient(x, grad);
-
-        if (grad.norm() < 1e-30)
+        if (initial_grad.norm() < 1e-30)
             return step_size;
 
-        const bool use_grad_norm = grad.norm() < use_grad_norm_tol;
-        if (use_grad_norm)
-            old_energy = grad.squaredNorm();
+        // TODO: Fix this
+        const bool use_grad_norm = false; // initial_grad.norm() < use_grad_norm_tol;
         const double starting_step_size = step_size;
 
         // ----------------------
@@ -147,11 +158,11 @@ namespace polysolve::nonlinear::line_search
         // ----------------------
         {
             POLYSOLVE_SCOPED_STOPWATCH("energy min in LS", classical_line_search_time, m_logger);
-            step_size = compute_descent_step_size(x, delta_x, objFunc, use_grad_norm, old_energy, step_size);
+            step_size = compute_descent_step_size(x, delta_x, objFunc, use_grad_norm, initial_energy, initial_grad, step_size);
             if (std::isnan(step_size))
             {
                 // Superclass::save_sampled_values("failed-line-search-values.csv", x, delta_x, objFunc);
-                return std::nan("");
+                return NaN;
             }
         }
 
@@ -163,15 +174,15 @@ namespace polysolve::nonlinear::line_search
         {
             m_logger.log(is_final_strategy ? spdlog::level::warn : spdlog::level::debug,
                          "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g}  use_grad_norm={} iter={:d})",
-                         old_energy, cur_energy, starting_step_size,
+                         initial_energy, cur_energy, starting_step_size,
                          step_size, delta_x.norm(), use_grad_norm, cur_iter);
             objFunc.solution_changed(x);
-#ifndef NDEBUG
+
             // tolerance for rounding error due to multithreading
             assert(abs(initial_energy - objFunc.value(x)) < 1e-15);
-#endif
+
             objFunc.line_search_end();
-            return std::nan("");
+            return NaN;
         }
 
         {
@@ -220,7 +231,7 @@ namespace polysolve::nonlinear::line_search
             m_logger.log(is_final_strategy ? spdlog::level::err : spdlog::level::debug,
                          "Line search failed to find a valid finite energy step (cur_iter={:d} step_size={:g})!",
                          cur_iter, step_size);
-            return std::nan("");
+            return NaN;
         }
 
         return step_size;
@@ -242,7 +253,7 @@ namespace polysolve::nonlinear::line_search
             m_logger.log(is_final_strategy ? spdlog::level::err : spdlog::level::debug,
                          "Line search failed because CCD produced a stepsize of zero!");
             objFunc.line_search_end();
-            return std::nan("");
+            return NaN;
         }
 
         {

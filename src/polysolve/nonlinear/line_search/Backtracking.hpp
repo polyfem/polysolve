@@ -15,13 +15,26 @@ namespace polysolve::nonlinear::line_search
 
         virtual std::string name() override { return "Backtracking"; }
 
-    public:
         double compute_descent_step_size(
             const TVector &x,
             const TVector &delta_x,
             Problem &objFunc,
             const bool use_grad_norm,
-            const double old_energy_in,
+            const double old_energy,
+            const TVector &old_grad,
             const double starting_step_size) override;
+
+    protected:
+        virtual void init_compute_descent_step_size(
+            const TVector &delta_x,
+            const TVector &old_grad) {}
+
+        virtual bool criteria(
+            const TVector &delta_x,
+            const double old_energy,
+            const TVector &old_grad,
+            const double new_energy,
+            const TVector &new_grad,
+            const double step_size) const;
     };
 } // namespace polysolve::nonlinear::line_search

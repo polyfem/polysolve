@@ -1,6 +1,8 @@
 
 #include "Solver.hpp"
 
+#include "PostStepData.hpp"
+
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"
 #include "descent_strategies/ADAM.hpp"
@@ -88,6 +90,10 @@ namespace polysolve::nonlinear
         {
             solver->add_strategy(std::make_unique<ADAM>(
                 solver_params, characteristic_length, logger));
+        else if (solver_name == "StochasticGradientDescent" || solver_name == "stochastic_gradient_descent")
+        {
+            solver->add_strategy(std::make_unique<GradientDescent>(
+                solver_params, true, characteristic_length, logger));
         }
         else if (solver_name == "GradientDescent" || solver_name == "gradient_descent")
         {
@@ -97,7 +103,7 @@ namespace polysolve::nonlinear
             throw std::runtime_error("Unrecognized solver type: " + solver_name);
 
         solver->add_strategy(std::make_unique<GradientDescent>(
-            solver_params, characteristic_length, logger));
+            solver_params, false, characteristic_length, logger));
 
         solver->set_strategies_iterations(solver_params);
         return solver;
@@ -110,6 +116,7 @@ namespace polysolve::nonlinear
                 "Newton",
                 "ADAM",
                 "GradientDescent",
+                "StochasticGradientDescent",
                 "L-BFGS"};
     }
 
@@ -133,8 +140,8 @@ namespace polysolve::nonlinear
         this->setStopCriteria(criteria);
 
         use_grad_norm_tol = solver_params["line_search"]["use_grad_norm_tol"];
-
         first_grad_norm_tol = solver_params["first_grad_norm_tol"];
+        allow_out_of_iterations = solver_params["allow_out_of_iterations"];
 
         use_grad_norm_tol *= characteristic_length;
         first_grad_norm_tol *= characteristic_length;
@@ -198,7 +205,7 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
-        objFunc.post_step(this->m_current.iterations, x);
+        objFunc.post_step(PostStepData(this->m_current.iterations, x, grad));
 
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
@@ -378,7 +385,7 @@ namespace polysolve::nonlinear
                 m_logger.debug("[{}][{}] Objective decided to stop", name(), m_line_search->name());
             }
 
-            objFunc.post_step(this->m_current.iterations, x);
+            objFunc.post_step(PostStepData(this->m_current.iterations, x, grad));
 
             if (f_delta < this->m_stop.fDelta)
                 f_delta_step_cnt++;

@@ -16,6 +16,7 @@
             "LBFGSB",
             "Newton",
             "ADAM",
+            "StochasticGradientDescent",
             "box_constraints",
             "advanced"
         ],
@@ -30,6 +31,7 @@
             "DenseNewton",
             "GradientDescent",
             "ADAM",
+            "StochasticGradientDescent",
             "L-BFGS",
             "BFGS",
             "L-BFGS-B",
@@ -201,6 +203,21 @@
         "default": 1e-8,
         "type": "float",
         "doc": "Parameter epsilon for ADAM."
+    },
+    {
+        "pointer": "/StochasticGradientDescent",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "erase_component_probability"
+        ],
+        "doc": "Options for Stochastic Gradient Descent."
+    },
+    {
+        "pointer": "/StochasticGradientDescent/erase_component_probability",
+        "default": 0.3,
+        "type": "float",
+        "doc": "Probability of erasing a component on the gradient for StochasticGradientDescent."
     },
     {
         "pointer": "/line_search",

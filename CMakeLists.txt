@@ -181,26 +181,11 @@ target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_JSON_SPEC_DIR="${PR
 # Dependencies
 ################################################################################
 
-# polysolve_linear
-target_link_libraries(polysolve PUBLIC polysolve::linear)
+# ------
+# Linear
+# ------
 
-# CppNumericalSolvers
-include(cppoptlib)
-target_link_libraries(polysolve PUBLIC cppoptlib)
-
-# LBFGSpp
-include(LBFGSpp)
-target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
-
-# JSON Specification Engine library
-include(jse)
-target_link_libraries(polysolve_linear PUBLIC jse::jse)
-
-# spdlog
-include(spdlog)
-target_link_libraries(polysolve_linear PUBLIC spdlog::spdlog)
-
-# Accelerate solver
+# Accelerate solver (Include before Eigen)
 if(POLYSOLVE_WITH_ACCELERATE)
     include(CPM)
     CPMAddPackage(
@@ -213,26 +198,23 @@ if(POLYSOLVE_WITH_ACCELERATE)
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
     target_link_libraries(polysolve_linear PRIVATE BLAS::BLAS LAPACK::LAPACK)
-endif()
-
-# Extra warnings
-include(polysolve_warnings)
-target_link_libraries(polysolve_linear PRIVATE polysolve::warnings)
-target_link_libraries(polysolve PRIVATE polysolve::warnings)
-
-# Sanitizers
-if(POLYSOLVE_WITH_SANITIZERS)
-    include(sanitizers)
-    add_sanitizers(polysolve_linear)
-    add_sanitizers(polysolve)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_ACCELERATE)
 endif()
 
 include(eigen)
 target_link_libraries(polysolve_linear PUBLIC Eigen3::Eigen)
 
-# finite-diff (include this after Eigen)
-include(finite-diff)
-target_link_libraries(polysolve PUBLIC finitediff::finitediff)
+# spdlog
+include(spdlog)
+target_link_libraries(polysolve_linear PUBLIC spdlog::spdlog)
+
+# JSON (MIT)
+include(json)
+target_link_libraries(polysolve_linear PUBLIC nlohmann_json::nlohmann_json)
+
+# JSON Specification Engine library
+include(jse)
+target_link_libraries(polysolve_linear PUBLIC jse::jse)
 
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
@@ -242,15 +224,6 @@ if(POLYSOLVE_WITH_HYPRE)
     if(HYPRE_WITH_MPI)
         target_compile_definitions(polysolve_linear PUBLIC HYPRE_WITH_MPI)
     endif()
-endif()
-
-# JSON
-include(json)
-target_link_libraries(polysolve_linear PUBLIC nlohmann_json::nlohmann_json)
-
-# Accelerate solvers
-if(POLYSOLVE_WITH_ACCELERATE)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_ACCELERATE)
 endif()
 
 # CHOLMOD solver
@@ -320,6 +293,46 @@ if(POLYSOLVE_WITH_CUSOLVER)
         message(WARNING "cuSOLVER not found, solver will not be available.")
     endif()
 endif()
+
+# Sanitizers
+if(POLYSOLVE_WITH_SANITIZERS)
+    include(sanitizers)
+    add_sanitizers(polysolve_linear)
+endif()
+
+# Extra warnings (include last for highest priority)
+include(polysolve_warnings)
+target_link_libraries(polysolve_linear PRIVATE polysolve::warnings)
+
+# ---------
+# Nonlinear
+# ---------
+
+# polysolve::linear
+target_link_libraries(polysolve PUBLIC polysolve::linear)
+
+# CppNumericalSolvers
+include(cppoptlib)
+target_link_libraries(polysolve PUBLIC cppoptlib)
+
+# LBFGSpp
+include(LBFGSpp)
+target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
+
+# finite-diff (include this after eigen)
+include(finite-diff)
+target_link_libraries(polysolve PUBLIC finitediff::finitediff)
+
+# Sanitizers
+if(POLYSOLVE_WITH_SANITIZERS)
+    include(sanitizers)
+    add_sanitizers(polysolve)
+endif()
+
+# Extra warnings (include last for highest priority)
+include(polysolve_warnings)
+target_link_libraries(polysolve PRIVATE polysolve::warnings)
+
 
 ################################################################################
 # Compiler options

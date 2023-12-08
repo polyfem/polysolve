@@ -117,6 +117,9 @@ namespace polysolve::nonlinear
         double reg_weight_max;
         double reg_weight_inc;
 
+        TVector x_cache;
+        polysolve::StiffnessMatrix hessian_cache;
+
         double reg_weight; ///< Regularization Coefficients
     protected:
         void compute_hessian(Problem &objFunc,

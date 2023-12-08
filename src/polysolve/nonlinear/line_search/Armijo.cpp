@@ -19,11 +19,12 @@ namespace polysolve::nonlinear::line_search
     }
 
     bool Armijo::criteria(
+        Problem &objFunc,
         const TVector &delta_x,
+        const TVector &new_x,
         const double old_energy,
         const TVector &old_grad,
         const double new_energy,
-        const TVector &new_grad,
         const double step_size) const
     {
         // TODO: Use use_grad_norm

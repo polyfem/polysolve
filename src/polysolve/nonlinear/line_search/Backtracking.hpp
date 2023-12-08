@@ -30,11 +30,12 @@ namespace polysolve::nonlinear::line_search
             const TVector &old_grad) {}
 
         virtual bool criteria(
+            Problem &objFunc,
             const TVector &delta_x,
+            const TVector &new_x,
             const double old_energy,
             const TVector &old_grad,
             const double new_energy,
-            const TVector &new_grad,
             const double step_size) const;
     };
 } // namespace polysolve::nonlinear::line_search

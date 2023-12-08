@@ -48,17 +48,14 @@ namespace polysolve::nonlinear::line_search
 
             const double new_energy = objFunc.value(new_x);
 
-            TVector new_grad; // TODO: only compute gradient if needed
-            objFunc.gradient(new_x, new_grad);
-
-            if (!std::isfinite(new_energy) || !std::isfinite(new_grad.norm()))
+            if (!std::isfinite(new_energy))
             {
                 continue;
             }
 
             m_logger.trace("ls it: {} ΔE: {}", cur_iter, new_energy - old_energy);
 
-            if (criteria(delta_x, old_energy, old_grad, new_energy, new_grad, step_size))
+            if (criteria(objFunc, delta_x, new_x, old_energy, old_grad, new_energy, step_size))
             {
                 break; // found a good step size
             }
@@ -68,11 +65,12 @@ namespace polysolve::nonlinear::line_search
     }
 
     bool Backtracking::criteria(
+        Problem &objFunc,
         const TVector &delta_x,
+        const TVector &new_x,
         const double old_energy,
         const TVector &old_grad,
         const double new_energy,
-        const TVector &new_grad,
         const double step_size) const
     {
         return new_energy < old_energy;

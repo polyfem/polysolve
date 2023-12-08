@@ -23,10 +23,17 @@
     },
     {
         "pointer": "/solver",
+        "doc": "Nonlinear solver type. If a list, list of solvers for ballback. Eg, ['Newton', 'L-BFGS', 'GradientDescent'] will solve using Newton, in case of failure will fallback to L-BFGS and eventually to GradientDescent",
+        "type": "list"
+    },
+    {
+        "pointer": "/solver/*",
         "default": "Newton",
         "type": "string",
         "options": [
             "Newton",
+            "ProjectedNewton",
+            "RegularizedNewton",
             "DenseNewton",
             "GradientDescent",
             "StochasticGradientDescent",
@@ -165,6 +172,57 @@
         "default": true,
         "type": "bool",
         "doc": "Use PSD as fallback using second order solvers (i.e., Newton's method)."
+    },
+    {
+        "pointer": "/ProjectedNewton",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "residual_tolerance"
+        ],
+        "doc": "Options for projected Newton."
+    },
+    {
+        "pointer": "/ProjectedNewton/residual_tolerance",
+        "default": 1e-5,
+        "type": "float",
+        "doc": "Tolerance of the linear system residual. If residual is above, the direction is rejected."
+    },
+    {
+        "pointer": "/RegularizedNewton",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for regularized Newton."
+    },
+    {
+        "pointer": "/RegularizedNewton/residual_tolerance",
+        "default": 1e-5,
+        "type": "float",
+        "doc": "Tolerance of the linear system residual. If residual is above, the direction is rejected."
+    },
+    {
+        "pointer": "/RegularizedNewton/reg_weight_min",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Minimum regulariztion weight."
+    },
+    {
+        "pointer": "/RegularizedNewton/reg_weight_max",
+        "default": 1e8,
+        "type": "float",
+        "doc": "Maximum regulariztion weight."
+    },
+    {
+        "pointer": "/RegularizedNewton/reg_weight_inc",
+        "default": 10,
+        "type": "float",
+        "doc": "Regulariztion weight increment."
     },
     {
         "pointer": "/StochasticGradientDescent",

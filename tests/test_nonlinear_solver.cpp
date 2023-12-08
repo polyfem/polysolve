@@ -456,8 +456,6 @@ TEST_CASE("non-linear-fallbacks", "[solver]")
     TestProblem::TVector x(prob->size());
     x.setZero();
 
-    std::cout << solver_params << std::endl;
-
     for (int i = 0; i < N_RANDOM; ++i)
     {
         auto solver = Solver::create(solver_params,

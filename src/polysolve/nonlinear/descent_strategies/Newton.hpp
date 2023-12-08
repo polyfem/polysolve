@@ -113,7 +113,10 @@ namespace polysolve::nonlinear
                           const double characteristic_length,
                           spdlog::logger &logger);
 
-        std::string name() const override { return internal_name() + "RegularizedNewton"; }
+        std::string name() const override
+        {
+            return fmt::format("{}RegularizedNewton (reg_weight={:g})", internal_name(), reg_weight);
+        }
 
         void reset(const int ndof) override;
         bool handle_error() override;

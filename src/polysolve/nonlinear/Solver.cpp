@@ -267,12 +267,10 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
-        objFunc.post_step(PostStepData(this->m_current.iterations, x, grad));
-
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
 
-        StopWatch stop_watch("non-linear solver", this->total_time, m_logger);
+        StopWatch stop_watch("nonlinear solver", this->total_time, m_logger);
         stop_watch.start();
 
         m_logger.debug(
@@ -283,6 +281,7 @@ namespace polysolve::nonlinear
             this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
         update_solver_info(objFunc.value(x));
+        objFunc.post_step(PostStepData(this->m_current.iterations, solver_info, x, grad));
 
         int f_delta_step_cnt = 0;
         double f_delta = 0;
@@ -446,14 +445,15 @@ namespace polysolve::nonlinear
             // -----------
             const double step = (rate * delta_x).norm();
 
+            update_solver_info(energy);
+            objFunc.post_step(PostStepData(this->m_current.iterations, solver_info, x, grad));
+
             if (objFunc.stop(x))
             {
                 this->m_status = cppoptlib::Status::UserDefined;
                 m_error_code = ErrorCode::SUCCESS;
                 m_logger.debug("[{}][{}] Objective decided to stop", descent_strategy_name(), m_line_search->name());
             }
-
-            objFunc.post_step(PostStepData(this->m_current.iterations, x, grad));
 
             if (f_delta < this->m_stop.fDelta)
                 f_delta_step_cnt++;
@@ -470,8 +470,6 @@ namespace polysolve::nonlinear
 
             if (++this->m_current.iterations >= this->m_stop.iterations)
                 this->m_status = cppoptlib::Status::IterationLimit;
-
-            update_solver_info(energy);
 
             // reset the tolerance, since in the first iter it might be smaller
             this->m_stop.gradNorm = g_norm_tol;

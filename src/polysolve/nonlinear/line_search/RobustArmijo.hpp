@@ -1,26 +1,23 @@
 #pragma once
 
-#include "Backtracking.hpp"
+#include "Armijo.hpp"
 
 namespace polysolve::nonlinear::line_search
 {
-    class Armijo : public Backtracking
+    /// @brief Numerically robust Armijo line search algorithm of Longva et al. [2023]
+    class RobustArmijo : public Armijo
     {
     public:
-        using Superclass = Backtracking;
+        using Superclass = Armijo;
         using typename Superclass::Scalar;
         using typename Superclass::TVector;
 
-        Armijo(const json &params, spdlog::logger &logger);
+        RobustArmijo(const json &params, spdlog::logger &logger);
 
-        virtual std::string name() override { return "Armijo"; }
+        virtual std::string name() override { return "RobustArmijo"; }
 
     protected:
-        virtual void init_compute_descent_step_size(
-            const TVector &delta_x,
-            const TVector &old_grad) override;
-
-        virtual bool criteria(
+        bool criteria(
             const TVector &delta_x,
             Problem &objFunc,
             const bool use_grad_norm,
@@ -30,7 +27,7 @@ namespace polysolve::nonlinear::line_search
             const double new_energy,
             const double step_size) const override;
 
-        double c;
-        double armijo_criteria; ///< cached value: c * delta_x.dot(old_grad)
+        double delta_relative_tolerance;
     };
+
 } // namespace polysolve::nonlinear::line_search

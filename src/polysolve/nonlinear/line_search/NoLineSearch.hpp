@@ -21,6 +21,7 @@ namespace polysolve::nonlinear::line_search
             Problem &objFunc,
             const bool,
             const double,
+            const TVector &,
             const double starting_step_size) override;
     };
 } // namespace polysolve::nonlinear::line_search

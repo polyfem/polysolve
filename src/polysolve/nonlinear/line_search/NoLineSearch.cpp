@@ -13,6 +13,7 @@ namespace polysolve::nonlinear::line_search
         Problem &objFunc,
         const bool,
         const double,
+        const TVector &,
         const double starting_step_size)
     {
         objFunc.solution_changed(x + delta_x * starting_step_size);

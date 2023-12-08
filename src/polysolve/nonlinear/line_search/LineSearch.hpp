@@ -86,7 +86,8 @@ namespace polysolve::nonlinear::line_search
             const TVector &delta_x,
             Problem &objFunc,
             const bool use_grad_norm,
-            const double old_energy_in,
+            const double old_energy,
+            const TVector &old_grad,
             const double starting_step_size) = 0;
 
     private:

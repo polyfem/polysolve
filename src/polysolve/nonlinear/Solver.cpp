@@ -5,6 +5,7 @@
 
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"
+#include "descent_strategies/ADAM.hpp"
 #include "descent_strategies/GradientDescent.hpp"
 #include "descent_strategies/LBFGS.hpp"
 
@@ -85,6 +86,22 @@ namespace polysolve::nonlinear
             solver->add_strategy(std::make_unique<LBFGS>(
                 solver_params, characteristic_length, logger));
         }
+        else if (solver_name == "ADAM" || solver_name == "adam")
+        {
+            solver->add_strategy(std::make_unique<ADAM>(
+                solver_params, false, characteristic_length, logger));
+        }
+        else if (solver_name == "StochasticADAM" || solver_name == "stochastic_adam")
+        {
+            solver->add_strategy(std::make_unique<ADAM>(
+                solver_params, true, characteristic_length, logger));
+        }
+
+        else if (solver_name == "StochasticGradientDescent" || solver_name == "stochastic_gradient_descent")
+        {
+            solver->add_strategy(std::make_unique<GradientDescent>(
+                solver_params, true, characteristic_length, logger));
+        }
         else if (solver_name == "GradientDescent" || solver_name == "gradient_descent")
         {
             // grad descent always there
@@ -93,7 +110,7 @@ namespace polysolve::nonlinear
             throw std::runtime_error("Unrecognized solver type: " + solver_name);
 
         solver->add_strategy(std::make_unique<GradientDescent>(
-            solver_params, characteristic_length, logger));
+            solver_params, false, characteristic_length, logger));
 
         solver->set_strategies_iterations(solver_params);
         return solver;
@@ -104,7 +121,10 @@ namespace polysolve::nonlinear
         return {"BFGS",
                 "DenseNewton",
                 "Newton",
+                "ADAM",
+                "StochasticADAM",
                 "GradientDescent",
+                "StochasticGradientDescent",
                 "L-BFGS"};
     }
 

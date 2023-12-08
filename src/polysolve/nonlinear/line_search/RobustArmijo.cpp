@@ -9,6 +9,7 @@ namespace polysolve::nonlinear::line_search
     RobustArmijo::RobustArmijo(const json &params, spdlog::logger &logger)
         : Superclass(params, logger)
     {
+        delta_relative_tolerance = params.at("delta_relative_tolerance");
     }
 
     bool RobustArmijo::criteria(
@@ -22,7 +23,7 @@ namespace polysolve::nonlinear::line_search
         if (new_energy <= old_energy + step_size * this->armijo_criteria) // Try Armijo first
             return true;
 
-        if (std::abs(new_energy - old_energy) <= 0.1 * std::abs(old_energy))
+        if (std::abs(new_energy - old_energy) <= delta_relative_tolerance * std::abs(old_energy))
         {
             // TODO: Compute new_grad here as needed
             // objFunc.gradient(new_x, new_grad);

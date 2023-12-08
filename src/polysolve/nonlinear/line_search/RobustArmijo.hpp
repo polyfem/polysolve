@@ -24,6 +24,8 @@ namespace polysolve::nonlinear::line_search
             const double new_energy,
             const TVector &new_grad,
             const double step_size) const override;
+
+        double delta_relative_tolerance;
     };
 
 } // namespace polysolve::nonlinear::line_search

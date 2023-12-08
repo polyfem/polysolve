@@ -253,6 +253,22 @@
         "doc": "Armijo c parameter."
     },
     {
+        "pointer": "/line_search/RobustArmijo",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "delta_relative_tolerance"
+        ],
+        "doc": "Options for RobustArmijo."
+    },
+    {
+        "pointer": "/line_search/RobustArmijo/delta_relative_tolerance",
+        "default": 0.1,
+        "type": "float",
+        "min_value": 0,
+        "doc": "Relative tolerance on E to switch to approximate."
+    },
+    {
         "pointer": "/box_constraints",
         "type": "object",
         "optional": [

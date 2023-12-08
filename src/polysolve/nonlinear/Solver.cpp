@@ -14,11 +14,18 @@
 #include <spdlog/fmt/bundled/color.h>
 #include <spdlog/fmt/ostr.h>
 
+#include <finitediff.hpp>
+
 #include <iomanip>
 #include <fstream>
 
 namespace polysolve::nonlinear
 {
+    NLOHMANN_JSON_SERIALIZE_ENUM(
+        FiniteDiffStrategy,
+        {{FiniteDiffStrategy::NONE, "None"},
+         {FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE, "DirectionalDerivative"},
+         {FiniteDiffStrategy::FULL_FINITE_DIFF, "FullFiniteDiff"}})
 
     // Static constructor
     std::unique_ptr<Solver> Solver::create(
@@ -130,6 +137,9 @@ namespace polysolve::nonlinear
         m_descent_strategy = 0;
 
         set_line_search(solver_params);
+
+        gradient_fd_strategy = solver_params["advanced"]["apply_gradient_fd"];
+        gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)
@@ -181,6 +191,8 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
+        objFunc.post_step(this->m_current.iterations, x);
+
         const auto g_norm_tol = this->m_stop.gradNorm;
         this->m_stop.gradNorm = first_grad_norm_tol;
 
@@ -230,6 +242,11 @@ namespace polysolve::nonlinear
             {
                 POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
                 objFunc.gradient(x, grad);
+            }
+
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("verify gradient", grad_time, m_logger);
+                this->verify_gradient(objFunc, x, grad);
             }
 
             const double grad_norm = compute_grad_norm(x, grad);
@@ -492,5 +509,60 @@ namespace polysolve::nonlinear
             obj_fun_time, m_line_search ? m_line_search->checking_for_nan_inf_time : 0,
             m_line_search ? m_line_search->broad_phase_ccd_time : 0, m_line_search ? m_line_search->ccd_time : 0,
             m_line_search ? m_line_search->classical_line_search_time : 0);
+    }
+
+    void Solver::verify_gradient(Problem &objFunc, const TVector &x, const TVector &grad)
+    {
+        bool match = false;
+
+        switch (gradient_fd_strategy)
+        {
+        case FiniteDiffStrategy::NONE:
+            return;
+        case FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE:
+        {
+            Eigen::VectorXd direc = grad.normalized();
+            Eigen::VectorXd x2 = x + direc * gradient_fd_eps;
+            Eigen::VectorXd x1 = x - direc * gradient_fd_eps;
+
+            objFunc.solution_changed(x2);
+            double J2 = objFunc.value(x2);
+
+            objFunc.solution_changed(x1);
+            double J1 = objFunc.value(x1);
+
+            double fd = (J2 - J1) / 2 / gradient_fd_eps;
+            double analytic = direc.dot(grad);
+
+            match = abs(fd - analytic) < 1e-8 || abs(fd - analytic) < 1e-4 * abs(analytic);
+
+            // Log error in either case to make it more visible in the logs.
+            if (match)
+                m_logger.debug("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
+            else
+                m_logger.error("step size: {}, finite difference: {}, derivative: {}", gradient_fd_eps, fd, analytic);
+        }
+        break;
+        case FiniteDiffStrategy::FULL_FINITE_DIFF:
+        {
+            Eigen::VectorXd grad_fd;
+            fd::finite_gradient(
+                x, [&](const Eigen::VectorXd &x_) {
+                    objFunc.solution_changed(x_);
+                    return objFunc.value(x_);
+                },
+                grad_fd, fd::AccuracyOrder::SECOND, gradient_fd_eps);
+
+            match = (grad_fd - grad).norm() < 1e-8 || (grad_fd - grad).norm() < 1e-4 * (grad).norm();
+
+            if (match)
+                m_logger.debug("step size: {}, all gradient components match finite difference", gradient_fd_eps);
+            else
+                m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
+        }
+        break;
+        }
+
+        objFunc.solution_changed(x);
     }
 } // namespace polysolve::nonlinear

@@ -157,8 +157,6 @@ add_subdirectory(src/polysolve/nonlinear)
 target_link_libraries(polysolve_linear PUBLIC polysolve_coverage_config)
 target_link_libraries(polysolve PUBLIC polysolve_coverage_config)
 
-
-
 target_compile_features(polysolve_linear PUBLIC cxx_std_17)
 target_compile_features(polysolve PUBLIC cxx_std_17)
 
@@ -193,9 +191,6 @@ target_link_libraries(polysolve PUBLIC cppoptlib)
 # LBFGSpp
 include(LBFGSpp)
 target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
-
-
-
 
 # JSON Specification Engine library
 include(jse)
@@ -235,6 +230,10 @@ endif()
 include(eigen)
 target_link_libraries(polysolve_linear PUBLIC Eigen3::Eigen)
 
+# finite-diff (include this after Eigen)
+include(finite-diff)
+target_link_libraries(polysolve PUBLIC finitediff::finitediff)
+
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
@@ -245,7 +244,7 @@ if(POLYSOLVE_WITH_HYPRE)
     endif()
 endif()
 
-# Json (MIT)
+# JSON
 include(json)
 target_link_libraries(polysolve_linear PUBLIC nlohmann_json::nlohmann_json)
 

@@ -420,24 +420,24 @@ void test_solvers_gradient_fd(const bool full_fd)
     }
 }
 
-TEST_CASE("non-linear", "[solver]")
+TEST_CASE("nonlinear", "[solver]")
 {
     test_solvers(Solver::available_solvers(), 1000, false);
     // test_solvers({"L-BFGS"}, 1000, false);
 }
 
-TEST_CASE("non-linear-gradient-fd", "[solver]")
+TEST_CASE("nonlinear-gradient-fd", "[solver]")
 {
     test_solvers_gradient_fd(false);
     test_solvers_gradient_fd(true);
 }
 
-TEST_CASE("non-linear-easier", "[solver]")
+TEST_CASE("nonlinear-easier", "[solver]")
 {
     test_solvers(Solver::available_solvers(), 5000, true);
 }
 
-TEST_CASE("non-linear-box-constraint", "[solver]")
+TEST_CASE("nonlinear-box-constraint", "[solver]")
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
     problems.push_back(std::make_unique<QuadraticProblem>());
@@ -509,7 +509,7 @@ TEST_CASE("non-linear-box-constraint", "[solver]")
     }
 }
 
-TEST_CASE("non-linear-box-constraint-input", "[solver]")
+TEST_CASE("nonlinear-box-constraint-input", "[solver]")
 {
     std::vector<std::unique_ptr<TestProblem>> problems;
     problems.push_back(std::make_unique<QuadraticProblem>());
@@ -603,10 +603,8 @@ TEST_CASE("MMA", "[solver]")
         solver_params["solver"] = "MMA";
         solver_params["line_search"]["method"] = "None";
 
-        auto solver = BoxConstraintSolver::create(solver_params,
-                                                  linear_solver_params,
-                                                  characteristic_length,
-                                                  *logger);
+        auto solver = BoxConstraintSolver::create(
+            solver_params, linear_solver_params, characteristic_length, *logger);
 
         auto c = std::make_shared<InequalityConstraint>(solver_params["box_constraints"]["bounds"][1]);
         dynamic_cast<BoxConstraintSolver &>(*solver).add_constraint(c);

@@ -1,5 +1,4 @@
-[
-    {
+[{
         "pointer": "/",
         "default": null,
         "type": "object",
@@ -277,17 +276,19 @@
             "max_step_size_iter_final",
             "default_init_step_size",
             "step_ratio",
-            "Armijo"
+            "Armijo",
+            "RobustArmijo"
         ],
         "doc": "Settings for line-search in the nonlinear solver"
     },
     {
         "pointer": "/line_search/method",
-        "default": "Backtracking",
+        "default": "RobustArmijo",
         "type": "string",
         "options": [
             "Armijo",
             "ArmijoAlt",
+            "RobustArmijo",
             "Backtracking",
             "MoreThuente",
             "None"
@@ -347,9 +348,26 @@
     },
     {
         "pointer": "/line_search/Armijo/c",
-        "default": 0.5,
+        "default": 1e-4,
         "type": "float",
+        "min_value": 0,
         "doc": "Armijo c parameter."
+    },
+    {
+        "pointer": "/line_search/RobustArmijo",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "delta_relative_tolerance"
+        ],
+        "doc": "Options for RobustArmijo."
+    },
+    {
+        "pointer": "/line_search/RobustArmijo/delta_relative_tolerance",
+        "default": 0.1,
+        "type": "float",
+        "min_value": 0,
+        "doc": "Relative tolerance on E to switch to approximate."
     },
     {
         "pointer": "/box_constraints",

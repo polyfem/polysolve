@@ -190,6 +190,9 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "Newton",
+        "required": [
+            "type"
+        ],
         "optional": [
             "residual_tolerance"
         ],
@@ -199,6 +202,9 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "ProjectedNewton",
+        "required": [
+            "type"
+        ],
         "optional": [
             "residual_tolerance"
         ],
@@ -208,6 +214,9 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "RegularizedNewton",
+        "required": [
+            "type"
+        ],
         "optional": [
             "residual_tolerance",
             "reg_weight_min",
@@ -220,6 +229,9 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "DenseNewton",
+        "required": [
+            "type"
+        ],
         "optional": [
             "residual_tolerance"
         ],
@@ -229,6 +241,9 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "DenseProjectedNewton",
+        "required": [
+            "type"
+        ],
         "optional": [
             "residual_tolerance"
         ],
@@ -238,6 +253,9 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "DenseRegularizedNewton",
+        "required": [
+            "type"
+        ],
         "optional": [
             "residual_tolerance",
             "reg_weight_min",
@@ -250,12 +268,18 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "GradientDescent",
+        "required": [
+            "type"
+        ],
         "doc": "Options for Gradient Descent."
     },
     {
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "StochasticGradientDescent",
+        "required": [
+            "type"
+        ],
         "optional": [
             "erase_component_probability"
         ],
@@ -265,8 +289,10 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "L-BFGS",
+        "required": [
+            "type"
+        ],
         "optional": [
-            "erase_component_probability",
             "history_size"
         ],
         "doc": "Options for L-BFGS."
@@ -275,10 +301,27 @@
         "pointer": "/solver/*",
         "type": "object",
         "type_name": "BFGS",
-        "optional": [
-            "erase_component_probability"
+        "required": [
+            "type"
         ],
         "doc": "Options for BFGS."
+    },
+    {
+        "pointer": "/solver/*/type",
+        "type": "string",
+        "options": [
+            "Newton",
+            "DenseNewton",
+            "ProjectedNewton",
+            "DenseProjectedNewton",
+            "RegularizedNewton",
+            "DenseRegularizedNewton",
+            "GradientDescent",
+            "StochasticGradientDescent",
+            "L-BFGS",
+            "BFGS"
+        ],
+        "doc": "Nonlinear solver type"
     },
     {
         "pointer": "/solver/*/residual_tolerance",

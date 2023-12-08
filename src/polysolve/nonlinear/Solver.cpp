@@ -124,7 +124,7 @@ namespace polysolve::nonlinear
         {
             for (const auto &j : solver_params["solver"])
             {
-                const std::string solver_name = solver_params["type"];
+                const std::string solver_name = j["type"];
                 solver->add_strategy(crate_solver(solver_name, j, linear_solver_params, characteristic_length, logger));
             }
         }

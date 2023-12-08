@@ -424,6 +424,65 @@ TEST_CASE("non-linear", "[solver]")
     // test_solvers({"L-BFGS"}, 1000, false);
 }
 
+TEST_CASE("non-linear-fallbacks", "[solver]")
+{
+    json solver_params = R"({"solver": [
+        {
+            "type": "Newton"
+        },
+        {
+            "type": "RegularizedNewton"
+        },
+        {
+            "type": "L-BFGS",
+            "history_size": 10
+        },
+        {
+            "type": "StochasticGradientDescent",
+            "erase_component_probability": 0.5
+        }
+    ]
+    })"_json;
+    json linear_solver_params;
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    const double characteristic_length = 1;
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    logger->set_level(spdlog::level::info);
+    TestProblem::TVector g;
+    auto prob = std::make_unique<QuadraticProblem>();
+
+    TestProblem::TVector x(prob->size());
+    x.setZero();
+
+    std::cout << solver_params << std::endl;
+
+    for (int i = 0; i < N_RANDOM; ++i)
+    {
+        auto solver = Solver::create(solver_params,
+                                     linear_solver_params,
+                                     characteristic_length,
+                                     *logger);
+
+        solver->minimize(*prob, x);
+
+        double err = std::numeric_limits<double>::max();
+        for (auto sol : prob->solutions())
+            err = std::min(err, (x - sol).norm());
+        if (err >= 1e-7)
+        {
+            prob->gradient(x, g);
+            err = g.norm();
+        }
+        CHECK(err < 1e-7);
+        if (err >= 1e-7)
+            break;
+
+        x.setRandom();
+    }
+}
+
 TEST_CASE("non-linear-gradient-fd", "[solver]")
 {
     test_solvers_gradient_fd(false);

@@ -1,5 +1,7 @@
 #include "Newton.hpp"
 
+#include <polysolve/Utils.hpp>
+
 namespace polysolve::nonlinear
 {
 
@@ -71,7 +73,7 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Newton(sparse, solver_params["Newton"]["residual_tolerance"], solver_params, linear_solver_params, characteristic_length, logger)
+        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger)
     {
     }
 
@@ -81,7 +83,7 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(sparse, solver_params["ProjectedNewton"]["residual_tolerance"], solver_params, linear_solver_params, characteristic_length, logger)
+        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger)
     {
     }
 
@@ -91,11 +93,11 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(sparse, solver_params["RegularizedNewton"]["residual_tolerance"], solver_params, linear_solver_params, characteristic_length, logger)
+        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger)
     {
-        reg_weight_min = solver_params["RegularizedNewton"]["reg_weight_min"];
-        reg_weight_max = solver_params["RegularizedNewton"]["reg_weight_max"];
-        reg_weight_inc = solver_params["RegularizedNewton"]["reg_weight_inc"];
+        reg_weight_min = extract_param("RegularizedNewton", "reg_weight_min", solver_params);
+        reg_weight_max = extract_param("RegularizedNewton", "reg_weight_max", solver_params);
+        reg_weight_inc = extract_param("RegularizedNewton", "reg_weight_inc", solver_params);
 
         reg_weight = reg_weight_min;
 

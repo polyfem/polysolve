@@ -10,6 +10,16 @@ namespace polysolve::nonlinear
         const double characteristic_length,
         spdlog::logger &logger)
     {
+        // Copies stuff from main newton
+        json proj_solver_params = R"({"ProjectedNewton": {}})"_json;
+        proj_solver_params["ProjectedNewton"]["residual_tolerance"] = solver_params["Newton"]["residual_tolerance"];
+
+        json reg_solver_params = R"({"RegularizedNewton": {}})"_json;
+        reg_solver_params["RegularizedNewton"]["residual_tolerance"] = solver_params["Newton"]["residual_tolerance"];
+        reg_solver_params["RegularizedNewton"]["reg_weight_min"] = solver_params["Newton"]["reg_weight_min"];
+        reg_solver_params["RegularizedNewton"]["reg_weight_max"] = solver_params["Newton"]["reg_weight_max"];
+        reg_solver_params["RegularizedNewton"]["reg_weight_inc"] = solver_params["Newton"]["reg_weight_inc"];
+
         std::vector<std::shared_ptr<DescentStrategy>> res;
         const bool force_psd_projection = solver_params["Newton"]["force_psd_projection"];
         if (!force_psd_projection)
@@ -22,14 +32,14 @@ namespace polysolve::nonlinear
         if (use_psd_projection)
             res.push_back(std::make_unique<ProjectedNewton>(
                 sparse,
-                solver_params, linear_solver_params,
+                proj_solver_params, linear_solver_params,
                 characteristic_length, logger));
 
         const double reg_weight_min = solver_params["Newton"]["reg_weight_min"];
         if (reg_weight_min > 0)
             res.push_back(std::make_unique<RegularizedNewton>(
                 sparse,
-                solver_params, linear_solver_params,
+                reg_solver_params, linear_solver_params,
                 characteristic_length, logger));
 
         if (res.empty())
@@ -65,6 +75,7 @@ namespace polysolve::nonlinear
         spdlog::logger &logger)
         : Superclass(sparse, solver_params, linear_solver_params, characteristic_length, logger)
     {
+        m_residual_tolerance = solver_params["ProjectedNewton"]["residual_tolerance"];
     }
 
     RegularizedNewton::RegularizedNewton(
@@ -75,9 +86,11 @@ namespace polysolve::nonlinear
         spdlog::logger &logger)
         : Superclass(sparse, solver_params, linear_solver_params, characteristic_length, logger)
     {
-        reg_weight_min = solver_params["Newton"]["reg_weight_min"];
-        reg_weight_max = solver_params["Newton"]["reg_weight_max"];
-        reg_weight_inc = solver_params["Newton"]["reg_weight_inc"];
+
+        m_residual_tolerance = solver_params["RegularizedNewton"]["residual_tolerance"];
+        reg_weight_min = solver_params["RegularizedNewton"]["reg_weight_min"];
+        reg_weight_max = solver_params["RegularizedNewton"]["reg_weight_max"];
+        reg_weight_inc = solver_params["RegularizedNewton"]["reg_weight_inc"];
 
         reg_weight = reg_weight_min;
 

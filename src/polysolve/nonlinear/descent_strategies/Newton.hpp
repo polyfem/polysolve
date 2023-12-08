@@ -39,7 +39,6 @@ namespace polysolve::nonlinear
 
         const bool is_sparse;
         const double m_characteristic_length;
-        double m_residual_tolerance;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
 
@@ -47,6 +46,8 @@ namespace polysolve::nonlinear
         double inverting_time;
 
     protected:
+        double m_residual_tolerance;
+
         std::string internal_name() const { return is_sparse ? "Sparse" : "Dense"; }
 
         virtual void compute_hessian(Problem &objFunc,

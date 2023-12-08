@@ -5,6 +5,7 @@
 
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"
+#include "descent_strategies/ADAM.hpp"
 #include "descent_strategies/GradientDescent.hpp"
 #include "descent_strategies/LBFGS.hpp"
 
@@ -76,6 +77,15 @@ namespace polysolve::nonlinear
             else if (solver_name == "GradientDescent" || solver_name == "gradient_descent")
             {
                 return std::make_shared<GradientDescent>(solver_params, false, characteristic_length, logger);
+            }
+
+            else if (solver_name == "ADAM" || solver_name == "adam")
+            {
+                return std::make_shared<ADAM>(solver_params, false, characteristic_length, logger);
+            }
+            else if (solver_name == "StochasticADAM" || solver_name == "stochastic_adam")
+            {
+                return std::make_shared<ADAM>(solver_params, true, characteristic_length, logger);
             }
             else
                 throw std::runtime_error("Unrecognized solver type: " + solver_name);
@@ -166,6 +176,8 @@ namespace polysolve::nonlinear
         return {"BFGS",
                 "DenseNewton",
                 "Newton",
+                "ADAM",
+                "StochasticADAM",
                 "GradientDescent",
                 "StochasticGradientDescent",
                 "L-BFGS"};

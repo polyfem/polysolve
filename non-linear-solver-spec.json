@@ -15,6 +15,8 @@
             "L-BFGS",
             "L-BFGS-B",
             "Newton",
+            "ADAM",
+            "StochasticADAM",
             "StochasticGradientDescent",
             "box_constraints",
             "advanced"
@@ -29,6 +31,8 @@
             "Newton",
             "DenseNewton",
             "GradientDescent",
+            "ADAM",
+            "StochasticADAM",
             "StochasticGradientDescent",
             "L-BFGS",
             "BFGS",
@@ -165,6 +169,85 @@
         "default": true,
         "type": "bool",
         "doc": "Use PSD as fallback using second order solvers (i.e., Newton's method)."
+    },
+    {
+        "pointer": "/ADAM",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/ADAM/alpha",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Parameter alpha for ADAM."
+    },
+    {
+        "pointer": "/ADAM/beta_1",
+        "default": 0.9,
+        "type": "float",
+        "doc": "Parameter beta_1 for ADAM."
+    },
+    {
+        "pointer": "/ADAM/beta_2",
+        "default": 0.999,
+        "type": "float",
+        "doc": "Parameter beta_2 for ADAM."
+    },
+    {
+        "pointer": "/ADAM/epsilon",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Parameter epsilon for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon",
+            "erase_component_probability"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/alpha",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Parameter alpha for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/beta_1",
+        "default": 0.9,
+        "type": "float",
+        "doc": "Parameter beta_1 for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/beta_2",
+        "default": 0.999,
+        "type": "float",
+        "doc": "Parameter beta_2 for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/epsilon",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Parameter epsilon for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/erase_component_probability",
+        "default": 0.3,
+        "type": "float",
+        "doc": "Probability of erasing a component on the gradient for ADAM."
     },
     {
         "pointer": "/StochasticGradientDescent",
@@ -307,6 +390,37 @@
         "doc": "Options for BFGS."
     },
     {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "ADAM",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "StochasticADAM",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon",
+            "erase_component_probability"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
         "pointer": "/solver/*/type",
         "type": "string",
         "options": [
@@ -318,6 +432,8 @@
             "DenseRegularizedNewton",
             "GradientDescent",
             "StochasticGradientDescent",
+            "ADAM",
+            "StochasticADAM",
             "L-BFGS",
             "BFGS"
         ],
@@ -358,6 +474,30 @@
         "default": 6,
         "type": "int",
         "doc": "The number of corrections to approximate the inverse Hessian matrix."
+    },
+    {
+        "pointer": "/solver/*/alpha",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Parameter alpha for ADAM."
+    },
+    {
+        "pointer": "/solver/*/beta_1",
+        "default": 0.9,
+        "type": "float",
+        "doc": "Parameter beta_1 for ADAM."
+    },
+    {
+        "pointer": "/solver/*/beta_2",
+        "default": 0.999,
+        "type": "float",
+        "doc": "Parameter beta_2 for ADAM."
+    },
+    {
+        "pointer": "/solver/*/epsilon",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Parameter epsilon for ADAM."
     },
     {
         "pointer": "/line_search",

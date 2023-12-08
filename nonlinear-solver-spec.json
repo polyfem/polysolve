@@ -176,7 +176,8 @@
             "max_step_size_iter_final",
             "default_init_step_size",
             "step_ratio",
-            "Armijo"
+            "Armijo",
+            "RobustArmijo"
         ],
         "doc": "Settings for line-search in the nonlinear solver"
     },

@@ -9,7 +9,8 @@ namespace polysolve::nonlinear::line_search
     RobustArmijo::RobustArmijo(const json &params, spdlog::logger &logger)
         : Superclass(params, logger)
     {
-        delta_relative_tolerance = params.at("delta_relative_tolerance");
+        delta_relative_tolerance = params.at(
+            "/line_search/RobustArmijo/delta_relative_tolerance"_json_pointer);
     }
 
     bool RobustArmijo::criteria(

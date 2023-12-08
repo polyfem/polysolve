@@ -9,10 +9,12 @@ namespace polysolve::nonlinear
     {
     public:
         PostStepData(const int iter_num,
+                     const json &solver_info,
                      const Eigen::VectorXd &x,
                      const Eigen::VectorXd &grad);
 
         const int iter_num;
+        const json &solver_info;
         const Eigen::VectorXd &x;
         const Eigen::VectorXd &grad;
     };

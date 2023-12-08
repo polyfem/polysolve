@@ -89,7 +89,14 @@ namespace polysolve::nonlinear
         else if (solver_name == "ADAM" || solver_name == "adam")
         {
             solver->add_strategy(std::make_unique<ADAM>(
-                solver_params, characteristic_length, logger));
+                solver_params, false, characteristic_length, logger));
+        }
+        else if (solver_name == "StochasticADAM" || solver_name == "stochastic_adam")
+        {
+            solver->add_strategy(std::make_unique<ADAM>(
+                solver_params, true, characteristic_length, logger));
+        }
+
         else if (solver_name == "StochasticGradientDescent" || solver_name == "stochastic_gradient_descent")
         {
             solver->add_strategy(std::make_unique<GradientDescent>(
@@ -115,6 +122,7 @@ namespace polysolve::nonlinear
                 "DenseNewton",
                 "Newton",
                 "ADAM",
+                "StochasticADAM",
                 "GradientDescent",
                 "StochasticGradientDescent",
                 "L-BFGS"};

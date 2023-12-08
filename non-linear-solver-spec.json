@@ -16,6 +16,7 @@
             "LBFGSB",
             "Newton",
             "ADAM",
+            "StochasticADAM",
             "StochasticGradientDescent",
             "box_constraints",
             "advanced"
@@ -31,6 +32,7 @@
             "DenseNewton",
             "GradientDescent",
             "ADAM",
+            "StochasticADAM",
             "StochasticGradientDescent",
             "L-BFGS",
             "BFGS",
@@ -203,6 +205,49 @@
         "default": 1e-8,
         "type": "float",
         "doc": "Parameter epsilon for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon",
+            "erase_component_probability"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/alpha",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Parameter alpha for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/beta_1",
+        "default": 0.9,
+        "type": "float",
+        "doc": "Parameter beta_1 for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/beta_2",
+        "default": 0.999,
+        "type": "float",
+        "doc": "Parameter beta_2 for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/epsilon",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Parameter epsilon for ADAM."
+    },
+    {
+        "pointer": "/StochasticADAM/erase_component_probability",
+        "default": 0.3,
+        "type": "float",
+        "doc": "Probability of erasing a component on the gradient for ADAM."
     },
     {
         "pointer": "/StochasticGradientDescent",

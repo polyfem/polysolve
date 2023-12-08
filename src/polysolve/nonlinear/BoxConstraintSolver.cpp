@@ -42,7 +42,7 @@ namespace polysolve::nonlinear
 
         const std::string solver_name = solver_params["solver"];
 
-        auto solver = std::make_unique<BoxConstraintSolver>(solver_name, solver_params, characteristic_length, logger);
+        auto solver = std::make_unique<BoxConstraintSolver>(solver_params, characteristic_length, logger);
 
         if (solver_name == "LBFGSB" || solver_name == "L-BFGS-B")
         {
@@ -70,11 +70,10 @@ namespace polysolve::nonlinear
                 "MMA"};
     }
 
-    BoxConstraintSolver::BoxConstraintSolver(const std::string &name,
-                                             const json &solver_params,
+    BoxConstraintSolver::BoxConstraintSolver(const json &solver_params,
                                              const double characteristic_length,
                                              spdlog::logger &logger)
-        : Superclass(name, solver_params, characteristic_length, logger)
+        : Superclass(solver_params, characteristic_length, logger)
     {
         json box_constraint_params = solver_params["box_constraints"];
         max_change_ = box_constraint_params["max_change"];
@@ -162,8 +161,8 @@ namespace polysolve::nonlinear
     }
 
     void BoxConstraintSolver::add_constraint(const std::shared_ptr<Problem> &constraint)
-    {  
-        for (auto& strategy : m_strategies)
+    {
+        for (auto &strategy : m_strategies)
             if (strategy->name() == "MMA")
                 std::dynamic_pointer_cast<MMA>(strategy)->add_constraint(constraint);
     }

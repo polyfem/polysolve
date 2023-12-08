@@ -27,8 +27,7 @@ namespace polysolve::nonlinear
 
         using Superclass = Solver;
 
-        BoxConstraintSolver(const std::string &name,
-                            const json &solver_params,
+        BoxConstraintSolver(const json &solver_params,
                             const double characteristic_length,
                             spdlog::logger &logger);
 

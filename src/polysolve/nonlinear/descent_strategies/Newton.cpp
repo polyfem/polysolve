@@ -48,17 +48,15 @@ namespace polysolve::nonlinear
         return res;
     }
 
-    Newton::Newton(
-        const bool sparse,
-        const json &solver_params,
-        const json &linear_solver_params,
-        const double characteristic_length,
-        spdlog::logger &logger)
+    Newton::Newton(const bool sparse,
+                   const double residual_tolerance,
+                   const json &solver_params,
+                   const json &linear_solver_params,
+                   const double characteristic_length,
+                   spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger),
-          is_sparse(sparse), m_characteristic_length(characteristic_length)
+          is_sparse(sparse), m_characteristic_length(characteristic_length), m_residual_tolerance(residual_tolerance)
     {
-        m_residual_tolerance = solver_params["Newton"]["residual_tolerance"];
-
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
@@ -67,15 +65,24 @@ namespace polysolve::nonlinear
             log_and_throw_error(logger, "Newton residual_tolerance must be > 0, instead got {}", m_residual_tolerance);
     }
 
+    Newton::Newton(
+        const bool sparse,
+        const json &solver_params,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger)
+        : Newton(sparse, solver_params["Newton"]["residual_tolerance"], solver_params, linear_solver_params, characteristic_length, logger)
+    {
+    }
+
     ProjectedNewton::ProjectedNewton(
         const bool sparse,
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(sparse, solver_params, linear_solver_params, characteristic_length, logger)
+        : Superclass(sparse, solver_params["ProjectedNewton"]["residual_tolerance"], solver_params, linear_solver_params, characteristic_length, logger)
     {
-        m_residual_tolerance = solver_params["ProjectedNewton"]["residual_tolerance"];
     }
 
     RegularizedNewton::RegularizedNewton(
@@ -84,10 +91,8 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(sparse, solver_params, linear_solver_params, characteristic_length, logger)
+        : Superclass(sparse, solver_params["RegularizedNewton"]["residual_tolerance"], solver_params, linear_solver_params, characteristic_length, logger)
     {
-
-        m_residual_tolerance = solver_params["RegularizedNewton"]["residual_tolerance"];
         reg_weight_min = solver_params["RegularizedNewton"]["reg_weight_min"];
         reg_weight_max = solver_params["RegularizedNewton"]["reg_weight_max"];
         reg_weight_inc = solver_params["RegularizedNewton"]["reg_weight_inc"];

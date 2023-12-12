@@ -26,7 +26,7 @@ namespace polysolve::nonlinear
 {
     namespace
     {
-        std::shared_ptr<DescentStrategy> crate_solver(
+        std::shared_ptr<DescentStrategy> create_solver(
             const std::string &solver_name, const json &solver_params,
             const json &linear_solver_params,
             const double characteristic_length,
@@ -135,7 +135,7 @@ namespace polysolve::nonlinear
             for (const auto &j : solver_params["solver"])
             {
                 const std::string solver_name = j["type"];
-                solver->add_strategy(crate_solver(solver_name, j, linear_solver_params, characteristic_length, logger));
+                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger));
             }
         }
         else
@@ -156,7 +156,7 @@ namespace polysolve::nonlinear
             }
             else
             {
-                solver->add_strategy(crate_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger));
+                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger));
             }
 
             if (solver_name != "GradientDescent" && solver_name != "gradient_descent")

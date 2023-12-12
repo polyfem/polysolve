@@ -282,10 +282,10 @@ namespace polysolve::nonlinear
         stop_watch.start();
 
         m_logger.debug(
-            "Starting {} with {} solve f₀={:g} ‖∇f₀‖={:g} "
+            "Starting {} with {} solve f₀={:g} "
             "(stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
             descent_strategy_name(), m_line_search->name(),
-            objFunc.value(x), this->m_current.gradNorm, this->m_stop.iterations,
+            objFunc.value(x), this->m_stop.iterations,
             this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
         update_solver_info(objFunc.value(x));
@@ -293,6 +293,9 @@ namespace polysolve::nonlinear
 
         int f_delta_step_cnt = 0;
         double f_delta = 0;
+
+        // Used for logging
+        double xDelta = 0, gradNorm = 0;
 
         do
         {
@@ -340,7 +343,10 @@ namespace polysolve::nonlinear
                 log_and_throw_error(m_logger, "[{}][{}] Gradient is nan; stopping", descent_strategy_name(), m_line_search->name());
                 break;
             }
+
             this->m_current.gradNorm = grad_norm;
+            gradNorm = this->m_current.gradNorm;
+
             this->m_status = checkConvergence(this->m_stop, this->m_current);
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
@@ -396,6 +402,7 @@ namespace polysolve::nonlinear
 
             // Use the maximum absolute displacement value divided by the timestep,
             this->m_current.xDelta = delta_x_norm;
+            xDelta = this->m_current.xDelta;
             this->m_status = checkConvergence(this->m_stop, this->m_current);
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
@@ -403,6 +410,11 @@ namespace polysolve::nonlinear
             // ---------------
             // Variable update
             // ---------------
+
+            m_logger.trace(
+                "[{}][{}] pre LS iter={:d} f={:g} ‖∇f‖={:g}",
+                descent_strategy_name(), m_line_search->name(),
+                this->m_current.iterations, energy, gradNorm);
 
             // Perform a line_search to compute step scale
             double rate = m_line_search->line_search(x, delta_x, objFunc);
@@ -473,7 +485,7 @@ namespace polysolve::nonlinear
                 " (stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
                 descent_strategy_name(), m_line_search->name(),
                 this->m_current.iterations, energy, f_delta,
-                this->m_current.gradNorm, this->m_current.xDelta, delta_x.dot(grad), rate, step,
+                gradNorm, xDelta, delta_x.dot(grad), rate, step,
                 this->m_stop.iterations, this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
             if (++this->m_current.iterations >= this->m_stop.iterations)
@@ -502,7 +514,7 @@ namespace polysolve::nonlinear
             " (stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
             descent_strategy_name(), m_line_search->name(),
             this->m_status, tot_time, this->m_current.iterations,
-            old_energy, f_delta, this->m_current.gradNorm, this->m_current.xDelta,
+            old_energy, f_delta, gradNorm, xDelta,
             this->m_stop.iterations, this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
         log_times();

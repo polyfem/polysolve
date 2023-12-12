@@ -71,4 +71,12 @@ namespace polysolve
         return I;
     }
 
+    double extract_param(const std::string &key, const std::string &name, const json &json)
+    {
+        if (json.find(key) != json.end())
+            return json[key][name];
+
+        return json[name];
+    }
+
 } // namespace polysolve

@@ -1,5 +1,7 @@
 #include "GradientDescent.hpp"
 
+#include <polysolve/Utils.hpp>
+
 namespace polysolve::nonlinear
 {
 
@@ -10,7 +12,7 @@ namespace polysolve::nonlinear
         : Superclass(solver_params_, characteristic_length, logger), is_stochastic_(is_stochastic)
     {
         if (is_stochastic_)
-            erase_component_probability_ = solver_params_["StochasticGradientDescent"]["erase_component_probability"];
+            erase_component_probability_ = extract_param("StochasticGradientDescent", "erase_component_probability", solver_params_);
     }
 
     bool GradientDescent::compute_update_direction(

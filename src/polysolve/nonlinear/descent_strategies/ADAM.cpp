@@ -2,6 +2,8 @@
 
 #include "ADAM.hpp"
 
+#include <polysolve/Utils.hpp>
+
 namespace polysolve::nonlinear
 {
 
@@ -12,12 +14,12 @@ namespace polysolve::nonlinear
         : Superclass(solver_params, characteristic_length, logger), is_stochastic_(is_stochastic)
     {
         std::string param_name = is_stochastic ? "StochasticADAM" : "ADAM";
-        alpha_ = solver_params[param_name]["alpha"];
-        beta_1_ = solver_params[param_name]["beta_1"];
-        beta_2_ = solver_params[param_name]["beta_2"];
-        epsilon_ = solver_params[param_name]["epsilon"];
+        alpha_ = extract_param(param_name, "alpha", solver_params);
+        beta_1_ = extract_param(param_name, "beta_1", solver_params);
+        beta_2_ = extract_param(param_name, "beta_2", solver_params);
+        epsilon_ = extract_param(param_name, "epsilon", solver_params);
         if (is_stochastic)
-            erase_component_probability_ = solver_params["StochasticADAM"]["erase_component_probability"];
+            erase_component_probability_ = extract_param("StochasticADAM", "erase_component_probability", solver_params);
     }
 
     void ADAM::reset(const int ndof)

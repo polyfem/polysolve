@@ -2,6 +2,8 @@
 
 #include "LBFGS.hpp"
 
+#include <polysolve/Utils.hpp>
+
 namespace polysolve::nonlinear
 {
     LBFGS::LBFGS(const json &solver_params,
@@ -11,9 +13,9 @@ namespace polysolve::nonlinear
                      characteristic_length,
                      logger)
     {
-        m_history_size = solver_params["LBFGS"]["history_size"];
+        m_history_size = extract_param("L-BFGS", "history_size", solver_params);
         if (m_history_size <= 0)
-            log_and_throw_error(logger, "LBFGS history_size must be >=1, instead got {}", m_history_size);
+            log_and_throw_error(logger, "L-BFGS history_size must be >=1, instead got {}", m_history_size);
     }
 
     void LBFGS::reset(const int ndof)

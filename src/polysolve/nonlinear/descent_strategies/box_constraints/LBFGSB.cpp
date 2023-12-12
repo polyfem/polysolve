@@ -10,10 +10,10 @@ namespace polysolve::nonlinear
                    spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger)
     {
-        m_history_size = solver_params["LBFGSB"]["history_size"];
+        m_history_size = solver_params["L-BFGS-B"]["history_size"];
 
         if (m_history_size <= 0)
-            log_and_throw_error(logger, "LBFGSB history_size must be >=1, instead got {}", m_history_size);
+            log_and_throw_error(logger, "L-BFGS-B history_size must be >=1, instead got {}", m_history_size);
     }
 
     void LBFGSB::reset(const int ndof)

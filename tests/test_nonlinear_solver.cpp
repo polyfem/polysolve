@@ -307,7 +307,6 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
                                                  linear_solver_params,
                                                  characteristic_length,
                                                  *logger);
-                    REQUIRE(solver->name() == solver_name);
 
                     try
                     {
@@ -389,7 +388,6 @@ void test_solvers_gradient_fd(const bool full_fd)
                                          linear_solver_params,
                                          characteristic_length,
                                          *logger);
-            REQUIRE(solver->name() == solver_name);
 
             try
             {
@@ -424,6 +422,63 @@ TEST_CASE("nonlinear", "[solver]")
 {
     test_solvers(Solver::available_solvers(), 1000, false);
     // test_solvers({"L-BFGS"}, 1000, false);
+}
+
+TEST_CASE("nonlinear-fallbacks", "[solver]")
+{
+    json solver_params = R"({"solver": [
+        {
+            "type": "Newton"
+        },
+        {
+            "type": "RegularizedNewton"
+        },
+        {
+            "type": "L-BFGS",
+            "history_size": 10
+        },
+        {
+            "type": "StochasticGradientDescent",
+            "erase_component_probability": 0.5
+        }
+    ]
+    })"_json;
+    json linear_solver_params;
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    const double characteristic_length = 1;
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    logger->set_level(spdlog::level::info);
+    TestProblem::TVector g;
+    auto prob = std::make_unique<QuadraticProblem>();
+
+    TestProblem::TVector x(prob->size());
+    x.setZero();
+
+    for (int i = 0; i < N_RANDOM; ++i)
+    {
+        auto solver = Solver::create(solver_params,
+                                     linear_solver_params,
+                                     characteristic_length,
+                                     *logger);
+
+        solver->minimize(*prob, x);
+
+        double err = std::numeric_limits<double>::max();
+        for (auto sol : prob->solutions())
+            err = std::min(err, (x - sol).norm());
+        if (err >= 1e-7)
+        {
+            prob->gradient(x, g);
+            err = g.norm();
+        }
+        CHECK(err < 1e-7);
+        if (err >= 1e-7)
+            break;
+
+        x.setRandom();
+    }
 }
 
 TEST_CASE("nonlinear-gradient-fd", "[solver]")
@@ -478,7 +533,6 @@ TEST_CASE("nonlinear-box-constraint", "[solver]")
                                                           characteristic_length,
                                                           *logger);
 
-                REQUIRE(solver->name() == solver_name);
                 QuadraticProblem::TVector x(prob->size());
                 x.setConstant(3);
 
@@ -554,7 +608,6 @@ TEST_CASE("nonlinear-box-constraint-input", "[solver]")
                                                           linear_solver_params,
                                                           characteristic_length,
                                                           *logger);
-                REQUIRE(solver->name() == solver_name);
 
                 try
                 {

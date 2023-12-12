@@ -53,18 +53,15 @@ namespace polysolve::nonlinear
 
         /// @brief Construct a new Nonlinear Solver object
         /// @param solver_params JSON of solver parameters
-        /// @param dt time step size (use 1 if not time-dependent) TODO
+        /// @param characteristic_length used to scale tolerances
         /// @param logger
-        Solver(const std::string &name,
-               const json &solver_params,
+        Solver(const json &solver_params,
                const double characteristic_length,
                spdlog::logger &logger);
 
         void set_strategies_iterations(const json &solver_params);
 
         virtual double compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const;
-
-        std::string name() const { return m_name; }
 
         void set_line_search(const json &params);
 
@@ -118,8 +115,6 @@ namespace polysolve::nonlinear
         // ====================================================================
         //                        Solver parameters
         // ====================================================================
-
-        std::string m_name;
 
         double use_grad_norm_tol;
         double first_grad_norm_tol;

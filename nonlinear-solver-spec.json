@@ -1,4 +1,5 @@
-[{
+[
+    {
         "pointer": "/",
         "default": null,
         "type": "object",
@@ -11,8 +12,8 @@
             "iterations_per_strategy",
             "line_search",
             "allow_out_of_iterations",
-            "LBFGS",
-            "LBFGSB",
+            "L-BFGS",
+            "L-BFGS-B",
             "Newton",
             "ADAM",
             "StochasticADAM",
@@ -90,7 +91,7 @@
         "doc": "If false (default), an exception will be thrown when the nonlinear solver reaches the maximum number of iterations."
     },
     {
-        "pointer": "/LBFGS",
+        "pointer": "/L-BFGS",
         "default": null,
         "type": "object",
         "optional": [
@@ -99,22 +100,22 @@
         "doc": "Options for LBFGS."
     },
     {
-        "pointer": "/LBFGS/history_size",
+        "pointer": "/L-BFGS/history_size",
         "default": 6,
         "type": "int",
         "doc": "The number of corrections to approximate the inverse Hessian matrix."
     },
     {
-        "pointer": "/LBFGSB",
+        "pointer": "/L-BFGS-B",
         "default": null,
         "type": "object",
         "optional": [
             "history_size"
         ],
-        "doc": "Options for the boxed LBFGS."
+        "doc": "Options for the boxed L-BFGS."
     },
     {
-        "pointer": "/LBFGSB/history_size",
+        "pointer": "/L-BFGS-B/history_size",
         "default": 6,
         "type": "int",
         "doc": "The number of corrections to approximate the inverse Hessian matrix."
@@ -129,7 +130,8 @@
             "reg_weight_max",
             "reg_weight_inc",
             "force_psd_projection",
-            "use_psd_projection"
+            "use_psd_projection",
+            "use_psd_projection_in_regularized"
         ],
         "doc": "Options for Newton."
     },
@@ -168,6 +170,12 @@
         "default": true,
         "type": "bool",
         "doc": "Use PSD as fallback using second order solvers (i.e., Newton's method)."
+    },
+    {
+        "pointer": "/Newton/use_psd_projection_in_regularized",
+        "default": true,
+        "type": "bool",
+        "doc": "Use PSD in regularized Newton."
     },
     {
         "pointer": "/ADAM",
@@ -262,6 +270,273 @@
         "default": 0.3,
         "type": "float",
         "doc": "Probability of erasing a component on the gradient for StochasticGradientDescent."
+    },
+    {
+        "pointer": "/solver",
+        "type": "list",
+        "doc": "List of solvers for ballback. Eg, [{'type':'Newton'}, {'type':'L-BFGS'}, {'type':'GradientDescent'}] will solve using Newton, in case of failure will fallback to L-BFGS and eventually to GradientDescent"
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "Newton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance"
+        ],
+        "doc": "Options for Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "ProjectedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance"
+        ],
+        "doc": "Options for projected Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "RegularizedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for regularized Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "RegularizedProjectedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for regularized projected Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "DenseNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance"
+        ],
+        "doc": "Options for Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "DenseProjectedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance"
+        ],
+        "doc": "Options for projected Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "DenseRegularizedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for regularized Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "DenseRegularizedProjectedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for projected regularized Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "GradientDescent",
+        "required": [
+            "type"
+        ],
+        "doc": "Options for Gradient Descent."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "StochasticGradientDescent",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "erase_component_probability"
+        ],
+        "doc": "Options for Stochastic Gradient Descent."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "L-BFGS",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "history_size"
+        ],
+        "doc": "Options for L-BFGS."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "BFGS",
+        "required": [
+            "type"
+        ],
+        "doc": "Options for BFGS."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "ADAM",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "StochasticADAM",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "alpha",
+            "beta_1",
+            "beta_2",
+            "epsilon",
+            "erase_component_probability"
+        ],
+        "doc": "Options for ADAM."
+    },
+    {
+        "pointer": "/solver/*/type",
+        "type": "string",
+        "options": [
+            "Newton",
+            "DenseNewton",
+            "ProjectedNewton",
+            "DenseProjectedNewton",
+            "RegularizedNewton",
+            "DenseRegularizedNewton",
+            "RegularizedProjectedNewton",
+            "DenseRegularizedProjectedNewton",
+            "GradientDescent",
+            "StochasticGradientDescent",
+            "ADAM",
+            "StochasticADAM",
+            "L-BFGS",
+            "BFGS"
+        ],
+        "doc": "Nonlinear solver type"
+    },
+    {
+        "pointer": "/solver/*/residual_tolerance",
+        "default": 1e-5,
+        "type": "float",
+        "doc": "Tolerance of the linear system residual. If residual is above, the direction is rejected."
+    },
+    {
+        "pointer": "/solver/*/reg_weight_min",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Minimum regulariztion weight."
+    },
+    {
+        "pointer": "/solver/*/reg_weight_max",
+        "default": 1e8,
+        "type": "float",
+        "doc": "Maximum regulariztion weight."
+    },
+    {
+        "pointer": "/solver/*/reg_weight_inc",
+        "default": 10,
+        "type": "float",
+        "doc": "Regulariztion weight increment."
+    },
+    {
+        "pointer": "/solver/*/erase_component_probability",
+        "default": 0.3,
+        "type": "float",
+        "doc": "Probability of erasing a component on the gradient for stochastic solvers."
+    },
+    {
+        "pointer": "/solver/*/history_size",
+        "default": 6,
+        "type": "int",
+        "doc": "The number of corrections to approximate the inverse Hessian matrix."
+    },
+    {
+        "pointer": "/solver/*/alpha",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Parameter alpha for ADAM."
+    },
+    {
+        "pointer": "/solver/*/beta_1",
+        "default": 0.9,
+        "type": "float",
+        "doc": "Parameter beta_1 for ADAM."
+    },
+    {
+        "pointer": "/solver/*/beta_2",
+        "default": 0.999,
+        "type": "float",
+        "doc": "Parameter beta_2 for ADAM."
+    },
+    {
+        "pointer": "/solver/*/epsilon",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Parameter epsilon for ADAM."
     },
     {
         "pointer": "/line_search",

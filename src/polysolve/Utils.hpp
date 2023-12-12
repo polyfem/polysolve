@@ -60,4 +60,6 @@ namespace polysolve
 
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
 
+    double extract_param(const std::string &key, const std::string &name, const json &json);
+
 } // namespace polysolve

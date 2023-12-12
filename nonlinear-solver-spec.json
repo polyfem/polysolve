@@ -1,4 +1,5 @@
-[{
+[
+    {
         "pointer": "/",
         "default": null,
         "type": "object",
@@ -129,7 +130,8 @@
             "reg_weight_max",
             "reg_weight_inc",
             "force_psd_projection",
-            "use_psd_projection"
+            "use_psd_projection",
+            "use_psd_projection_in_regularized"
         ],
         "doc": "Options for Newton."
     },
@@ -168,6 +170,12 @@
         "default": true,
         "type": "bool",
         "doc": "Use PSD as fallback using second order solvers (i.e., Newton's method)."
+    },
+    {
+        "pointer": "/Newton/use_psd_projection_in_regularized",
+        "default": true,
+        "type": "bool",
+        "doc": "Use PSD in regularized Newton."
     },
     {
         "pointer": "/ADAM",
@@ -290,7 +298,7 @@
         "optional": [
             "residual_tolerance"
         ],
-        "doc": "Options for Newton."
+        "doc": "Options for projected Newton."
     },
     {
         "pointer": "/solver/*",
@@ -305,7 +313,22 @@
             "reg_weight_max",
             "reg_weight_inc"
         ],
-        "doc": "Options for Newton."
+        "doc": "Options for regularized Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "RegularizedProjectedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for regularized projected Newton."
     },
     {
         "pointer": "/solver/*",
@@ -329,7 +352,7 @@
         "optional": [
             "residual_tolerance"
         ],
-        "doc": "Options for Newton."
+        "doc": "Options for projected Newton."
     },
     {
         "pointer": "/solver/*",
@@ -344,7 +367,22 @@
             "reg_weight_max",
             "reg_weight_inc"
         ],
-        "doc": "Options for Newton."
+        "doc": "Options for regularized Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "DenseRegularizedProjectedNewton",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "residual_tolerance",
+            "reg_weight_min",
+            "reg_weight_max",
+            "reg_weight_inc"
+        ],
+        "doc": "Options for projected regularized Newton."
     },
     {
         "pointer": "/solver/*",
@@ -429,6 +467,8 @@
             "DenseProjectedNewton",
             "RegularizedNewton",
             "DenseRegularizedNewton",
+            "RegularizedProjectedNewton",
+            "DenseRegularizedProjectedNewton",
             "GradientDescent",
             "StochasticGradientDescent",
             "ADAM",

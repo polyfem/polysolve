@@ -40,7 +40,7 @@ namespace polysolve::nonlinear
         const double reg_weight_min = solver_params["Newton"]["reg_weight_min"];
         if (reg_weight_min > 0)
             res.push_back(std::make_unique<RegularizedNewton>(
-                sparse,
+                sparse, solver_params["Newton"]["use_psd_projection_in_regularized"],
                 reg_solver_params, linear_solver_params,
                 characteristic_length, logger));
 
@@ -89,11 +89,13 @@ namespace polysolve::nonlinear
 
     RegularizedNewton::RegularizedNewton(
         const bool sparse,
+        const bool project_to_psd,
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger)
-        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger)
+        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger),
+          project_to_psd(project_to_psd)
     {
         reg_weight_min = extract_param("RegularizedNewton", "reg_weight_min", solver_params);
         reg_weight_max = extract_param("RegularizedNewton", "reg_weight_max", solver_params);
@@ -265,7 +267,7 @@ namespace polysolve::nonlinear
     {
         if (x.size() != x_cache.size() || x != x_cache)
         {
-            objFunc.set_project_to_psd(true);
+            objFunc.set_project_to_psd(project_to_psd);
             objFunc.hessian(x, hessian_cache);
             x_cache = x;
         }
@@ -299,7 +301,7 @@ namespace polysolve::nonlinear
                                             Eigen::MatrixXd &hessian)
 
     {
-        objFunc.set_project_to_psd(true);
+        objFunc.set_project_to_psd(project_to_psd);
         objFunc.hessian(x, hessian);
         if (reg_weight > 0)
         {

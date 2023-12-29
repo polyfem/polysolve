@@ -658,7 +658,14 @@ namespace polysolve::nonlinear
             if (match)
                 m_logger.debug("step size: {}, all gradient components match finite difference", gradient_fd_eps);
             else
+            {
                 m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
+                Eigen::MatrixXd grad_comparison(grad.size(), 2);
+                grad_comparison.col(0) = grad;
+                grad_comparison.col(1) = grad_fd;
+                std::cout << "grad, grad fd" << std::endl;
+                std::cout << grad_comparison << std::endl;
+            }
         }
         break;
         }

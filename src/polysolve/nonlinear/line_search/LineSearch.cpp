@@ -210,11 +210,9 @@ namespace polysolve::nonlinear::line_search
         // Find step that does not result in nan or infinite energy
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
-            // Compute the new energy value without contacts
-            const double energy = objFunc.value(new_x);
             const bool is_step_valid = objFunc.is_step_valid(x, new_x);
 
-            if (!std::isfinite(energy) || !is_step_valid)
+            if (!is_step_valid || !std::isfinite(objFunc.value(new_x)))
             {
                 step_size *= rate;
                 new_x = x + step_size * delta_x;

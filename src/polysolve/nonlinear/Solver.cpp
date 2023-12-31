@@ -407,6 +407,24 @@ namespace polysolve::nonlinear
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
 
+            // if (delta_x_norm < 1e-13)
+            // {
+            //     Eigen::VectorXd alphas, fs, gs;
+            //     Eigen::VectorXi valid;
+
+            //     objFunc.sample_along_direction(x, grad, -1e-2, 1e-2, 200, alphas, fs, gs, valid);
+            //     alphas *= grad.norm();
+            //     std::cout << std::setprecision(20) << "start\n" << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
+
+            //     objFunc.sample_along_direction(x, grad, -1, 1, 200, alphas, fs, gs, valid);
+            //     alphas *= grad.norm();
+            //     std::cout << std::setprecision(20) << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
+
+            //     objFunc.sample_along_direction(x, grad, -100, 100, 200, alphas, fs, gs, valid);
+            //     alphas *= grad.norm();
+            //     std::cout << std::setprecision(20) << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
+            // }
+
             // ---------------
             // Variable update
             // ---------------

@@ -51,6 +51,7 @@ namespace polysolve::nonlinear
             const int num_samples,
             Eigen::VectorXd &alphas,
             Eigen::VectorXd &fs,
+            Eigen::VectorXd &grads,
             Eigen::VectorXi &valid);
     };
 } // namespace polysolve::nonlinear

@@ -99,6 +99,19 @@ namespace polysolve::nonlinear
                 throw std::runtime_error("Unrecognized solver type: " + solver_name);
         }
 
+        void plot_energy_and_grad(Problem &objFunc, const Eigen::VectorXd &x, const Eigen::VectorXd &delta_x, const json &args)
+        {
+            Eigen::VectorXd alphas, fs, gs;
+            Eigen::VectorXi valid;
+
+            for (auto range : args["range"])
+            {
+                std::cout << "Plot energy and grad in range of [" << -range.get<double>() << "," << range.get<double>() << "] with " << args["resolution"].get<int>() << " sampling\n";
+                objFunc.sample_along_direction(x, delta_x, -range.get<double>(), range.get<double>(), args["resolution"], alphas, fs, gs, valid);
+                alphas *= delta_x.norm();
+                std::cout << std::setprecision(20) << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
+            }
+        }
     } // namespace
 
     NLOHMANN_JSON_SERIALIZE_ENUM(
@@ -224,6 +237,8 @@ namespace polysolve::nonlinear
 
         gradient_fd_strategy = solver_params["advanced"]["apply_gradient_fd"];
         gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
+
+        plot_energy_args = solver_params["advanced"]["plot_energy"];
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)
@@ -407,23 +422,8 @@ namespace polysolve::nonlinear
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
 
-            // if (delta_x_norm < 1e-13)
-            // {
-            //     Eigen::VectorXd alphas, fs, gs;
-            //     Eigen::VectorXi valid;
-
-            //     objFunc.sample_along_direction(x, grad, -1e-2, 1e-2, 200, alphas, fs, gs, valid);
-            //     alphas *= grad.norm();
-            //     std::cout << std::setprecision(20) << "start\n" << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
-
-            //     objFunc.sample_along_direction(x, grad, -1, 1, 200, alphas, fs, gs, valid);
-            //     alphas *= grad.norm();
-            //     std::cout << std::setprecision(20) << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
-
-            //     objFunc.sample_along_direction(x, grad, -100, 100, 200, alphas, fs, gs, valid);
-            //     alphas *= grad.norm();
-            //     std::cout << std::setprecision(20) << alphas.transpose() << "\n" << fs.transpose() << "\n" << gs.transpose() << "\n" << valid.cast<int>().transpose() << "\n";
-            // }
+            if (abs(delta_x.dot(grad)) < plot_energy_args["residual"])
+                plot_energy_and_grad(objFunc, x, delta_x, plot_energy_args);
 
             // ---------------
             // Variable update
@@ -447,6 +447,8 @@ namespace polysolve::nonlinear
                     this->m_status = cppoptlib::Status::UserDefined; // Line search failed on gradient descent, so quit!
                     log_and_throw_error(m_logger, "[{}][{}] Line search failed on last strategy; stopping", current_name, m_line_search->name());
                 }
+
+                plot_energy_and_grad(objFunc, x, delta_x, plot_energy_args);
 
                 m_logger.debug("[{}] Line search failed; reverting to {}", current_name, descent_strategy_name());
                 continue;
@@ -507,7 +509,11 @@ namespace polysolve::nonlinear
                 this->m_stop.iterations, this->m_stop.fDelta, this->m_stop.gradNorm, this->m_stop.xDelta);
 
             if (++this->m_current.iterations >= this->m_stop.iterations)
+            {
                 this->m_status = cppoptlib::Status::IterationLimit;
+
+                plot_energy_and_grad(objFunc, x, delta_x, plot_energy_args);
+            }
 
             // reset the tolerance, since in the first iter it might be smaller
             this->m_stop.gradNorm = g_norm_tol;
@@ -635,8 +641,6 @@ namespace polysolve::nonlinear
 
         switch (gradient_fd_strategy)
         {
-        case FiniteDiffStrategy::NONE:
-            return;
         case FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE:
         {
             Eigen::VectorXd direc = grad.normalized();
@@ -679,6 +683,9 @@ namespace polysolve::nonlinear
                 m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
         }
         break;
+        case FiniteDiffStrategy::NONE:
+        default:
+            return;
         }
 
         objFunc.solution_changed(x);

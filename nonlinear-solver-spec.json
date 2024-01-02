@@ -698,9 +698,46 @@
             "f_delta",
             "f_delta_step_tol",
             "apply_gradient_fd",
-            "gradient_fd_eps"
+            "gradient_fd_eps",
+            "plot_energy"
         ],
         "doc": "Nonlinear solver advanced options"
+    },
+    {
+        "pointer": "/advanced/plot_energy",
+        "type": "object",
+        "default": {},
+        "optional": [
+            "range",
+            "residual",
+            "resolution"
+        ],
+        "doc": "Plot energy and gradient along the descent direction."
+    },
+    {
+        "pointer": "/advanced/plot_energy/residual",
+        "type": "float",
+        "min": 0,
+        "default": 0,
+        "doc": "Plot energy and gradient if grad dot delta_x is smaller than residual."
+    },
+    {
+        "pointer": "/advanced/plot_energy/range",
+        "type": "list",
+        "default": [],
+        "doc": "Plot ranges."
+    },
+    {
+        "pointer": "/advanced/plot_energy/range/*",
+        "type": "float",
+        "doc": "Plot range."
+    },
+    {
+        "pointer": "/advanced/plot_energy/resolution",
+        "type": "int",
+        "min": 1,
+        "default": 100,
+        "doc": "Number of samples in plot."
     },
     {
         "pointer": "/advanced/f_delta",

@@ -152,6 +152,8 @@ namespace polysolve::nonlinear
         double constraint_set_update_time;
         double obj_fun_time;
 
+        json plot_energy_args;
+
         ErrorCode m_error_code;
 
         // ====================================================================

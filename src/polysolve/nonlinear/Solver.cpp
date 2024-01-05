@@ -242,7 +242,7 @@ namespace polysolve::nonlinear
             m_iter_per_strategy.assign(m_strategies.size() + 1, solver_params["iterations_per_strategy"].get<int>());
     }
 
-    double Solver::compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const
+    double Solver::compute_grad_norm(const TVector &x, const TVector &grad) const
     {
         return grad.norm();
     }
@@ -625,9 +625,9 @@ namespace polysolve::nonlinear
             return;
         case FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE:
         {
-            Eigen::VectorXd direc = grad.normalized();
-            Eigen::VectorXd x2 = x + direc * gradient_fd_eps;
-            Eigen::VectorXd x1 = x - direc * gradient_fd_eps;
+            TVector direc = grad.normalized();
+            TVector x2 = x + direc * gradient_fd_eps;
+            TVector x1 = x - direc * gradient_fd_eps;
 
             objFunc.solution_changed(x2);
             double J2 = objFunc(x2);
@@ -649,9 +649,9 @@ namespace polysolve::nonlinear
         break;
         case FiniteDiffStrategy::FULL_FINITE_DIFF:
         {
-            Eigen::VectorXd grad_fd;
+            TVector grad_fd;
             fd::finite_gradient(
-                x, [&](const Eigen::VectorXd &x_) {
+                x, [&](const TVector &x_) {
                     objFunc.solution_changed(x_);
                     return objFunc(x_);
                 },

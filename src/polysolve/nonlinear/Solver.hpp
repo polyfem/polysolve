@@ -64,7 +64,7 @@ namespace polysolve::nonlinear
 
         virtual ~Solver() = default;
 
-        const TCriteria &get_stop_criteria() { return this->m_stop; }
+        const TCriteria &get_stop_criteria() { return m_stop; }
         void set_stop_criteria(const TCriteria &s) { m_stop = s; }
 
         const TCriteria &criteria() { return m_current; }
@@ -84,13 +84,13 @@ namespace polysolve::nonlinear
 
         bool converged() const
         {
-            return this->m_status == Status::XDeltaTolerance
-                   || this->m_status == Status::FDeltaTolerance
-                   || this->m_status == Status::GradNormTolerance;
+            return m_status == Status::XDeltaTolerance
+                   || m_status == Status::FDeltaTolerance
+                   || m_status == Status::GradNormTolerance;
         }
 
-        size_t max_iterations() const { return this->m_stop.iterations; }
-        size_t &max_iterations() { return this->m_stop.iterations; }
+        size_t max_iterations() const { return m_stop.iterations; }
+        size_t &max_iterations() { return m_stop.iterations; }
         bool allow_out_of_iterations = false;
 
         void add_strategy(const std::shared_ptr<DescentStrategy> &s) { m_strategies.push_back(s); }

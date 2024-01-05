@@ -42,16 +42,12 @@ namespace polysolve::nonlinear
         /// @param[out] grad Gradient of the function at x.
         virtual void gradient(const TVector &x, TVector &grad) = 0;
 
-        // TODO: Add dense Hessian
-
         /// @brief Compute the Hessian of the function at x.
         /// @param[in] x Degrees of freedom.
         /// @param[out] hessian Hessian of the function at x.
         virtual void hessian(const TVector &x, TMatrix &hessian)
         {
-            StiffnessMatrix sparse_hessian;
-            hessian(x, sparse_hessian);
-            hessian = sparse_hessian;
+            throw std::runtime_error("Dense Hessian not implemented.");
         }
 
         /// @brief Compute the Hessian of the function at x.
@@ -63,13 +59,13 @@ namespace polysolve::nonlinear
         /// @param x0 Starting point.
         /// @param x1 Ending point.
         /// @return True if the step is valid, false otherwise.
-        virtual bool is_step_valid(const TVector &x0, const TVector &x1) const { return true; }
+        virtual bool is_step_valid(const TVector &x0, const TVector &x1) { return true; }
 
         /// @brief Determine a maximum step size from x0 to x1.
         /// @param x0 Starting point.
         /// @param x1 Ending point.
         /// @return Maximum step size.
-        virtual double max_step_size(const TVector &x0, const TVector &x1) const { return 1; }
+        virtual double max_step_size(const TVector &x0, const TVector &x1) { return 1; }
 
         // --- Callbacks ------------------------------------------------------
 

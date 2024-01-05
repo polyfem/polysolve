@@ -286,10 +286,10 @@ namespace polysolve::nonlinear
             "Starting {} with {} solve f₀={:g} "
             "(stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
             descent_strategy_name(), m_line_search->name(),
-            objFunc.value(x), m_stop.iterations,
+            objFunc(x), m_stop.iterations,
             m_stop.fDelta, m_stop.gradNorm, m_stop.xDelta);
 
-        update_solver_info(objFunc.value(x));
+        update_solver_info(objFunc(x));
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
         int f_delta_step_cnt = 0;
@@ -310,7 +310,7 @@ namespace polysolve::nonlinear
             double energy;
             {
                 POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
-                energy = objFunc.value(x);
+                energy = objFunc(x);
             }
 
             if (!std::isfinite(energy))
@@ -522,7 +522,7 @@ namespace polysolve::nonlinear
             m_stop.iterations, m_stop.fDelta, m_stop.gradNorm, m_stop.xDelta);
 
         log_times();
-        update_solver_info(objFunc.value(x));
+        update_solver_info(objFunc(x));
     }
 
     void Solver::reset(const int ndof)
@@ -630,10 +630,10 @@ namespace polysolve::nonlinear
             Eigen::VectorXd x1 = x - direc * gradient_fd_eps;
 
             objFunc.solution_changed(x2);
-            double J2 = objFunc.value(x2);
+            double J2 = objFunc(x2);
 
             objFunc.solution_changed(x1);
-            double J1 = objFunc.value(x1);
+            double J1 = objFunc(x1);
 
             double fd = (J2 - J1) / 2 / gradient_fd_eps;
             double analytic = direc.dot(grad);
@@ -653,7 +653,7 @@ namespace polysolve::nonlinear
             fd::finite_gradient(
                 x, [&](const Eigen::VectorXd &x_) {
                     objFunc.solution_changed(x_);
-                    return objFunc.value(x_);
+                    return objFunc(x_);
                 },
                 grad_fd, fd::AccuracyOrder::SECOND, gradient_fd_eps);
 

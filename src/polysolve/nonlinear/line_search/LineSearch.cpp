@@ -96,7 +96,7 @@ namespace polysolve::nonlinear::line_search
 
             cur_iter = 0;
 
-            initial_energy = objFunc.value(x);
+            initial_energy = objFunc(x);
             if (std::isnan(initial_energy))
             {
                 m_logger.error("Original energy in line search is nan!");
@@ -166,7 +166,7 @@ namespace polysolve::nonlinear::line_search
             }
         }
 
-        const double cur_energy = objFunc.value(x + step_size * delta_x);
+        const double cur_energy = objFunc(x + step_size * delta_x);
 
         const double descent_step_size = step_size;
 
@@ -179,7 +179,7 @@ namespace polysolve::nonlinear::line_search
             objFunc.solution_changed(x);
 
             // tolerance for rounding error due to multithreading
-            assert(abs(initial_energy - objFunc.value(x)) < 1e-15);
+            assert(abs(initial_energy - objFunc(x)) < 1e-15);
 
             objFunc.line_search_end();
             return NaN;
@@ -211,7 +211,7 @@ namespace polysolve::nonlinear::line_search
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
             // Compute the new energy value without contacts
-            const double energy = objFunc.value(new_x);
+            const double energy = objFunc(new_x);
             const bool is_step_valid = objFunc.is_step_valid(x, new_x);
 
             if (!std::isfinite(energy) || !is_step_valid)

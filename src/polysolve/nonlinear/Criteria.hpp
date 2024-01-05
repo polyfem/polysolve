@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cstddef>
 #include <iostream>
-#include <Eigen/Core>
 
 namespace polysolve::nonlinear
 {
+    // Source: https://github.com/PatWie/CppNumericalSolvers/blob/7eddf28fa5a8872a956d3c8666055cac2f5a535d/include/cppoptlib/meta.h
+    // License: MIT
+
     enum class Status
     {
         NotStarted = -1,

@@ -17,9 +17,7 @@ namespace polysolve::nonlinear
         using typename cppoptlib::Problem<double>::Scalar;
         using typename cppoptlib::Problem<double>::TVector;
         typedef polysolve::StiffnessMatrix THessian;
-
-        // disable warning for dense hessian
-        using cppoptlib::Problem<double>::hessian;
+        typedef Eigen::MatrixXd TDenseHessian;
 
         Problem() {}
         ~Problem() = default;
@@ -29,6 +27,12 @@ namespace polysolve::nonlinear
         virtual double value(const TVector &x) override = 0;
         virtual void gradient(const TVector &x, TVector &gradv) override = 0;
         virtual void hessian(const TVector &x, THessian &hessian) = 0;
+        virtual void hessian(const TVector &x, TDenseHessian &hessian)
+        {
+            THessian sparse_hessian;
+            this->hessian(x, sparse_hessian);
+            hessian = TDenseHessian(sparse_hessian);
+        }
 
         virtual bool is_step_valid(const TVector &x0, const TVector &x1) const { return true; }
         virtual double max_step_size(const TVector &x0, const TVector &x1) const { return 1; }

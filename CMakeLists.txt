@@ -313,15 +313,15 @@ target_link_libraries(polysolve PUBLIC polysolve::linear)
 
 # CppNumericalSolvers
 include(cppoptlib)
-target_link_libraries(polysolve PUBLIC cppoptlib)
+target_link_libraries(polysolve PRIVATE cppoptlib)
 
 # LBFGSpp
 include(LBFGSpp)
-target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
+target_link_libraries(polysolve PRIVATE LBFGSpp::LBFGSpp)
 
 # finite-diff (include this after eigen)
 include(finite-diff)
-target_link_libraries(polysolve PUBLIC finitediff::finitediff)
+target_link_libraries(polysolve PRIVATE finitediff::finitediff)
 
 # Sanitizers
 if(POLYSOLVE_WITH_SANITIZERS)

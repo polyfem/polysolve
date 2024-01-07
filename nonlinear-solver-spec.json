@@ -545,6 +545,7 @@
         "optional": [
             "method",
             "use_grad_norm_tol",
+            "use_directional_derivative",
             "min_step_size",
             "max_step_size_iter",
             "min_step_size_final",
@@ -575,6 +576,12 @@
         "default": 1e-6,
         "type": "float",
         "doc": "When the energy is smaller than use_grad_norm_tol, line-search uses norm of gradient instead of energy"
+    },
+    {
+        "pointer": "/line_search/use_directional_derivative",
+        "default": false,
+        "type": "bool",
+        "doc": "When the energy is smaller than use_directional_derivative, line-search uses norm of gradient instead of energy"
     },
     {
         "pointer": "/line_search/min_step_size",

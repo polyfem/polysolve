@@ -59,6 +59,7 @@ namespace polysolve::nonlinear::line_search
         double constraint_set_update_time;
         double classical_line_search_time;
 
+        bool use_directional_derivative = false;
         double use_grad_norm_tol = -1;
 
         virtual std::string name() = 0;

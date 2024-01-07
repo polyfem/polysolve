@@ -77,7 +77,10 @@ namespace polysolve::nonlinear::line_search
         {
             TVector new_grad;
             objFunc.gradient(new_x, new_grad);
-            return new_grad.norm() < old_grad.norm(); // TODO: cache old_grad.norm()
+            if (use_directional_derivative)
+                return new_grad.dot(delta_x) <= 0;
+            else
+                return new_grad.norm() < old_grad.norm(); // TODO: cache old_grad.norm()
         }
         return new_energy < old_energy;
     }

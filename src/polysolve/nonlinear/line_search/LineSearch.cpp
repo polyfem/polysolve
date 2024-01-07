@@ -79,6 +79,8 @@ namespace polysolve::nonlinear::line_search
 
         default_init_step_size = params["line_search"]["default_init_step_size"];
         step_ratio = params["line_search"]["step_ratio"];
+
+        use_directional_derivative = params["line_search"]["use_directional_derivative"];
     }
 
     double LineSearch::line_search(

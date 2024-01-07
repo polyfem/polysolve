@@ -695,14 +695,14 @@ TEST_CASE("sample", "[solver]")
     Rosenbrock rb;
 
     Eigen::VectorXd alphas;
-    Eigen::VectorXd fs;
+    Eigen::VectorXd fs, gs;
     Eigen::VectorXi valid;
 
     Eigen::VectorXd dir(rb.size());
     dir.setOnes();
     for (int i = 0; i < N_RANDOM; ++i)
     {
-        rb.sample_along_direction(rb.solutions()[0], dir, 0, 1, 10, alphas, fs, valid);
+        rb.sample_along_direction(rb.solutions()[0], dir, 0, 1, 10, alphas, fs, gs, valid);
         dir.setRandom();
 
         for (int i = 1; i < fs.size(); ++i)

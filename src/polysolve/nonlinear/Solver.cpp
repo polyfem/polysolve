@@ -421,7 +421,7 @@ namespace polysolve::nonlinear
             this->m_current.xDelta = delta_x_norm;
             xDelta = this->m_current.xDelta;
             this->m_status = checkConvergence(this->m_stop, this->m_current);
-            if (this->m_status == cppoptlib::Status::Continue && derivative_along_delta_x > -derivative_along_delta_x_tol)
+            if (this->m_status == cppoptlib::Status::Continue && derivative_along_delta_x > -derivative_along_delta_x_tol * abs(energy))
                 this->m_status = cppoptlib::Status::XDeltaTolerance;
             if (this->m_status != cppoptlib::Status::Continue)
                 break;

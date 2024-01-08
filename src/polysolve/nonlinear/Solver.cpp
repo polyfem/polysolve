@@ -239,6 +239,7 @@ namespace polysolve::nonlinear
         gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
 
         plot_energy_args = solver_params["advanced"]["plot_energy"];
+        derivative_along_delta_x_tol = solver_params["advanced"]["derivative_along_delta_x_tol"];
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)
@@ -372,8 +373,9 @@ namespace polysolve::nonlinear
             // Compute a Δx to update the variable
             //
             bool ok = compute_update_direction(objFunc, x, grad, delta_x);
+            const double derivative_along_delta_x = delta_x.dot(grad);
 
-            if (!ok || std::isnan(grad_norm) || (m_strategies[m_descent_strategy]->is_direction_descent() && grad_norm != 0 && delta_x.dot(grad) >= 0))
+            if (!ok || std::isnan(grad_norm) || (m_strategies[m_descent_strategy]->is_direction_descent() && grad_norm != 0 && derivative_along_delta_x >= 0))
             {
                 const auto current_name = descent_strategy_name();
 
@@ -384,13 +386,13 @@ namespace polysolve::nonlinear
                     this->m_status = cppoptlib::Status::UserDefined;
                     log_and_throw_error(m_logger, "[{}][{}] direction is not a descent direction on last strategy (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); stopping",
                                         current_name, m_line_search->name(),
-                                        delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad));
+                                        delta_x.norm(), compute_grad_norm(x, grad), derivative_along_delta_x);
                 }
 
                 m_logger.debug(
                     "[{}][{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
                     current_name, m_line_search->name(),
-                    delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad), descent_strategy_name());
+                    delta_x.norm(), compute_grad_norm(x, grad), derivative_along_delta_x, descent_strategy_name());
                 this->m_status = cppoptlib::Status::Continue;
                 continue;
             }
@@ -419,6 +421,8 @@ namespace polysolve::nonlinear
             this->m_current.xDelta = delta_x_norm;
             xDelta = this->m_current.xDelta;
             this->m_status = checkConvergence(this->m_stop, this->m_current);
+            if (this->m_status == cppoptlib::Status::Continue && derivative_along_delta_x > -derivative_along_delta_x_tol)
+                this->m_status = cppoptlib::Status::XDeltaTolerance;
             if (this->m_status != cppoptlib::Status::Continue)
                 break;
 

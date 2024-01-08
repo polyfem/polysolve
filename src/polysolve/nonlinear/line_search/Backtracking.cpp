@@ -73,16 +73,17 @@ namespace polysolve::nonlinear::line_search
         const double new_energy,
         const double step_size) const
     {
+        bool flag = false;
         if (use_grad_norm)
         {
             TVector new_grad;
             objFunc.gradient(new_x, new_grad);
             if (use_directional_derivative)
-                return new_grad.dot(delta_x) <= 0;
+                flag = flag || new_grad.dot(delta_x) <= 0;
             else
-                return new_grad.norm() < old_grad.norm(); // TODO: cache old_grad.norm()
+                flag = flag || new_grad.norm() < old_grad.norm(); // TODO: cache old_grad.norm()
         }
-        return new_energy < old_energy;
+        return flag || new_energy < old_energy;
     }
 
 } // namespace polysolve::nonlinear::line_search

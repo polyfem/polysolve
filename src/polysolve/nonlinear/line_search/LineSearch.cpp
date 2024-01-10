@@ -152,7 +152,7 @@ namespace polysolve::nonlinear::line_search
             return step_size;
 
         // TODO: Fix this
-        const bool use_grad_norm = initial_grad.norm() < use_grad_norm_tol * abs(initial_energy);
+        const bool use_grad_norm = abs(initial_grad.dot(delta_x)) < use_grad_norm_tol * abs(initial_energy);
         const double starting_step_size = step_size;
 
         // ----------------------

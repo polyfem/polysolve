@@ -573,7 +573,7 @@
     },
     {
         "pointer": "/line_search/use_grad_norm_tol",
-        "default": 1e-6,
+        "default": 1e-14,
         "type": "float",
         "doc": "When the energy is smaller than use_grad_norm_tol, line-search uses norm of gradient instead of energy"
     },

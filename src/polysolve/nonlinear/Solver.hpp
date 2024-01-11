@@ -118,6 +118,7 @@ namespace polysolve::nonlinear
 
         double use_grad_norm_tol;
         double first_grad_norm_tol;
+        double derivative_along_delta_x_tol;
 
         const double characteristic_length;
 

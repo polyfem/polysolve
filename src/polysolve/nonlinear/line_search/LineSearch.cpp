@@ -20,24 +20,19 @@ namespace polysolve::nonlinear::line_search
     std::shared_ptr<LineSearch> LineSearch::create(const json &params, spdlog::logger &logger)
     {
         const std::string name = params["line_search"]["method"];
-        if (name == "armijo" || name == "Armijo")
+        if (name == "Armijo")
         {
             return std::make_shared<Armijo>(params, logger);
         }
-        else if (name == "robust_armijo" || name == "RobustArmijo")
+        else if (name == "RobustArmijo")
         {
             return std::make_shared<RobustArmijo>(params, logger);
         }
-        else if (name == "bisection" || name == "Bisection")
-        {
-            logger.warn("{} linesearch was renamed to \"backtracking\"; using backtracking line-search", name);
-            return std::make_shared<Backtracking>(params, logger);
-        }
-        else if (name == "backtracking" || name == "Backtracking")
+        else if (name == "Backtracking")
         {
             return std::make_shared<Backtracking>(params, logger);
         }
-        else if (name == "none" || name == "None")
+        else if (name == "None")
         {
             return std::make_shared<NoLineSearch>(params, logger);
         }
@@ -50,12 +45,7 @@ namespace polysolve::nonlinear::line_search
 
     std::vector<std::string> LineSearch::available_methods()
     {
-        return {{"Armijo",
-                 "ArmijoAlt",
-                 "RobustArmijo",
-                 "Backtracking",
-                 "MoreThuente",
-                 "None"}};
+        return {{"Armijo", "RobustArmijo", "Backtracking", "None"}};
     }
 
     LineSearch::LineSearch(const json &params, spdlog::logger &logger)

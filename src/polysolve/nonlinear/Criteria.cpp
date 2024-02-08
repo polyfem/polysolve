@@ -76,6 +76,18 @@ namespace polysolve::nonlinear
         case Status::GradNormTolerance:
             os << "Gradient vector norm too small.";
             break;
+        case Status::ObjectiveCustomStop:
+            os << "Objective function specified to stop.";
+            break;
+        case Status::NanEncountered:
+            os << "Objective or gradient function returned NaN.";
+            break;
+        case Status::NotDescentDirection:
+            os << "Search direction not a descent direction.";
+            break;
+        case Status::LineSearchFailed:
+            os << "Line search failed.";
+            break;
         default:
             os << "Unknown status.";
             break;

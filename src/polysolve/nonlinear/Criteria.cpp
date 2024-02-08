@@ -30,6 +30,8 @@ namespace polysolve::nonlinear
         os << "xDelta:     " << xDelta << std::endl;
         os << "fDelta:     " << fDelta << std::endl;
         os << "GradNorm:   " << gradNorm << std::endl;
+        os << "FirstGradNorm: " << firstGradNorm << std::endl;
+        os << "fDeltaCount: " << fDeltaCount << std::endl;
     }
 
     Status checkConvergence(const Criteria &stop, const Criteria &current)

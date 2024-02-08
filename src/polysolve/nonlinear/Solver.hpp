@@ -55,34 +55,34 @@ namespace polysolve::nonlinear
 
         virtual ~Solver() = default;
 
-        Criteria &stop_criteria() { return m_stop; }
-        const Criteria &stop_criteria() const { return m_stop; }
-        const Criteria &criteria() const { return m_current; }
-        const Status &status() const { return m_status; }
+        /// @brief Add a descent strategy to the solver
+        /// @param s Descent strategy
+        void add_strategy(const std::shared_ptr<DescentStrategy> &s) { m_strategies.push_back(s); }
 
-        void set_strategies_iterations(const json &solver_params);
+        /// @brief Minimize the objective function
+        /// @param objFunc Objective function
+        /// @param x Initial guess
+        void minimize(Problem &objFunc, TVector &x);
 
         virtual double compute_grad_norm(const TVector &x, const TVector &grad) const;
 
+        // ====================================================================
+        // Getters and setters
+        // ====================================================================
+
+        Criteria &stop_criteria() { return m_stop; }
+        const Criteria &stop_criteria() const { return m_stop; }
+        const Criteria &current_criteria() const { return m_current; }
+        const Status &status() const { return m_status; }
+
+        void set_strategies_iterations(const json &solver_params);
         void set_line_search(const json &params);
+        const json &info() const { return solver_info; }
 
-        void minimize(Problem &objFunc, TVector &x);
-
-        const json &get_info() const { return solver_info; }
-
-        bool converged() const
-        {
-            return m_status == Status::XDeltaTolerance
-                   || m_status == Status::FDeltaTolerance
-                   || m_status == Status::GradNormTolerance;
-        }
-
-        size_t max_iterations() const { return m_stop.iterations; }
-        size_t &max_iterations() { return m_stop.iterations; }
+        /// @brief If true the solver will not throw an error if the maximum number of iterations is reached
         bool allow_out_of_iterations = false;
 
-        void add_strategy(const std::shared_ptr<DescentStrategy> &s) { m_strategies.push_back(s); }
-
+        /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 
     protected:
@@ -95,12 +95,19 @@ namespace polysolve::nonlinear
             return m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, direction);
         }
 
+        /// @brief Stopping criteria
         Criteria m_stop;
+
+        /// @brief Current criteria
         Criteria m_current;
+
+        /// @brief Current status
         Status m_status = Status::NotStarted;
 
+        /// @brief Index into m_strategies
         int m_descent_strategy;
 
+        /// @brief Logger to use
         spdlog::logger &m_logger;
 
         // ====================================================================
@@ -116,12 +123,8 @@ namespace polysolve::nonlinear
         //                        Solver parameters
         // ====================================================================
 
-        double use_grad_norm_tol;
-        double first_grad_norm_tol;
-
         const double characteristic_length;
 
-        int f_delta_step_tol;
         // ====================================================================
         //                           Solver state
         // ====================================================================
@@ -146,6 +149,7 @@ namespace polysolve::nonlinear
 
         json solver_info;
 
+        // Timers
         double total_time;
         double grad_time;
         double line_search_time;

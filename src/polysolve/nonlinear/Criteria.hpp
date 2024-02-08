@@ -24,13 +24,17 @@ namespace polysolve::nonlinear
         LineSearchFailed,    ///< The line search failed
     };
 
+    bool is_converged_status(const Status s);
+
     class Criteria
     {
     public:
-        size_t iterations; ///< Maximum number of iterations
-        double xDelta;     ///< Minimum change in parameter vector
-        double fDelta;     ///< Minimum change in cost function
-        double gradNorm;   ///< Minimum norm of gradient vector
+        size_t iterations;    ///< Maximum number of iterations
+        double xDelta;        ///< Minimum change in parameter vector
+        double fDelta;        ///< Minimum change in cost function
+        double gradNorm;      ///< Minimum norm of gradient vector
+        double firstGradNorm; ///< Initial norm of gradient vector
+        unsigned fDeltaCount; ///< Number of steps where fDelta is satisfied
 
         Criteria();
 

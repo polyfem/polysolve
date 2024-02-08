@@ -4,6 +4,11 @@
 
 namespace polysolve::nonlinear
 {
+    bool is_converged_status(const Status s)
+    {
+        return s == Status::XDeltaTolerance || s == Status::FDeltaTolerance || s == Status::GradNormTolerance;
+    }
+
     Criteria::Criteria()
     {
         reset();
@@ -15,6 +20,8 @@ namespace polysolve::nonlinear
         xDelta = 0;
         fDelta = 0;
         gradNorm = 0;
+        firstGradNorm = 0;
+        fDeltaCount = 0;
     }
 
     void Criteria::print(std::ostream &os) const
@@ -27,20 +34,20 @@ namespace polysolve::nonlinear
 
     Status checkConvergence(const Criteria &stop, const Criteria &current)
     {
-
-        if ((stop.iterations > 0) && (current.iterations > stop.iterations))
+        if (stop.iterations > 0 && current.iterations > stop.iterations)
         {
             return Status::IterationLimit;
         }
-        if ((stop.xDelta > 0) && (current.xDelta < stop.xDelta))
+        if (stop.xDelta > 0 && current.xDelta < stop.xDelta)
         {
             return Status::XDeltaTolerance;
         }
-        if ((stop.fDelta > 0) && (current.fDelta < stop.fDelta))
+        if (stop.fDelta > 0 && current.fDelta < stop.fDelta && current.fDeltaCount >= stop.fDeltaCount)
         {
             return Status::FDeltaTolerance;
         }
-        if ((stop.gradNorm > 0) && (current.gradNorm < stop.gradNorm))
+        const double stopGradNorm = current.iterations == 0 ? stop.firstGradNorm : stop.gradNorm;
+        if (stopGradNorm > 0 && current.gradNorm < stopGradNorm)
         {
             return Status::GradNormTolerance;
         }

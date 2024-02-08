@@ -12,14 +12,6 @@ namespace spdlog
 
 namespace polysolve::nonlinear
 {
-
-    enum class ErrorCode
-    {
-        NAN_ENCOUNTERED = -10,
-        STEP_TOO_SMALL = -1,
-        SUCCESS = 0,
-    };
-
     enum class FiniteDiffStrategy
     {
         NONE = 0,
@@ -33,7 +25,6 @@ namespace polysolve::nonlinear
         using Scalar = typename Problem::Scalar;
         using TVector = typename Problem::TVector;
         using THessian = typename Problem::THessian;
-        using TCriteria = Criteria<Scalar>;
 
     public:
         // --- Static methods -------------------------------------------------
@@ -64,11 +55,10 @@ namespace polysolve::nonlinear
 
         virtual ~Solver() = default;
 
-        const TCriteria &get_stop_criteria() { return m_stop; }
-        void set_stop_criteria(const TCriteria &s) { m_stop = s; }
-
-        const TCriteria &criteria() { return m_current; }
-        const Status &status() { return m_status; }
+        Criteria &stop_criteria() { return m_stop; }
+        const Criteria &stop_criteria() const { return m_stop; }
+        const Criteria &criteria() const { return m_current; }
+        const Status &status() const { return m_status; }
 
         void set_strategies_iterations(const json &solver_params);
 
@@ -79,8 +69,6 @@ namespace polysolve::nonlinear
         void minimize(Problem &objFunc, TVector &x);
 
         const json &get_info() const { return solver_info; }
-
-        ErrorCode error_code() const { return m_error_code; }
 
         bool converged() const
         {
@@ -107,8 +95,8 @@ namespace polysolve::nonlinear
             return m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, direction);
         }
 
-        TCriteria m_stop;
-        TCriteria m_current;
+        Criteria m_stop;
+        Criteria m_current;
         Status m_status = Status::NotStarted;
 
         int m_descent_strategy;
@@ -163,8 +151,6 @@ namespace polysolve::nonlinear
         double line_search_time;
         double constraint_set_update_time;
         double obj_fun_time;
-
-        ErrorCode m_error_code;
 
         // ====================================================================
         //                                 END

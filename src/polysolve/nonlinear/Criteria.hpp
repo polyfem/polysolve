@@ -10,124 +10,38 @@ namespace polysolve::nonlinear
 
     enum class Status
     {
-        NotStarted = -1,
-        Continue = 0,
-        IterationLimit,
-        XDeltaTolerance,
-        FDeltaTolerance,
-        GradNormTolerance,
-        Condition,
-        UserDefined
+        NotStarted = -1, ///< The solver has not been started
+        Continue = 0,    ///< The solver should continue
+        // Success cases
+        IterationLimit,      ///< The maximum number of iterations has been reached
+        XDeltaTolerance,     ///< The change in the parameter vector is below the tolerance
+        FDeltaTolerance,     ///< The change in the cost function is below the tolerance
+        GradNormTolerance,   ///< The norm of the gradient vector is below the tolerance
+        ObjectiveCustomStop, ///< The objective function specified to stop
+        // Failure cases
+        NanEncountered,      ///< The objective function returned NaN
+        NotDescentDirection, ///< The search direction is not a descent direction
+        LineSearchFailed,    ///< The line search failed
     };
 
-    template <typename T>
     class Criteria
     {
     public:
-        size_t iterations; //!< Maximum number of iterations
-        T xDelta;          //!< Minimum change in parameter vector
-        T fDelta;          //!< Minimum change in cost function
-        T gradNorm;        //!< Minimum norm of gradient vector
-        T condition;       //!< Maximum condition number of Hessian
+        size_t iterations; ///< Maximum number of iterations
+        double xDelta;     ///< Minimum change in parameter vector
+        double fDelta;     ///< Minimum change in cost function
+        double gradNorm;   ///< Minimum norm of gradient vector
 
-        Criteria()
-        {
-            reset();
-        }
+        Criteria();
 
-        static Criteria defaults()
-        {
-            Criteria d;
-            d.iterations = 10000;
-            d.xDelta = 0;
-            d.fDelta = 0;
-            d.gradNorm = 1e-4;
-            d.condition = 0;
-            return d;
-        }
+        void reset();
 
-        void reset()
-        {
-            iterations = 0;
-            xDelta = 0;
-            fDelta = 0;
-            gradNorm = 0;
-            condition = 0;
-        }
-
-        void print(std::ostream &os) const
-        {
-            os << "Iterations: " << iterations << std::endl;
-            os << "xDelta:     " << xDelta << std::endl;
-            os << "fDelta:     " << fDelta << std::endl;
-            os << "GradNorm:   " << gradNorm << std::endl;
-            os << "Condition:  " << condition << std::endl;
-        }
+        void print(std::ostream &os) const;
     };
 
-    template <typename T>
-    Status checkConvergence(const Criteria<T> &stop, const Criteria<T> &current)
-    {
+    Status checkConvergence(const Criteria &stop, const Criteria &current);
 
-        if ((stop.iterations > 0) && (current.iterations > stop.iterations))
-        {
-            return Status::IterationLimit;
-        }
-        if ((stop.xDelta > 0) && (current.xDelta < stop.xDelta))
-        {
-            return Status::XDeltaTolerance;
-        }
-        if ((stop.fDelta > 0) && (current.fDelta < stop.fDelta))
-        {
-            return Status::FDeltaTolerance;
-        }
-        if ((stop.gradNorm > 0) && (current.gradNorm < stop.gradNorm))
-        {
-            return Status::GradNormTolerance;
-        }
-        if ((stop.condition > 0) && (current.condition > stop.condition))
-        {
-            return Status::Condition;
-        }
-        return Status::Continue;
-    }
+    std::ostream &operator<<(std::ostream &os, const Status &s);
 
-    inline std::ostream &operator<<(std::ostream &os, const Status &s)
-    {
-        switch (s)
-        {
-        case Status::NotStarted:
-            os << "Solver not started.";
-            break;
-        case Status::Continue:
-            os << "Convergence criteria not reached.";
-            break;
-        case Status::IterationLimit:
-            os << "Iteration limit reached.";
-            break;
-        case Status::XDeltaTolerance:
-            os << "Change in parameter vector too small.";
-            break;
-        case Status::FDeltaTolerance:
-            os << "Change in cost function value too small.";
-            break;
-        case Status::GradNormTolerance:
-            os << "Gradient vector norm too small.";
-            break;
-        case Status::Condition:
-            os << "Condition of Hessian/Covariance matrix too large.";
-            break;
-        case Status::UserDefined:
-            os << "Stop condition defined in the callback.";
-            break;
-        }
-        return os;
-    }
-
-    template <typename T>
-    std::ostream &operator<<(std::ostream &os, const Criteria<T> &c)
-    {
-        c.print(os);
-        return os;
-    }
+    std::ostream &operator<<(std::ostream &os, const Criteria &c);
 } // namespace polysolve::nonlinear

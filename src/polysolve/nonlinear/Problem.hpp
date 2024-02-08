@@ -93,7 +93,7 @@ namespace polysolve::nonlinear
         /// @param state Current state of the solver.
         /// @param x Current solution.
         /// @return True if the solver should stop, false otherwise.
-        virtual bool callback(const Criteria<Scalar> &state, const TVector &x) { return true; }
+        virtual bool callback(const Criteria &state, const TVector &x) { return true; }
 
         /// @brief Callback function used Determine if the solver should stop.
         /// @param x Current solution.

@@ -198,7 +198,6 @@ namespace polysolve::nonlinear
     {
         m_current.reset();
 
-        m_stop = TCriteria::defaults();
         m_stop.xDelta = solver_params["x_delta"];
         m_stop.fDelta = solver_params["advanced"]["f_delta"];
         m_stop.gradNorm = solver_params["grad_norm"];
@@ -315,8 +314,7 @@ namespace polysolve::nonlinear
 
             if (!std::isfinite(energy))
             {
-                m_status = Status::UserDefined;
-                m_error_code = ErrorCode::NAN_ENCOUNTERED;
+                m_status = Status::NanEncountered;
                 log_and_throw_error(m_logger, "[{}][{}] f(x) is nan or inf; stopping", descent_strategy_name(), m_line_search->name());
                 break;
             }
@@ -339,8 +337,7 @@ namespace polysolve::nonlinear
             const double grad_norm = compute_grad_norm(x, grad);
             if (std::isnan(grad_norm))
             {
-                m_status = Status::UserDefined;
-                m_error_code = ErrorCode::NAN_ENCOUNTERED;
+                m_status = Status::NanEncountered;
                 log_and_throw_error(m_logger, "[{}][{}] Gradient is nan; stopping", descent_strategy_name(), m_line_search->name());
                 break;
             }
@@ -367,7 +364,7 @@ namespace polysolve::nonlinear
                     ++m_descent_strategy;
                 if (m_descent_strategy >= m_strategies.size())
                 {
-                    m_status = Status::UserDefined;
+                    m_status = Status::NotDescentDirection;
                     log_and_throw_error(m_logger, "[{}][{}] direction is not a descent direction on last strategy (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); stopping",
                                         current_name, m_line_search->name(),
                                         delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad));
@@ -393,12 +390,11 @@ namespace polysolve::nonlinear
 
                 if (m_descent_strategy >= m_strategies.size())
                 {
-                    m_status = Status::UserDefined;
+                    m_status = Status::NanEncountered;
                     log_and_throw_error(m_logger, "[{}][{}] Δx is nan on last strategy; stopping",
                                         current_name, m_line_search->name());
                 }
 
-                m_status = Status::UserDefined;
                 m_logger.debug("[{}][{}] Δx is nan; reverting to {}", current_name, m_line_search->name(), descent_strategy_name());
                 m_status = Status::Continue;
                 continue;
@@ -430,7 +426,8 @@ namespace polysolve::nonlinear
                     ++m_descent_strategy;
                 if (m_descent_strategy >= m_strategies.size())
                 {
-                    m_status = Status::UserDefined; // Line search failed on gradient descent, so quit!
+                    // Line search failed on gradient descent, so quit!
+                    m_status = Status::LineSearchFailed;
                     log_and_throw_error(m_logger, "[{}][{}] Line search failed on last strategy; stopping", current_name, m_line_search->name());
                 }
 
@@ -474,8 +471,7 @@ namespace polysolve::nonlinear
 
             if (objFunc.stop(x))
             {
-                m_status = Status::UserDefined;
-                m_error_code = ErrorCode::SUCCESS;
+                m_status = Status::ObjectiveCustomStop;
                 m_logger.debug("[{}][{}] Objective decided to stop", descent_strategy_name(), m_line_search->name());
             }
 
@@ -507,7 +503,7 @@ namespace polysolve::nonlinear
 
         if (!allow_out_of_iterations && m_status == Status::IterationLimit)
             log_and_throw_error(m_logger, "[{}][{}] Reached iteration limit (limit={})", descent_strategy_name(), m_line_search->name(), m_stop.iterations);
-        if (m_status == Status::UserDefined && m_error_code != ErrorCode::SUCCESS)
+        if (m_status == Status::NanEncountered)
             log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", descent_strategy_name(), m_line_search->name());
 
         double tot_time = stop_watch.getElapsedTimeInSec();
@@ -529,7 +525,7 @@ namespace polysolve::nonlinear
     {
         m_current.reset();
         m_descent_strategy = 0;
-        m_error_code = ErrorCode::SUCCESS;
+        m_status = Status::NotStarted;
 
         const std::string line_search_name = solver_info["line_search"];
         solver_info = json();
@@ -560,14 +556,12 @@ namespace polysolve::nonlinear
     void Solver::update_solver_info(const double energy)
     {
         solver_info["status"] = status();
-        solver_info["error_code"] = m_error_code;
         solver_info["energy"] = energy;
         const auto &crit = criteria();
         solver_info["iterations"] = crit.iterations;
         solver_info["xDelta"] = crit.xDelta;
         solver_info["fDelta"] = crit.fDelta;
         solver_info["gradNorm"] = crit.gradNorm;
-        solver_info["condition"] = crit.condition;
 
         double per_iteration = crit.iterations ? crit.iterations : 1;
 

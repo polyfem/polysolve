@@ -311,10 +311,6 @@ target_link_libraries(polysolve_linear PRIVATE polysolve::warnings)
 # polysolve::linear
 target_link_libraries(polysolve PUBLIC polysolve::linear)
 
-# CppNumericalSolvers
-include(cppoptlib)
-target_link_libraries(polysolve PRIVATE cppoptlib)
-
 # LBFGSpp
 include(LBFGSpp)
 target_link_libraries(polysolve PRIVATE LBFGSpp::LBFGSpp)

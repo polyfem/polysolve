@@ -3,8 +3,6 @@
 #include "Armijo.hpp"
 #include "Backtracking.hpp"
 #include "RobustArmijo.hpp"
-#include "CppOptArmijo.hpp"
-#include "MoreThuente.hpp"
 #include "NoLineSearch.hpp"
 
 #include <polysolve/Utils.hpp>
@@ -26,10 +24,6 @@ namespace polysolve::nonlinear::line_search
         {
             return std::make_shared<Armijo>(params, logger);
         }
-        else if (name == "armijo_alt" || name == "ArmijoAlt")
-        {
-            return std::make_shared<CppOptArmijo>(params, logger);
-        }
         else if (name == "robust_armijo" || name == "RobustArmijo")
         {
             return std::make_shared<RobustArmijo>(params, logger);
@@ -42,10 +36,6 @@ namespace polysolve::nonlinear::line_search
         else if (name == "backtracking" || name == "Backtracking")
         {
             return std::make_shared<Backtracking>(params, logger);
-        }
-        else if (name == "more_thuente" || name == "MoreThuente")
-        {
-            return std::make_shared<MoreThuente>(params, logger);
         }
         else if (name == "none" || name == "None")
         {

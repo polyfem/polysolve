@@ -1,5 +1,4 @@
-[
-    {
+[{
         "pointer": "/",
         "default": null,
         "type": "object",
@@ -562,10 +561,8 @@
         "type": "string",
         "options": [
             "Armijo",
-            "ArmijoAlt",
             "RobustArmijo",
             "Backtracking",
-            "MoreThuente",
             "None"
         ],
         "doc": "Line-search type"

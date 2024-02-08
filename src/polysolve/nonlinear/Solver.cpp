@@ -202,12 +202,14 @@ namespace polysolve::nonlinear
         m_stop.fDelta = solver_params["advanced"]["f_delta"];
         m_stop.gradNorm = solver_params["grad_norm"];
         m_stop.firstGradNorm = solver_params["first_grad_norm_tol"];
+        m_stop.xDeltaDotGrad = -solver_params["advanced"]["derivative_along_delta_x_tol"].get<double>();
 
         // Make these relative to the characteristic length
         m_stop.xDelta *= characteristic_length;
         m_stop.fDelta *= characteristic_length;
         m_stop.gradNorm *= characteristic_length;
         m_stop.firstGradNorm *= characteristic_length;
+        // m_stop.xDeltaDotGrad *= characteristic_length;
 
         m_stop.iterations = solver_params["max_iterations"];
         allow_out_of_iterations = solver_params["allow_out_of_iterations"];
@@ -337,8 +339,9 @@ namespace polysolve::nonlinear
             // --- Update direction --------------------------------------------
 
             const bool ok = compute_update_direction(objFunc, x, grad, delta_x);
+            m_current.xDeltaDotGrad = delta_x.dot(grad);
 
-            if (!ok || (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && delta_x.dot(grad) >= 0))
+            if (!ok || (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0))
             {
                 const std::string current_name = descent_strategy_name();
 
@@ -350,18 +353,14 @@ namespace polysolve::nonlinear
                     m_status = Status::NotDescentDirection;
                     log_and_throw_error(m_logger, "[{}][{}] direction is not a descent direction on last strategy (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); stopping",
                                         current_name, m_line_search->name(),
-                                        delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad));
+                                        delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad);
                 }
 
-                if (ok) // if ok, then the direction is not a descent direction
-                {
-                    m_logger.debug(
-                        "[{}][{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
-                        current_name, m_line_search->name(),
-                        delta_x.norm(), compute_grad_norm(x, grad), delta_x.dot(grad), descent_strategy_name());
-                }
-
-                m_status = Status::Continue;
+                m_logger.debug(
+                    "[{}][{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
+                    current_name, m_line_search->name(),
+                    delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad, descent_strategy_name());
+                m_status = Status::NotDescentDirection;
                 continue;
             }
 

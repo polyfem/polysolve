@@ -34,6 +34,7 @@ namespace polysolve::nonlinear
         double fDelta;        ///< Minimum change in cost function
         double gradNorm;      ///< Minimum norm of gradient vector
         double firstGradNorm; ///< Initial norm of gradient vector
+        double xDeltaDotGrad; ///< Dot product of parameter vector and gradient vector
         unsigned fDeltaCount; ///< Number of steps where fDelta is satisfied
 
         Criteria();

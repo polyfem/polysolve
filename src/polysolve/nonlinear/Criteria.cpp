@@ -22,6 +22,7 @@ namespace polysolve::nonlinear
         gradNorm = 0;
         firstGradNorm = 0;
         fDeltaCount = 0;
+        xDeltaDotGrad = 0;
     }
 
     void Criteria::print(std::ostream &os) const
@@ -30,6 +31,7 @@ namespace polysolve::nonlinear
         os << "xDelta:     " << xDelta << std::endl;
         os << "fDelta:     " << fDelta << std::endl;
         os << "GradNorm:   " << gradNorm << std::endl;
+        os << "xDeltaDotGrad: " << xDeltaDotGrad << std::endl;
         os << "FirstGradNorm: " << firstGradNorm << std::endl;
         os << "fDeltaCount: " << fDeltaCount << std::endl;
     }
@@ -52,6 +54,11 @@ namespace polysolve::nonlinear
         if (stopGradNorm > 0 && current.gradNorm < stopGradNorm)
         {
             return Status::GradNormTolerance;
+        }
+        // Δx⋅∇f ≥ 0 means that the search direction is not a descent direction
+        if (stop.xDeltaDotGrad < 0 && current.xDeltaDotGrad > stop.xDeltaDotGrad)
+        {
+            return Status::NotDescentDirection;
         }
         return Status::Continue;
     }

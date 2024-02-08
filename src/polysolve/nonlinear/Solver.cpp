@@ -344,16 +344,18 @@ namespace polysolve::nonlinear
                 if (m_descent_strategy >= m_strategies.size())
                 {
                     m_status = Status::NotDescentDirection;
-                    log_and_throw_error(m_logger, "[{}][{}] direction is not a descent direction on last strategy (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); stopping",
-                                        current_name, m_line_search->name(),
-                                        delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad);
+                    log_and_throw_error(
+                        m_logger, "[{}][{}] direction is not a descent direction on last strategy (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); stopping",
+                        current_name, m_line_search->name(), delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad);
                 }
-
-                m_logger.debug(
-                    "[{}][{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
-                    current_name, m_line_search->name(),
-                    delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad, descent_strategy_name());
-                m_status = Status::NotDescentDirection;
+                else
+                {
+                    m_status = Status::Continue;
+                    m_logger.debug(
+                        "[{}][{}] direction is not a descent direction (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
+                        current_name, m_line_search->name(), delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad,
+                        descent_strategy_name());
+                }
                 continue;
             }
 

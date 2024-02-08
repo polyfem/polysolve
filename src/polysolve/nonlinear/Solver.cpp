@@ -286,16 +286,9 @@ namespace polysolve::nonlinear
         update_solver_info(objFunc(x));
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
-        // Used for logging
-        // double xDelta = 0, gradNorm = 0;
-
         do
         {
             m_line_search->set_is_final_strategy(m_descent_strategy == m_strategies.size() - 1);
-
-            m_current.xDelta = NaN;
-            m_current.fDelta = NaN;
-            m_current.gradNorm = NaN;
 
             // --- Energy ------------------------------------------------------
 
@@ -390,9 +383,7 @@ namespace polysolve::nonlinear
             if (m_status != Status::Continue)
                 break;
 
-            // ---------------
-            // Variable update
-            // ---------------
+            // --- Variable update ---------------------------------------------
 
             m_logger.trace(
                 "[{}][{}] pre LS iter={:d} f={:g} ‖∇f‖={:g}",

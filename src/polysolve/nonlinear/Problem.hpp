@@ -13,7 +13,7 @@ namespace polysolve::nonlinear
     class Problem
     {
     public:
-        static const int Dim = Eigen::Dynamic;
+        static constexpr int Dim = Eigen::Dynamic;
         using Scalar = double;
         using TVector = Eigen::Matrix<Scalar, Dim, 1>;
         using TMatrix = Eigen::Matrix<Scalar, Dim, Dim>;

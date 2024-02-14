@@ -5,10 +5,6 @@ set(SOURCES
 	Armijo.hpp
 	Backtracking.cpp
 	Backtracking.hpp
-	CppOptArmijo.cpp
-	CppOptArmijo.hpp
-	MoreThuente.cpp
-	MoreThuente.hpp
 	NoLineSearch.cpp
 	NoLineSearch.hpp
 	RobustArmijo.cpp

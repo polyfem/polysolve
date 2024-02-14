@@ -136,8 +136,7 @@ namespace polysolve::nonlinear
         TVector &direction)
     {
         const double residual =
-            is_sparse ? //
-                solve_sparse_linear_system(objFunc, x, grad, direction)
+            is_sparse ? solve_sparse_linear_system(objFunc, x, grad, direction)
                       : solve_dense_linear_system(objFunc, x, grad, direction);
 
         if (std::isnan(residual) || residual > m_residual_tolerance * m_characteristic_length)

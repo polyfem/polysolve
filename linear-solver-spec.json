@@ -15,7 +15,8 @@
             "Eigen::MINRES",
             "Pardiso",
             "Hypre",
-            "AMGCL"
+            "AMGCL",
+            "Trilinos"
         ],
         "doc": "Settings for the linear solver."
     },
@@ -42,6 +43,7 @@
             "Pardiso",
             "Hypre",
             "AMGCL",
+            "Trilinos",
             "Eigen::LeastSquaresConjugateGradient",
             "Eigen::DGMRES",
             "Eigen::ConjugateGradient",
@@ -152,6 +154,16 @@
             "precond"
         ],
         "doc": "Settings for the AMGCL solver."
+    },
+    {
+        "pointer": "/Trilinos",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "solver",
+            "precond"
+        ],
+        "doc": "Settings for the Trilinos solver."
     },
     {
         "pointer": "/Eigen::LeastSquaresConjugateGradient/max_iter",

@@ -80,6 +80,8 @@ option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                    
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
 option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                             ON)
+option(POLYSOLVE_WITH_TRILINOS      "Enable Trilinos"                                    ON)
+option(BUILD_TRILINOS_FROM_SOURCE   "Build trilinos from source"                        OFF)
 
 # Sanitizer options
 option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                                  OFF)
@@ -217,7 +219,7 @@ include(jse)
 target_link_libraries(polysolve_linear PUBLIC jse::jse)
 
 # Hypre (GNU Lesser General Public License)
-if(POLYSOLVE_WITH_HYPRE)
+if(POLYSOLVE_WITH_HYPRE AND NOT POLYSOLVE_WITH_TRILINOS)
     include(hypre)
     target_link_libraries(polysolve_linear PUBLIC HYPRE::HYPRE)
     target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_HYPRE)
@@ -281,6 +283,13 @@ if(POLYSOLVE_WITH_SPECTRA)
     include(spectra)
     target_link_libraries(polysolve_linear PUBLIC Spectra::Spectra)
     target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_SPECTRA)
+endif()
+
+# Trilinos
+if (POLYSOLVE_WITH_TRILINOS)
+    include(trilinos)
+    target_link_libraries(polysolve_linear PUBLIC Trilinos::Trilinos)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_TRILINOS)
 endif()
 
 # cuSolver solvers

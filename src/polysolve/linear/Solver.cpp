@@ -36,12 +36,42 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 #include "AMGCL.hpp"
 #endif
+#ifdef POLYSOLVE_WITH_TRILINOS
+#include "TrilinosSolver.hpp"
+#endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include "CuSolverDN.cuh"
 #endif
 #include <unsupported/Eigen/IterativeSolvers>
 
 ////////////////////////////////////////////////////////////////////////////////
+Eigen::MatrixXd test_vertices;
+Eigen::MatrixXd init_vertices;
+std::vector<int> test_boundary_nodes;
+Eigen::MatrixXd remove_boundary_vertices(const Eigen::MatrixXd &vertices, const std::vector<int> &boundary_nodes)
+{
+    // Remove boundary vertices
+    if (boundary_nodes.empty())
+    {
+        return vertices;
+    }
+    else
+    {
+        std::vector<int> order_nodes = boundary_nodes;
+        std::sort(order_nodes.begin(), order_nodes.end());
+        Eigen::MatrixXd out_vertices;
+        std::vector<int> keep;
+        for (int i = 0; i < vertices.rows(); i++)
+        {
+            if (!std::binary_search(order_nodes.begin(), order_nodes.end(),i))
+            {
+                keep.push_back(i);
+            }
+        }
+        out_vertices = vertices(keep, Eigen::all);
+        return out_vertices;
+    }
+}
 
 namespace polysolve::linear
 {
@@ -377,6 +407,12 @@ namespace polysolve::linear
         {
             return std::make_unique<AMGCL>();
 #endif
+#ifdef POLYSOLVE_WITH_TRILINOS
+        }
+        else if (solver == "Trilinos")
+        {
+            return std::make_unique<TrilinosSolver>();
+#endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -498,6 +534,9 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+#endif
+#ifdef POLYSOLVE_WITH_TRILINOS
+            "Trilinos",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

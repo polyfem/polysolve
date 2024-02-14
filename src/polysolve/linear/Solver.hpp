@@ -4,11 +4,20 @@
 
 #include <memory>
 
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <vector>
+
 #define POLYSOLVE_DELETE_MOVE_COPY(Base) \
     Base(Base &&) = delete;              \
     Base &operator=(Base &&) = delete;   \
     Base(const Base &) = delete;         \
     Base &operator=(const Base &) = delete;
+
+extern Eigen::MatrixXd init_vertices;
+extern Eigen::MatrixXd test_vertices;
+extern std::vector<int> test_boundary_nodes;
+Eigen::MatrixXd remove_boundary_vertices(const Eigen::MatrixXd &vertices, const std::vector<int> &boundary_nodes);
 
 ////////////////////////////////////////////////////////////////////////////////
 // TODO:
@@ -25,6 +34,11 @@ namespace spdlog
 
 namespace polysolve::linear
 {
+#ifdef POLYSOLVE_LARGE_INDEX
+    typedef Eigen::SparseMatrix<double, Eigen::ColMajor, std::ptrdiff_t> StiffnessMatrix;
+#else
+    typedef Eigen::SparseMatrix<double, Eigen::ColMajor> StiffnessMatrix;
+#endif
     /**
      * @brief      Base class for linear solver.
      */

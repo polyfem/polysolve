@@ -127,13 +127,13 @@ namespace polysolve::nonlinear::line_search
             Problem &objFunc,
             const double starting_step_size, const double rate);
 
-        /// @brief Compute step size that is collision free
+        /// @brief Compute maximum valid step size
         /// @param x Current input (n x 1)
         /// @param delta_x Current step direction (n x 1)
         /// @param objFunc Problem to be minimized
         /// @param starting_step_size Initial step size
-        /// @return Collision free step size (NaN if it is 0)
-        double compute_collision_free_step_size(
+        /// @return Maximum valid step size (NaN if it is 0)
+        double compute_max_step_size(
             const TVector &x,
             const TVector &delta_x,
             Problem &objFunc,

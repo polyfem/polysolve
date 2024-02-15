@@ -1,5 +1,4 @@
-[
-    {
+[{
         "pointer": "/",
         "default": null,
         "type": "object",
@@ -562,10 +561,8 @@
         "type": "string",
         "options": [
             "Armijo",
-            "ArmijoAlt",
             "RobustArmijo",
             "Backtracking",
-            "MoreThuente",
             "None"
         ],
         "doc": "Line-search type"
@@ -697,6 +694,7 @@
         "optional": [
             "f_delta",
             "f_delta_step_tol",
+            "derivative_along_delta_x_tol",
             "apply_gradient_fd",
             "gradient_fd_eps"
         ],
@@ -714,6 +712,13 @@
         "default": 100,
         "type": "int",
         "doc": "Dangerous Option: Quit the optimization if the solver reduces the energy by less than f_delta for consecutive f_delta_step_tol steps."
+    },
+    {
+        "pointer": "/advanced/derivative_along_delta_x_tol",
+        "default": 0,
+        "min": 0,
+        "type": "float",
+        "doc": "Quit the optimization if the directional derivative along the descent direction is smaller than this tolerance."
     },
     {
         "pointer": "/advanced/apply_gradient_fd",

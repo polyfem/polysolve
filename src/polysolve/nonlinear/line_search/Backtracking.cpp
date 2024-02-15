@@ -45,7 +45,7 @@ namespace polysolve::nonlinear::line_search
                 continue;
             }
 
-            const double new_energy = objFunc.value(new_x);
+            const double new_energy = objFunc(new_x);
 
             if (!std::isfinite(new_energy))
             {

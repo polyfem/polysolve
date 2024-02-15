@@ -1,12 +1,14 @@
 set(SOURCES
 	BoxConstraintSolver.cpp
 	BoxConstraintSolver.hpp
-	Solver.hpp
-	Solver.cpp
-	Problem.hpp
-	Problem.cpp
-	PostStepData.hpp
+	Criteria.cpp
+	Criteria.hpp
 	PostStepData.cpp
+	PostStepData.hpp
+	Problem.cpp
+	Problem.hpp
+	Solver.cpp
+	Solver.hpp
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})

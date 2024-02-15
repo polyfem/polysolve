@@ -139,7 +139,7 @@ namespace polysolve::nonlinear::line_search
         {
             POLYSOLVE_SCOPED_STOPWATCH("CCD narrow-phase", ccd_time, m_logger);
             m_logger.trace("Performing narrow-phase CCD");
-            step_size = compute_collision_free_step_size(x, delta_x, objFunc, step_size);
+            step_size = compute_max_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
                 return NaN;
         }
@@ -237,7 +237,8 @@ namespace polysolve::nonlinear::line_search
         return step_size;
     }
 
-    double LineSearch::compute_collision_free_step_size(
+    // change to max_step_size
+    double LineSearch::compute_max_step_size(
         const TVector &x,
         const TVector &delta_x,
         Problem &objFunc,

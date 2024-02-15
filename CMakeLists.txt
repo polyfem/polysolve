@@ -173,7 +173,7 @@ target_include_directories(polysolve PUBLIC ${PROJECT_SOURCE_DIR}/src)
 ################################################################################
 
 if(POLYSOLVE_LARGE_INDEX)
-    target_compile_definitions(polysolve_linear PUBLIC -DPOLYSOLVE_LARGE_INDEX)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_LARGE_INDEX)
 endif()
 
 target_compile_definitions(polysolve_linear PRIVATE POLYSOLVE_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/linear-solver-spec.json")
@@ -202,7 +202,7 @@ if(POLYSOLVE_WITH_ACCELERATE)
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)
     target_link_libraries(polysolve_linear PRIVATE BLAS::BLAS LAPACK::LAPACK)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_ACCELERATE)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_ACCELERATE)
 endif()
 
 include(eigen)
@@ -224,7 +224,7 @@ target_link_libraries(polysolve_linear PUBLIC jse::jse)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
     target_link_libraries(polysolve_linear PUBLIC HYPRE::HYPRE)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_HYPRE)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_HYPRE)
     if(HYPRE_WITH_MPI)
         target_compile_definitions(polysolve_linear PUBLIC HYPRE_WITH_MPI)
     endif()
@@ -234,14 +234,14 @@ endif()
 if(POLYSOLVE_WITH_CHOLMOD)
     include(suitesparse)
     target_link_libraries(polysolve_linear PRIVATE SuiteSparse::CHOLMOD)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_CHOLMOD)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CHOLMOD)
 endif()
 
 # MKL library
 if(POLYSOLVE_WITH_MKL)
     include(mkl)
     target_link_libraries(polysolve_linear PRIVATE mkl::mkl)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_MKL)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_MKL)
 endif()
 
 # Pardiso solver
@@ -249,7 +249,7 @@ if(POLYSOLVE_WITH_PARDISO)
     include(pardiso)
     if(TARGET Pardiso::Pardiso)
         target_link_libraries(polysolve_linear PRIVATE Pardiso::Pardiso)
-        target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_PARDISO)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_PARDISO)
     else()
         message(WARNING "Pardiso not found, solver will not be available.")
     endif()
@@ -259,7 +259,7 @@ endif()
 if(POLYSOLVE_WITH_UMFPACK)
     include(suitesparse)
     target_link_libraries(polysolve_linear PRIVATE SuiteSparse::UMFPACK)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_UMFPACK)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_UMFPACK)
 endif()
 
 # SuperLU solver
@@ -267,7 +267,7 @@ if(POLYSOLVE_WITH_SUPERLU)
     include(superlu)
     if(TARGET SuperLU::SuperLU)
         target_link_libraries(polysolve_linear PRIVATE SuperLU::SuperLU)
-        target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_SUPERLU)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SUPERLU)
     else()
         message(WARNING "SuperLU not found, solver will not be available.")
     endif()
@@ -284,7 +284,7 @@ endif()
 if(POLYSOLVE_WITH_SPECTRA)
     include(spectra)
     target_link_libraries(polysolve_linear PUBLIC Spectra::Spectra)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_SPECTRA)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SPECTRA)
 endif()
 
 # cuSolver solvers
@@ -312,17 +312,13 @@ target_link_libraries(polysolve_linear PRIVATE polysolve::warnings)
 # polysolve::linear
 target_link_libraries(polysolve PUBLIC polysolve::linear)
 
-# CppNumericalSolvers
-include(cppoptlib)
-target_link_libraries(polysolve PUBLIC cppoptlib)
-
 # LBFGSpp
 include(LBFGSpp)
-target_link_libraries(polysolve PUBLIC LBFGSpp::LBFGSpp)
+target_link_libraries(polysolve PRIVATE LBFGSpp::LBFGSpp)
 
 # finite-diff (include this after eigen)
 include(finite-diff)
-target_link_libraries(polysolve PUBLIC finitediff::finitediff)
+target_link_libraries(polysolve PRIVATE finitediff::finitediff)
 
 # Sanitizers
 if(POLYSOLVE_WITH_SANITIZERS)

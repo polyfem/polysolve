@@ -84,7 +84,7 @@ namespace polysolve::linear
                 }
             }
             if (!accepted_solver.empty())
-                logger.info("Solver {} is the highest priority availble solver; using it.", accepted_solver);
+                logger.info("Solver {} is the highest priority available solver; using it.", accepted_solver);
             else
                 logger.warn("No valid solver found in the list of specified solvers!");
             params[lin_solver_ptr] = accepted_solver;

@@ -51,22 +51,22 @@ namespace polysolve::linear
         /// Selects the correct solver based on params using the fallback or the list of solvers if necessary
         static void select_valid_solver(json &params, spdlog::logger &logger);
 
-        // Static constructor
-        //
-        // @param[in]  params   Parameter of the solver, including name and preconditioner
-        // @param[in]  logger   Logger used for error
-        // @param[in]  strict_validation    strict validation of the input paraams
-        // @param[out] a pointer to a linear solver
+        /// @brief Static constructor
+        ///
+        /// @param[in]  params   Parameter of the solver, including name and preconditioner
+        /// @param[in]  logger   Logger used for error
+        /// @param[in]  strict_validation    strict validation of the input paraams
+        /// @return a pointer to a linear solver
         //
         static std::unique_ptr<Solver> create(const json &params,
                                               spdlog::logger &logger,
                                               const bool strict_validation = true);
 
-        // Static constructor
-        //
-        // @param[in]  solver   Solver type
-        // @param[in]  precond  Preconditioner for iterative solvers
-        //
+        /// @brief Static constructor
+        ///
+        /// @param[in]  solver   Solver type
+        /// @param[in]  precond  Preconditioner for iterative solvers
+        ///
         static std::unique_ptr<Solver> create(const std::string &solver, const std::string &precond);
 
         // List available solvers
@@ -107,15 +107,15 @@ namespace polysolve::linear
         // If solver uses dense matrices
         virtual bool is_dense() const { return false; }
 
-        //
-        // @brief         { Solve the linear system Ax = b }
-        //
-        // @param[in]     b     { Right-hand side. }
-        // @param[in,out] x     { Unknown to compute. When using an iterative
-        //                      solver, the input unknown vector is used as an
-        //                      initial guess, and must thus be properly allocated
-        //                      and initialized. }
-        //
+        ///
+        /// @brief         { Solve the linear system Ax = b }
+        ///
+        /// @param[in]     b     { Right-hand side. }
+        /// @param[in,out] x     { Unknown to compute. When using an iterative
+        ///                      solver, the input unknown vector is used as an
+        ///                      initial guess, and must thus be properly allocated
+        ///                      and initialized. }
+        ///
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) = 0;
 
     public:
@@ -123,7 +123,7 @@ namespace polysolve::linear
         // Debug //
         ///////////
 
-        // Name of the solver type (for debugging purposes)
+        /// @brief Name of the solver type (for debugging purposes)
         virtual std::string name() const { return ""; }
     };
 

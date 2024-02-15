@@ -433,5 +433,137 @@
         "default": 0,
         "type": "float",
         "doc": "Aggregation epsilon strong."
+    },
+    {
+        "pointer": "/AMGCL_cuda/solver",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "tol",
+            "maxiter",
+            "type"
+        ],
+        "doc": "Solver settings for the AMGCL."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "relax",
+            "class",
+            "max_levels",
+            "direct_coarse",
+            "ncycle",
+            "coarsening"
+        ],
+        "doc": "Preconditioner settings for the AMGCL."
+    },
+    {
+        "pointer": "/AMGCL_cuda/solver/maxiter",
+        "default": 1000,
+        "type": "int",
+        "doc": "Maximum number of iterations."
+    },
+    {
+        "pointer": "/AMGCL_cuda/solver/tol",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Convergence tolerance."
+    },
+    {
+        "pointer": "/AMGCL_cuda/solver/type",
+        "default": "cg",
+        "type": "string",
+        "doc": "Type of solver to use."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/relax",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "degree",
+            "type",
+            "power_iters",
+            "higher",
+            "lower",
+            "scale"
+        ],
+        "doc": "Preconditioner settings for the AMGCL."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/class",
+        "default": "amg",
+        "type": "string",
+        "doc": "Type of preconditioner to use."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/max_levels",
+        "default": 6,
+        "type": "int",
+        "doc": "Maximum number of levels."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/direct_coarse",
+        "default": false,
+        "type": "bool",
+        "doc": "Use direct solver for the coarsest level."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/ncycle",
+        "default": 2,
+        "type": "int",
+        "doc": "Number of cycles."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/coarsening",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "type",
+            "estimate_spectral_radius",
+            "relax",
+            "aggr"
+        ],
+        "doc": "Coarsening parameters."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/relax/type",
+        "default": "spai0",
+        "type": "string",
+        "doc": "Type of relaxation to use."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/coarsening/type",
+        "default": "smoothed_aggregation",
+        "type": "string",
+        "doc": "Coarsening type."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/coarsening/estimate_spectral_radius",
+        "default": true,
+        "type": "bool",
+        "doc": "Should the spectral radius be estimated."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/coarsening/relax",
+        "default": 1,
+        "type": "float",
+        "doc": "Coarsening relaxation."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/coarsening/aggr",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "eps_strong"
+        ],
+        "doc": "Aggregation settings."
+    },
+    {
+        "pointer": "/AMGCL_cuda/precond/coarsening/aggr/eps_strong",
+        "default": 0,
+        "type": "float",
+        "doc": "Aggregation epsilon strong."
     }
 ]

@@ -1,5 +1,4 @@
 #ifdef POLYSOLVE_WITH_AMGCL
-// #ifdef POLYSOLVE_WITH_CUDA
 
 ////////////////////////////////////////////////////////////////////////////////
 #include "AMGCL_cuda.hpp"
@@ -29,36 +28,6 @@ namespace polysolve::linear
             const T *begin_;
             const T *end_;
         };
-
-        json default_params()
-        {
-            json params = R"({
-                "precond": {
-                    "relax": {
-                        "type": "spai0"
-                    },
-                    "class": "amg",
-                    "max_levels": 6,
-                    "direct_coarse": false,
-                    "ncycle": 2,
-                    "coarsening": {
-                        "type": "smoothed_aggregation",
-                        "estimate_spectral_radius": true,
-                        "relax": 1,
-                        "aggr": {
-                            "eps_strong": 0
-                        }
-                    }
-                },
-                "solver": {
-                    "tol": 1e-10,
-                    "maxiter": 1000,
-                    "type": "cg"
-                }
-        })"_json;
-
-            return params;
-        }
 
         void set_params(const json &params, json &out)
         {
@@ -92,7 +61,6 @@ namespace polysolve::linear
 
     AMGCL_cuda::AMGCL_cuda()
     {
-        params_ = default_params();
         // NOTE: usolver and psolver parameters are only used if the
         // preconditioner class is "schur_pressure_correction"
         precond_num_ = 0;
@@ -169,5 +137,4 @@ namespace polysolve::linear
 
 } // namespace polysolve
 
-// #endif
 #endif

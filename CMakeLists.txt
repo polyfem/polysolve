@@ -76,7 +76,7 @@ option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                    
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_NOT_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                            ON)
-option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                             ON)
+option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                            OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
 option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                             ON)

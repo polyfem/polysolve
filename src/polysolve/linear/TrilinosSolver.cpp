@@ -5,103 +5,42 @@
 #include <string>
 #include <vector>
 #include <unsupported/Eigen/SparseExtra>
-/////////////////////////////////s///////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+Eigen::MatrixXd test_vertices;
+Eigen::MatrixXd init_vertices;
+std::vector<int> test_boundary_nodes;
+Eigen::MatrixXd remove_boundary_vertices(const Eigen::MatrixXd &vertices, const std::vector<int> &boundary_nodes)
+{
+    // Remove boundary vertices
+    if (boundary_nodes.empty())
+    {
+        return vertices;
+    }
+    else
+    {
+        std::vector<int> order_nodes = boundary_nodes;
+        std::sort(order_nodes.begin(), order_nodes.end());
+        Eigen::MatrixXd out_vertices;
+        std::vector<int> keep;
+        for (int i = 0; i < vertices.rows(); i++)
+        {
+            if (!std::binary_search(order_nodes.begin(), order_nodes.end(),i))
+            {
+                keep.push_back(i);
+            }
+        }
+        out_vertices = vertices(keep, Eigen::all);
+        return out_vertices;
+    }
+}
 
 namespace polysolve::linear
 {
-    namespace{
-    ////////////////////////////////////////////////////////////////
-    // int rigid_body_mode(int ndim, const std::vector<double> &coo, std::vector<double> &B, bool transpose = true) {
-
-    //     size_t n = coo.size();
-    //     int nmodes = (ndim == 2 ? 3 : 6);
-    //     B.resize(n * nmodes, 0.0);
-
-    //     const int stride1 = transpose ? 1 : nmodes;
-    //     const int stride2 = transpose ? n : 1;
-    //     // int stride1 = nmodes;
-    //     // int stride2 = 1;
-
-    //     double sn = 1 / sqrt(n);
-
-    //     if (ndim == 2) {
-    //         for(size_t i = 0; i < n; ++i) {
-    //             size_t nod = i / ndim;
-    //             size_t dim = i % ndim;
-
-    //             double x = coo[nod * 2 + 0];
-    //             double y = coo[nod * 2 + 1];
-
-    //             // Translation
-    //             B[i * stride1 + dim * stride2] = sn;
-
-    //             // Rotation
-    //             switch(dim) {
-    //                 case 0:
-    //                     B[i * stride1 + 2 * stride2] = -y;
-    //                     break;
-    //                 case 1:
-    //                     B[i * stride1 + 2 * stride2] = x;
-    //                     break;
-    //             }
-    //         }
-    //     } else if (ndim == 3) {
-    //         for(size_t i = 0; i < n; ++i) {
-    //             size_t nod = i / ndim;
-    //             size_t dim = i % ndim;
-
-    //             double x = coo[nod * 3 + 0];
-    //             double y = coo[nod * 3 + 1];
-    //             double z = coo[nod * 3 + 2];
-
-    //             // Translation
-    //             B[i * stride1 + dim * stride2] = sn;
-
-    //             // Rotation
-    //             switch(dim) {
-    //                 case 0:
-    //                     B[i * stride1 + 5 * stride2] = -y;
-    //                     B[i * stride1 + 4 * stride2] = z;
-    //                     break;
-    //                 case 1:
-    //                     B[i * stride1 + 5 * stride2] = x;
-    //                     B[i * stride1 + 3 * stride2] = -z;
-    //                     break;
-    //                 case 2:
-    //                     B[i * stride1 + 3 * stride2] =  y;
-    //                     B[i * stride1 + 4 * stride2] = -x;
-    //                     break;
-    //             }
-    //         }
-    //     }
-
-    //    // Orthonormalization
-    //     std::array<double, 6> dot;
-    //     for(int i = ndim; i < nmodes; ++i) {
-    //         std::fill(dot.begin(), dot.end(), 0.0);
-    //         for(size_t j = 0; j < n; ++j) {
-    //             for(int k = 0; k < i; ++k)
-    //                 dot[k] += B[j * stride1 + k * stride2] * B[j * stride1 + i * stride2];
-    //         }
-    //         double s = 0.0;
-    //         for(size_t j = 0; j < n; ++j) {
-    //             for(int k = 0; k < i; ++k)
-    //                 B[j * stride1 + i * stride2] -= dot[k] * B[j * stride1 + k * stride2];
-    //             s += B[j * stride1 + i * stride2] * B[j * stride1 + i * stride2];
-    //         }
-    //         s = sqrt(s);
-    //         for(size_t j = 0; j < n; ++j)
-    //             B[j * stride1 + i * stride2] /= s;
-    //     }
-    //     return nmodes;
-    // }
-    // Produce a vector of rigid body modes
-
-    }
     TrilinosSolver::TrilinosSolver()
     {
         precond_num_ = 0;
-#ifdef HAVE_MPI
+// #ifdef HAVE_MPI
         int done_already;
         MPI_Initialized(&done_already);
         if (!done_already)
@@ -114,9 +53,9 @@ namespace polysolve::linear
             MPI_Init(&argc, &argvv);
             CommPtr = new Epetra_MpiComm(MPI_COMM_WORLD);
         }
-#else
-     CommPtr=new Epetra_SerialComm;
-#endif
+// #else
+    //  CommPtr=new Epetra_SerialComm;
+// #endif
     }
 
     ////////////////////////////////////////////////////////////////
@@ -226,36 +165,6 @@ namespace polysolve::linear
         Teuchos::ParameterList MLList;
         TrilinosML_SetDefaultOptions(MLList);
         MLList.set("PDE equations",numPDEs);
-        
-        //Set null space
-
-        // if (true)
-        // {
-        // int n=test_vertices.rows();
-        // int NRbm=0;
-        // int NscalarDof=0;
-        
-        // if (numPDEs==2)
-        // {
-        //     NRbm=3;
-        //     rbm=new double[n*(NRbm+NscalarDof)*(numPDEs+NscalarDof)];
-        //     std::vector<double> z_coord(n,0);
-        //     ML_Coord2RBM(n,test_vertices.col(0).data(),test_vertices.col(1).data(),z_coord.data(),rbm,numPDEs,NscalarDof);
-        // }
-        // else
-        // {
-        //     NRbm=6;
-        //     rbm=new double[n*(NRbm+NscalarDof)*(numPDEs+NscalarDof)];
-        //     ML_Coord2RBM(n,test_vertices.col(0).data(),test_vertices.col(1).data(),test_vertices.col(2).data(),rbm,numPDEs,NscalarDof);
-        // }
-
-        // MLList.set("null space: vectors",rbm);
-        // MLList.set("null space: dimension", NRbm);        
-        // MLList.set("null space: type", "pre-computed");
-        // MLList.set("aggregation: threshold",0.00);
-        // }
-
-        ///////////////////////////////////////////////////////////////////////
 
         if (is_nullspace_)
         {
@@ -342,9 +251,9 @@ namespace polysolve::linear
         delete A;
         delete rowMap;
         delete MLPrec;   
-#ifdef HAVE_MPI
+// #ifdef HAVE_MPI
         MPI_Finalize() ;
-#endif
+// #endif
     }
 }
 

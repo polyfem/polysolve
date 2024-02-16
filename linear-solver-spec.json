@@ -160,8 +160,9 @@
         "default": null,
         "type": "object",
         "optional": [
-            "solver",
-            "precond"
+            "max_iter",
+            "tolerance",
+            "block_size"
         ],
         "doc": "Settings for the Trilinos solver."
     },
@@ -433,5 +434,29 @@
         "default": 0,
         "type": "float",
         "doc": "Aggregation epsilon strong."
+    },
+    {
+        "pointer": "/Trilinos/max_iter",
+        "default": 1000,
+        "type": "int",
+        "doc": "Maximum number of iterations."
+    },
+    {
+        "pointer": "/Trilinos/block_size",
+        "default": 3,
+        "type": "int",
+        "doc": "Aggregation epsilon strong."
+    },
+    {
+        "pointer": "/Trilinos/tolerance",
+        "default": 1e-8,
+        "type": "float",
+        "doc": "Convergence tolerance."
+    },
+    {
+        "pointer": "/Trilinos/is_nullspace",
+        "default": false,
+        "type": "bool",
+        "doc": "Is nullspace or not."
     }
 ]

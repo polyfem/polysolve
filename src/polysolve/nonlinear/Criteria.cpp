@@ -2,6 +2,8 @@
 // License: MIT
 #include "Criteria.hpp"
 
+#include <spdlog/fmt/fmt.h>
+
 namespace polysolve::nonlinear
 {
     bool is_converged_status(const Status s)
@@ -27,13 +29,9 @@ namespace polysolve::nonlinear
 
     void Criteria::print(std::ostream &os) const
     {
-        os << "Iterations: " << iterations << std::endl;
-        os << "xDelta:     " << xDelta << std::endl;
-        os << "fDelta:     " << fDelta << std::endl;
-        os << "GradNorm:   " << gradNorm << std::endl;
-        os << "xDeltaDotGrad: " << xDeltaDotGrad << std::endl;
-        os << "FirstGradNorm: " << firstGradNorm << std::endl;
-        os << "fDeltaCount: " << fDeltaCount << std::endl;
+        os << fmt::format(
+            "iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g}",
+            iterations, fDelta, gradNorm, xDelta, xDeltaDotGrad);
     }
 
     Status checkConvergence(const Criteria &stop, const Criteria &current)

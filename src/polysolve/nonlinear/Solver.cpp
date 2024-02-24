@@ -277,11 +277,8 @@ namespace polysolve::nonlinear
         stop_watch.start();
 
         m_logger.debug(
-            "Starting {} with {} solve f₀={:g} "
-            "(stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
-            descent_strategy_name(), m_line_search->name(),
-            objFunc(x), m_stop.iterations,
-            m_stop.fDelta, m_stop.gradNorm, m_stop.xDelta);
+            "Starting {} with {} solve f₀={:g} (stopping criteria: {})",
+            descent_strategy_name(), m_line_search->name(), objFunc(x), m_stop);
 
         update_solver_info(objFunc(x));
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
@@ -442,6 +439,9 @@ namespace polysolve::nonlinear
             // -----------
             const double step = (rate * delta_x).norm();
 
+            m_logger.debug("[{}][{}] rate={:g} ‖step‖={:g}",
+                           descent_strategy_name(), m_line_search->name(), rate, step);
+
             update_solver_info(energy);
             objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
@@ -454,12 +454,8 @@ namespace polysolve::nonlinear
             m_current.fDeltaCount = (m_current.fDelta < m_stop.fDelta) ? (m_current.fDeltaCount + 1) : 0;
 
             m_logger.debug(
-                "[{}][{}] iter={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g} rate={:g} ‖step‖={:g}"
-                " (stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
-                descent_strategy_name(), m_line_search->name(),
-                m_current.iterations, energy, m_current.fDelta,
-                m_current.gradNorm, m_current.xDelta, delta_x.dot(grad), rate, step,
-                m_stop.iterations, m_stop.fDelta, m_stop.gradNorm, m_stop.xDelta);
+                "[{}][{}] {} (stopping criteria: {})",
+                descent_strategy_name(), m_line_search->name(), m_current, m_stop);
 
             if (++m_current.iterations >= m_stop.iterations)
                 m_status = Status::IterationLimit;
@@ -480,12 +476,9 @@ namespace polysolve::nonlinear
         const bool succeeded = m_status == Status::GradNormTolerance;
         m_logger.log(
             succeeded ? spdlog::level::info : spdlog::level::err,
-            "[{}][{}] Finished: {} Took {:g}s (niters={:d} f={:g} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})"
-            " (stopping criteria: max_iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g})",
-            descent_strategy_name(), m_line_search->name(),
-            m_status, tot_time, m_current.iterations,
-            old_energy, m_current.fDelta, m_current.gradNorm, m_current.xDelta,
-            m_stop.iterations, m_stop.fDelta, m_stop.gradNorm, m_stop.xDelta);
+            "[{}][{}] Finished: {} took {:g}s ({}) (stopping criteria: {})",
+            descent_strategy_name(), m_line_search->name(), m_status, tot_time,
+            m_current, m_stop);
 
         log_times();
         update_solver_info(objFunc(x));

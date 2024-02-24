@@ -73,7 +73,7 @@ namespace polysolve::nonlinear
         Criteria &stop_criteria() { return m_stop; }
         const Criteria &stop_criteria() const { return m_stop; }
         const Criteria &current_criteria() const { return m_current; }
-        const Status &status() const { return m_status; }
+        Status status() const { return m_status; }
 
         void set_strategies_iterations(const json &solver_params);
         void set_line_search(const json &params);

@@ -19,9 +19,10 @@ namespace polysolve::nonlinear
         GradNormTolerance,   ///< The norm of the gradient vector is below the tolerance
         ObjectiveCustomStop, ///< The objective function specified to stop
         // Failure cases
-        NanEncountered,      ///< The objective function returned NaN
-        NotDescentDirection, ///< The search direction is not a descent direction
-        LineSearchFailed,    ///< The line search failed
+        NanEncountered,        ///< The objective function returned NaN
+        NotDescentDirection,   ///< The search direction is not a descent direction
+        LineSearchFailed,      ///< The line search failed
+        UpdateDirectionFailed, ///< The update direction could not be computed
     };
 
     bool is_converged_status(const Status s);

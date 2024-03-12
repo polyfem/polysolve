@@ -13,7 +13,7 @@ namespace polysolve::nonlinear::line_search
 
         Armijo(const json &params, spdlog::logger &logger);
 
-        virtual std::string name() override { return "Armijo"; }
+        virtual std::string name() const override { return "Armijo"; }
 
     protected:
         virtual void init_compute_descent_step_size(

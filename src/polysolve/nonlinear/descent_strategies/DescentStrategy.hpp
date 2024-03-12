@@ -25,6 +25,7 @@ namespace polysolve::nonlinear
         virtual void reset(const int ndof) {}
         virtual void reset_times() {}
         virtual void update_solver_info(json &solver_info, const double per_iteration) {}
+        virtual void log_times() const {}
 
         virtual bool is_direction_descent() { return true; }
         virtual bool handle_error() { return false; }

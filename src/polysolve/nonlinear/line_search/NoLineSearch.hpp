@@ -12,7 +12,7 @@ namespace polysolve::nonlinear::line_search
 
         NoLineSearch(const json &params, spdlog::logger &logger);
 
-        virtual std::string name() override { return "None"; }
+        virtual std::string name() const override { return "None"; }
 
     protected:
         double compute_descent_step_size(

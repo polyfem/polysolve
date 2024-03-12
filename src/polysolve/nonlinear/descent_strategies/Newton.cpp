@@ -2,6 +2,8 @@
 
 #include <polysolve/Utils.hpp>
 
+#include <spdlog/fmt/bundled/color.h>
+
 namespace polysolve::nonlinear
 {
 
@@ -57,14 +59,14 @@ namespace polysolve::nonlinear
                    const double characteristic_length,
                    spdlog::logger &logger)
         : Superclass(solver_params, characteristic_length, logger),
-          is_sparse(sparse), m_characteristic_length(characteristic_length), m_residual_tolerance(residual_tolerance)
+          is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
 
-        if (m_residual_tolerance <= 0)
-            log_and_throw_error(logger, "Newton residual_tolerance must be > 0, instead got {}", m_residual_tolerance);
+        if (residual_tolerance <= 0)
+            log_and_throw_error(logger, "Newton residual_tolerance must be > 0, instead got {}", residual_tolerance);
     }
 
     Newton::Newton(
@@ -139,10 +141,10 @@ namespace polysolve::nonlinear
             is_sparse ? solve_sparse_linear_system(objFunc, x, grad, direction)
                       : solve_dense_linear_system(objFunc, x, grad, direction);
 
-        if (std::isnan(residual) || residual > m_residual_tolerance * m_characteristic_length)
+        if (std::isnan(residual) || residual > residual_tolerance * characteristic_length)
         {
             m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (||∇f||={})",
-                           name(), residual, m_residual_tolerance * m_characteristic_length, grad.norm());
+                           name(), residual, residual_tolerance * characteristic_length, grad.norm());
 
             return false;
         }
@@ -153,8 +155,6 @@ namespace polysolve::nonlinear
 
         return true;
     }
-
-    // =======================================================================
 
     // =======================================================================
 
@@ -324,6 +324,20 @@ namespace polysolve::nonlinear
         solver_info["internal_solver"] = internal_solver_info;
         solver_info["time_assembly"] = assembly_time / per_iteration;
         solver_info["time_inverting"] = inverting_time / per_iteration;
+    }
+
+    void Newton::reset_times()
+    {
+        assembly_time = 0;
+        inverting_time = 0;
+    }
+
+    void Newton::log_times() const
+    {
+        m_logger.debug(
+            "[{}][{}] assembly: {:.2e}s; linear_solve: {:.2e}s",
+            fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"),
+            name(), assembly_time, inverting_time);
     }
 
     // =======================================================================

@@ -332,10 +332,14 @@ namespace polysolve::nonlinear
 
             // --- Update direction --------------------------------------------
 
-            const bool ok = compute_update_direction(objFunc, x, grad, delta_x);
-            m_current.xDelta = delta_x.norm();
+            bool update_direction_successful;
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("compute update direction", update_direction_time, m_logger);
+                update_direction_successful = compute_update_direction(objFunc, x, grad, delta_x);
+            }
 
-            if (!ok || std::isnan(m_current.xDelta))
+            m_current.xDelta = delta_x.norm();
+            if (!update_direction_successful || std::isnan(m_current.xDelta))
             {
                 const auto current_name = descent_strategy_name();
                 if (!m_strategies[m_descent_strategy]->handle_error())
@@ -400,7 +404,12 @@ namespace polysolve::nonlinear
                 m_current.iterations, energy, m_current.gradNorm);
 
             // Perform a line_search to compute step scale
-            double rate = m_line_search->line_search(x, delta_x, objFunc);
+            double rate;
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
+                rate = m_line_search->line_search(x, delta_x, objFunc);
+            }
+
             if (std::isnan(rate))
             {
                 const auto current_name = descent_strategy_name();
@@ -428,7 +437,6 @@ namespace polysolve::nonlinear
             // if we did enough lower strategy, we revert back to normal
             if (m_descent_strategy != 0 && current_strategy_iter >= m_iter_per_strategy[m_descent_strategy])
             {
-
                 const auto current_name = descent_strategy_name();
                 const std::string prev_strategy_name = descent_strategy_name();
 
@@ -514,14 +522,13 @@ namespace polysolve::nonlinear
     void Solver::reset_times()
     {
         total_time = 0;
-        grad_time = 0;
-        line_search_time = 0;
         obj_fun_time = 0;
+        grad_time = 0;
+        update_direction_time = 0;
+        line_search_time = 0;
         constraint_set_update_time = 0;
         if (m_line_search)
-        {
             m_line_search->reset_times();
-        }
         for (auto &s : m_strategies)
             s->reset_times();
     }
@@ -538,47 +545,30 @@ namespace polysolve::nonlinear
         double per_iteration = m_current.iterations ? m_current.iterations : 1;
 
         solver_info["total_time"] = total_time;
+        solver_info["time_obj_fun"] = obj_fun_time / per_iteration;
         solver_info["time_grad"] = grad_time / per_iteration;
+        // Do not save update_direction_time as it is redundant with the strategies
         solver_info["time_line_search"] = line_search_time / per_iteration;
         solver_info["time_constraint_set_update"] = constraint_set_update_time / per_iteration;
-        solver_info["time_obj_fun"] = obj_fun_time / per_iteration;
 
         for (auto &s : m_strategies)
             s->update_solver_info(solver_info, per_iteration);
-
         if (m_line_search)
-        {
-            solver_info["line_search_iterations"] = m_line_search->iterations();
-
-            solver_info["time_checking_for_nan_inf"] =
-                m_line_search->checking_for_nan_inf_time / per_iteration;
-            solver_info["time_broad_phase_ccd"] =
-                m_line_search->broad_phase_ccd_time / per_iteration;
-            solver_info["time_ccd"] = m_line_search->ccd_time / per_iteration;
-            // Remove double counting
-            solver_info["time_classical_line_search"] =
-                (m_line_search->classical_line_search_time
-                 - m_line_search->constraint_set_update_time)
-                / per_iteration;
-            solver_info["time_line_search_constraint_set_update"] =
-                m_line_search->constraint_set_update_time / per_iteration;
-        }
+            m_line_search->update_solver_info(solver_info, per_iteration);
     }
 
-    void Solver::log_times()
+    void Solver::log_times() const
     {
         m_logger.debug(
-            "[{}] grad {:.3g}s, "
-            "line_search {:.3g}s, constraint_set_update {:.3g}s, "
-            "obj_fun {:.3g}s, checking_for_nan_inf {:.3g}s, "
-            "broad_phase_ccd {:.3g}s, ccd {:.3g}s, "
-            "classical_line_search {:.3g}s",
+            "[{}] f: {:.2e}s, grad_f: {:.2e}s, update_direction: {:.2e}s, "
+            "line_search: {:.2e}s, constraint_set_update: {:.2e}s",
             fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"),
-            grad_time, line_search_time,
-            constraint_set_update_time + (m_line_search ? m_line_search->constraint_set_update_time : 0),
-            obj_fun_time, m_line_search ? m_line_search->checking_for_nan_inf_time : 0,
-            m_line_search ? m_line_search->broad_phase_ccd_time : 0, m_line_search ? m_line_search->ccd_time : 0,
-            m_line_search ? m_line_search->classical_line_search_time : 0);
+            obj_fun_time, grad_time, update_direction_time, line_search_time,
+            constraint_set_update_time);
+        for (auto &s : m_strategies)
+            s->log_times();
+        if (m_line_search)
+            m_line_search->log_times();
     }
 
     void Solver::verify_gradient(Problem &objFunc, const TVector &x, const TVector &grad)

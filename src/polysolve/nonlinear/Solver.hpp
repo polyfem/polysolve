@@ -145,16 +145,17 @@ namespace polysolve::nonlinear
 
         void update_solver_info(const double energy);
         void reset_times();
-        void log_times();
+        void log_times() const;
 
         json solver_info;
 
         // Timers
         double total_time;
+        double obj_fun_time;
         double grad_time;
+        double update_direction_time;
         double line_search_time;
         double constraint_set_update_time;
-        double obj_fun_time;
 
         // ====================================================================
         //                                 END

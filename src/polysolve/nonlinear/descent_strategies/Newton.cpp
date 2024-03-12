@@ -334,6 +334,8 @@ namespace polysolve::nonlinear
 
     void Newton::log_times() const
     {
+        if (assembly_time <= 0 && inverting_time <= 0)
+            return; // nothing to log
         m_logger.debug(
             "[{}][{}] assembly: {:.2e}s; linear_solve: {:.2e}s",
             fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"),

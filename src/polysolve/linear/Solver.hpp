@@ -107,6 +107,12 @@ namespace polysolve::linear
         // If solver uses dense matrices
         virtual bool is_dense() const { return false; }
 
+        // Set block size for multigrid solvers
+        virtual void set_block_size(int block_size) {}
+
+        // If the problem is nullspace for multigrid solvers
+        virtual void set_is_nullspace(const VectorXd &x) {}
+
         //
         // @brief         { Solve the linear system Ax = b }
         //

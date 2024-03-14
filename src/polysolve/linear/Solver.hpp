@@ -111,7 +111,7 @@ namespace polysolve::linear
         virtual void set_block_size(int block_size) {}
 
         // If the problem is nullspace for multigrid solvers
-        virtual void set_is_nullspace(bool is_nullspace) {}
+        virtual void set_is_nullspace(const VectorXd &x) {}
 
         //
         // @brief         { Solve the linear system Ax = b }

@@ -77,7 +77,7 @@ option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                    
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_NOT_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                           OFF)
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                            OFF)
-option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
+option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                      OFF)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
 option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                             ON)
 option(POLYSOLVE_WITH_TRILINOS      "Enable Trilinos"                                    ON)
@@ -288,8 +288,12 @@ endif()
 # Trilinos
 if (POLYSOLVE_WITH_TRILINOS)
     include(trilinos)
-    target_link_libraries(polysolve_linear PUBLIC Trilinos::Trilinos)
-    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_TRILINOS)
+    if(TARGET Trilinos::Trilinos)
+        target_link_libraries(polysolve_linear PUBLIC Trilinos::Trilinos)
+        target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_TRILINOS)
+    else()
+        message(WARNING "Trilinos not found, solver will not be available.")
+    endif()
 endif()
 
 # cuSolver solvers

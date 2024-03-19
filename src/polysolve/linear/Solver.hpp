@@ -86,26 +86,32 @@ namespace polysolve::linear
         // Public interface //
         //////////////////////
 
-        // Set solver parameters
+        /// Set solver parameters
         virtual void set_parameters(const json &params) {}
 
-        // Get info on the last solve step
+        /// Get info on the last solve step
         virtual void get_info(json &params) const {};
 
-        // Analyze sparsity pattern
+        /// Analyze sparsity pattern
         virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}
 
-        // Factorize system matrix
+        /// Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) {}
 
-        // Analyze sparsity pattern of a dense matrix
+        /// Analyze sparsity pattern of a dense matrix
         virtual void analyze_pattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}
 
-        // Factorize system matrix of a dense matrix
+        /// Factorize system matrix of a dense matrix
         virtual void factorize_dense(const Eigen::MatrixXd &A) {}
 
-        // If solver uses dense matrices
+        /// If solver uses dense matrices
         virtual bool is_dense() const { return false; }
+
+        /// Set block size for multigrid solvers
+        virtual void set_block_size(int block_size) {}
+
+        /// If the problem is nullspace for multigrid solvers
+        virtual void set_is_nullspace(const VectorXd &x) {}
 
         ///
         /// @brief         { Solve the linear system Ax = b }
@@ -117,11 +123,6 @@ namespace polysolve::linear
         ///                      and initialized. }
         ///
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) = 0;
-
-    public:
-        ///////////
-        // Debug //
-        ///////////
 
         /// @brief Name of the solver type (for debugging purposes)
         virtual std::string name() const { return ""; }

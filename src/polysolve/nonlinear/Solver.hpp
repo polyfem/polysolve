@@ -73,7 +73,7 @@ namespace polysolve::nonlinear
         Criteria &stop_criteria() { return m_stop; }
         const Criteria &stop_criteria() const { return m_stop; }
         const Criteria &current_criteria() const { return m_current; }
-        const Status &status() const { return m_status; }
+        Status status() const { return m_status; }
 
         void set_strategies_iterations(const json &solver_params);
         void set_line_search(const json &params);
@@ -163,16 +163,17 @@ namespace polysolve::nonlinear
         void reset_times();
 
         /// @brief Log time taken in different phases of the solve
-        void log_times();
+        void log_times() const;
 
         json solver_info;
 
         // Timers
         double total_time;
+        double obj_fun_time;
         double grad_time;
+        double update_direction_time;
         double line_search_time;
         double constraint_set_update_time;
-        double obj_fun_time;
 
         // ====================================================================
         //                                 END

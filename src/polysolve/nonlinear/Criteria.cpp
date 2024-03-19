@@ -2,6 +2,8 @@
 // License: MIT
 #include "Criteria.hpp"
 
+#include <spdlog/fmt/fmt.h>
+
 namespace polysolve::nonlinear
 {
     bool is_converged_status(const Status s)
@@ -27,13 +29,9 @@ namespace polysolve::nonlinear
 
     void Criteria::print(std::ostream &os) const
     {
-        os << "Iterations: " << iterations << std::endl;
-        os << "xDelta:     " << xDelta << std::endl;
-        os << "fDelta:     " << fDelta << std::endl;
-        os << "GradNorm:   " << gradNorm << std::endl;
-        os << "xDeltaDotGrad: " << xDeltaDotGrad << std::endl;
-        os << "FirstGradNorm: " << firstGradNorm << std::endl;
-        os << "fDeltaCount: " << fDeltaCount << std::endl;
+        os << fmt::format(
+            "iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g}",
+            iterations, fDelta, gradNorm, xDelta, xDeltaDotGrad);
     }
 
     Status checkConvergence(const Criteria &stop, const Criteria &current)
@@ -42,6 +40,11 @@ namespace polysolve::nonlinear
         {
             return Status::IterationLimit;
         }
+        const double stopGradNorm = current.iterations == 0 ? stop.firstGradNorm : stop.gradNorm;
+        if (stopGradNorm > 0 && current.gradNorm < stopGradNorm)
+        {
+            return Status::GradNormTolerance;
+        }
         if (stop.xDelta > 0 && current.xDelta < stop.xDelta)
         {
             return Status::XDeltaTolerance;
@@ -49,11 +52,6 @@ namespace polysolve::nonlinear
         if (stop.fDelta > 0 && current.fDelta < stop.fDelta && current.fDeltaCount >= stop.fDeltaCount)
         {
             return Status::FDeltaTolerance;
-        }
-        const double stopGradNorm = current.iterations == 0 ? stop.firstGradNorm : stop.gradNorm;
-        if (stopGradNorm > 0 && current.gradNorm < stopGradNorm)
-        {
-            return Status::GradNormTolerance;
         }
         // Δx⋅∇f ≥ 0 means that the search direction is not a descent direction
         if (stop.xDeltaDotGrad < 0 && current.xDeltaDotGrad > stop.xDeltaDotGrad)
@@ -68,37 +66,40 @@ namespace polysolve::nonlinear
         switch (s)
         {
         case Status::NotStarted:
-            os << "Solver not started.";
+            os << "Solver not started";
             break;
         case Status::Continue:
-            os << "Convergence criteria not reached.";
+            os << "Convergence criteria not reached";
             break;
         case Status::IterationLimit:
-            os << "Iteration limit reached.";
+            os << "Iteration limit reached";
             break;
         case Status::XDeltaTolerance:
-            os << "Change in parameter vector too small.";
+            os << "Change in parameter vector too small";
             break;
         case Status::FDeltaTolerance:
-            os << "Change in cost function value too small.";
+            os << "Change in cost function value too small";
             break;
         case Status::GradNormTolerance:
-            os << "Gradient vector norm too small.";
+            os << "Gradient vector norm too small";
             break;
         case Status::ObjectiveCustomStop:
-            os << "Objective function specified to stop.";
+            os << "Objective function specified to stop";
             break;
         case Status::NanEncountered:
-            os << "Objective or gradient function returned NaN.";
+            os << "Objective or gradient function returned NaN";
             break;
         case Status::NotDescentDirection:
-            os << "Search direction not a descent direction.";
+            os << "Search direction not a descent direction";
             break;
         case Status::LineSearchFailed:
-            os << "Line search failed.";
+            os << "Line search failed";
+            break;
+        case Status::UpdateDirectionFailed:
+            os << "Update direction could not be computed";
             break;
         default:
-            os << "Unknown status.";
+            os << "Unknown status";
             break;
         }
         return os;

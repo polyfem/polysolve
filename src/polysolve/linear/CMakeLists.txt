@@ -15,6 +15,8 @@ set(SOURCES
     Pardiso.hpp
     SaddlePointSolver.cpp
     SaddlePointSolver.hpp
+    AMGCL_cuda.cu
+    AMGCL_cuda.hpp
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})

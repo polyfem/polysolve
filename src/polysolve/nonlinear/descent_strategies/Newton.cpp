@@ -143,7 +143,7 @@ namespace polysolve::nonlinear
 
         if (std::isnan(residual) || residual > residual_tolerance * characteristic_length)
         {
-            m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (||∇f||={})",
+            m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (‖∇f‖={})",
                            name(), residual, residual_tolerance * characteristic_length, grad.norm());
 
             return false;

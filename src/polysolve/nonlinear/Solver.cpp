@@ -427,7 +427,13 @@ namespace polysolve::nonlinear
                 continue;
             }
 
-            x += rate * delta_x;
+            {
+                TVector x1 = x + rate * delta_x;
+                if (objFunc.smooth_step(x, x1))
+                    objFunc.solution_changed(x1);
+                x = x1;
+            }
+
             old_energy = energy;
 
             // Reset this for the next iterations

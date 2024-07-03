@@ -96,18 +96,21 @@ if(MKL_VERSION VERSION_EQUAL 2020.4)
 
     # To compute file names, we use the following bash script:
     # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-file") <(conda search --override-channel --channel intel $f=2020.4 --platform $os-64 -i | grep file | cut -d : -f 2); done; done
-    set(mkl-linux-64-file mkl-2020.4-intel_304.tar.bz2)
-    set(mkl-osx-64-file mkl-2020.4-intel_301.tar.bz2)
-    set(mkl-win-64-file mkl-2020.4-intel_311.tar.bz2)
-    set(mkl-include-linux-64-file mkl-include-2020.4-intel_304.tar.bz2)
-    set(mkl-include-osx-64-file mkl-include-2020.4-intel_301.tar.bz2)
-    set(mkl-include-win-64-file mkl-include-2020.4-intel_311.tar.bz2)
-    set(mkl-static-linux-64-file mkl-static-2020.4-intel_304.tar.bz2)
-    set(mkl-static-osx-64-file mkl-static-2020.4-intel_301.tar.bz2)
-    set(mkl-static-win-64-file mkl-static-2020.4-intel_311.tar.bz2)
-    set(mkl-devel-linux-64-file mkl-devel-2020.4-intel_304.tar.bz2)
-    set(mkl-devel-osx-64-file mkl-devel-2020.4-intel_301.tar.bz2)
-    set(mkl-devel-win-64-file mkl-devel-2020.4-intel_311.tar.bz2)
+    set(mkl-linux-64-file mkl-2020.4-h726a3e6_304.tar.bz2)
+    set(mkl-osx-64-file mkl-2020.4-h08c4f10_301.tar.bz2)
+    set(mkl-win-64-file mkl-2020.4-hb70f87d_311.tar.bz2)
+
+    set(mkl-include-linux-64-file mkl-include-2020.4-h726a3e6_304.tar.bz2)
+    set(mkl-include-osx-64-file mkl-include-2020.4-h08c4f10_301.tar.bz2)
+    set(mkl-include-win-64-file mkl-include-2020.4-hb70f87d_311.tar.bz2)
+
+    set(mkl-static-linux-64-file mkl-static-2020.4-h726a3e6_304.tar.bz2)
+    set(mkl-static-osx-64-file mkl-static-2020.4-h08c4f10_301.tar.bz2)
+    set(mkl-static-win-64-file mkl-static-2020.4-hb70f87d_311.tar.bz2)
+
+    set(mkl-devel-linux-64-file mkl-devel-2020.4-h726a3e6_304.tar.bz2)
+    set(mkl-devel-osx-64-file mkl-devel-2020.4-h08c4f10_301.tar.bz2)
+    set(mkl-devel-win-64-file mkl-devel-2020.4-hb70f87d_311.tar.bz2)
 elseif(MKL_VERSION VERSION_EQUAL 2021.3.0)
     # To compute the md5 checksums for each lib, use the following bash script (replace the target version number):
     # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-md5") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep md5 | cut -d : -f 2); done; done
@@ -126,23 +129,24 @@ elseif(MKL_VERSION VERSION_EQUAL 2021.3.0)
 
     # To compute file names, we use the following bash script:
     # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-file") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep file | cut -d : -f 2); done; done
-    set(mkl-linux-64-file mkl-2021.3.0-h08c4f10_555.tar.bz2)
-    set(mkl-osx-64-file mkl-2021.3.0-hecd8cb5_517.tar.bz2)
-    set(mkl-win-64-file mkl-2021.3.0-haa95532_524.tar.bz2)
+    set(mkl-linux-64-file mkl-2021.3.0-h726a3e6_557.tar.bz2)
+    set(mkl-osx-64-file mkl-2021.3.0-h08c4f10_555.tar.bz2)
+    set(mkl-win-64-file mkl-2021.3.0-hb70f87d_564.tar.bz2)
 
-    set(mkl-include-linux-64-file mkl-include-2021.3.0-h08c4f10_555.tar.bz2)
-    set(mkl-include-osx-64-file mkl-include-2021.3.0-hecd8cb5_517.tar.bz2)
-    set(mkl-include-win-64-file mkl-include-2021.3.0-haa95532_524.tar.bz2)
+    set(mkl-include-linux-64-file mkl-include-2021.3.0-h726a3e6_557.tar.bz2)
+    set(mkl-include-osx-64-file mkl-include-2021.3.0-h08c4f10_555.tar.bz2)
+    set(mkl-include-win-64-file mkl-include-2021.3.0-hb70f87d_564.tar.bz2)
 
-    set(mkl-static-linux-64-file mkl-static-2021.3.0-h08c4f10_555.tar.bz2)
-    set(mkl-static-osx-64-file mkl-static-2021.3.0-hecd8cb5_517.tar.bz2)
-    set(mkl-static-win-64-file mkl-static-2021.3.0-haa95532_524.tar.bz2)
+    set(mkl-static-linux-64-file mkl-static-2021.3.0-h726a3e6_557.tar.bz2)
+    set(mkl-static-osx-64-file mkl-static-2021.3.0-h08c4f10_555.tar.bz2)
+    set(mkl-static-win-64-file mkl-static-2021.3.0-hb70f87d_564.tar.bz2)
 
-    set(mkl-devel-linux-64-file mkl-devel-2021.3.0-h08c4f10_555.tar.bz2)
-    set(mkl-devel-osx-64-file mkl-devel-2021.3.0-hecd8cb5_517.tar.bz2)
-    set(mkl-devel-win-64-file mkl-devel-2021.3.0-haa95532_524.tar.bz2)
+    set(mkl-devel-linux-64-file mkl-devel-2021.3.0-h726a3e6_557.tar.bz2)
+    set(mkl-devel-osx-64-file mkl-devel-2021.3.0-h08c4f10_555.tar.bz2)
+    set(mkl-devel-win-64-file mkl-devel-2021.3.0-hb70f87d_564.tar.bz2)
 endif()
-
+https://anaconda.org/conda-forge/mkl-include/2021.3.0/download/linux-64/mkl-include-2021.3.0-h726a3e6_557.tar.bz2
+https://anaconda.org/conda-forge/mkl-include/2021.3.0/download/linux-64/mkl-include-2021.3.0-h726a3e6_557.tar.bz2
 # On Windows, `mkl-devel` contains the .lib files (needed at link time),
 # while `mkl` contains the .dll files (needed at run time). On macOS/Linux,
 # `mkl-devel` is empty, and only `mkl` is needed for the .so/.dylib

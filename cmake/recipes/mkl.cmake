@@ -145,8 +145,7 @@ elseif(MKL_VERSION VERSION_EQUAL 2021.3.0)
     set(mkl-devel-osx-64-file mkl-devel-2021.3.0-h08c4f10_555.tar.bz2)
     set(mkl-devel-win-64-file mkl-devel-2021.3.0-hb70f87d_564.tar.bz2)
 endif()
-https://anaconda.org/conda-forge/mkl-include/2021.3.0/download/linux-64/mkl-include-2021.3.0-h726a3e6_557.tar.bz2
-https://anaconda.org/conda-forge/mkl-include/2021.3.0/download/linux-64/mkl-include-2021.3.0-h726a3e6_557.tar.bz2
+
 # On Windows, `mkl-devel` contains the .lib files (needed at link time),
 # while `mkl` contains the .dll files (needed at run time). On macOS/Linux,
 # `mkl-devel` is empty, and only `mkl` is needed for the .so/.dylib

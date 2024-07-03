@@ -153,7 +153,7 @@ include(CPM)
 foreach(name IN ITEMS ${MKL_REMOTES})
     CPMAddPackage(
         NAME ${name}
-        URL https://anaconda.org/intel/${name}/${MKL_VERSION}/download/${MKL_PLATFORM}/${${name}-${MKL_PLATFORM}-file}
+        URL https://anaconda.org/conda-forge/${name}/${MKL_VERSION}/download/${MKL_PLATFORM}/${${name}-${MKL_PLATFORM}-file}
         URL_MD5 ${${name}-${MKL_PLATFORM}-md5}
     )
 endforeach()

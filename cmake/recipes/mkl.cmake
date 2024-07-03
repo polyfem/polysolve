@@ -117,12 +117,15 @@ elseif(MKL_VERSION VERSION_EQUAL 2021.3.0)
     set(mkl-linux-64-md5 2501643729c00b24fddb9530b339aea7)
     set(mkl-osx-64-md5 d6129ae9dfba58671667a65c160d0776)
     set(mkl-win-64-md5 264213ea4c5cb6b6d81ea97f59e757ab)
+
     set(mkl-include-linux-64-md5 70b4f9a53401a3d11ce27d7ddb0e2511)
     set(mkl-include-osx-64-md5 6da50c06992b78c4127a1881d39c1804)
     set(mkl-include-win-64-md5 28d785eb22d28512d4e40e5890a817dc)
+
     set(mkl-static-linux-64-md5 1469ad60a34269d4d0c5666bc131b82a)
     set(mkl-static-osx-64-md5 4a099581ba95cc50bb538598b26389e4)
     set(mkl-static-win-64-md5 69aef10428893314bc486e81397e1b25)
+
     set(mkl-devel-linux-64-md5 2432ad963e3f7e4619ffc7f896178fbe)
     set(mkl-devel-osx-64-md5 61b84a60715a3855a2097a3b619a00c8)
     set(mkl-devel-win-64-md5 6128dee67d2b20ff534cf54757f623e0)
@@ -160,7 +163,7 @@ foreach(name IN ITEMS ${MKL_REMOTES})
     CPMAddPackage(
         NAME ${name}
         URL https://anaconda.org/conda-forge/${name}/${MKL_VERSION}/download/${MKL_PLATFORM}/${${name}-${MKL_PLATFORM}-file}
-        URL_MD5 ${${name}-${MKL_PLATFORM}-md5}
+        # URL_MD5 ${${name}-${MKL_PLATFORM}-md5}
     )
 endforeach()
 

@@ -144,16 +144,16 @@ endif()
 # while `mkl` contains the .dll files (needed at run time). On macOS/Linux,
 # `mkl-devel` is empty, and only `mkl` is needed for the .so/.dylib
 if(MKL_LINKING STREQUAL static)
-    set(MKL_REMOTES mkl-include mkl-static)
+    set(MKL_REMOTES mkl mkl-static)
 else()
-    set(MKL_REMOTES mkl-include mkl mkl-devel)
+    set(MKL_REMOTES mkl mkl mkl-devel)
 endif()
 
 include(CPM)
 foreach(name IN ITEMS ${MKL_REMOTES})
     CPMAddPackage(
         NAME ${name}
-        URL https://anaconda.org/intel/${name}/${MKL_VERSION}/download/${MKL_PLATFORM}/${${name}-${MKL_PLATFORM}-file}
+        URL https://anaconda.org/anaconda/${name}/${MKL_VERSION}/download/${MKL_PLATFORM}/${${name}-${MKL_PLATFORM}-file}
         URL_MD5 ${${name}-${MKL_PLATFORM}-md5}
     )
 endforeach()

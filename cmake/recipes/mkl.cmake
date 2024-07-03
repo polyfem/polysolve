@@ -126,9 +126,9 @@ elseif(MKL_VERSION VERSION_EQUAL 2021.3.0)
 
     # To compute file names, we use the following bash script:
     # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-file") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep file | cut -d : -f 2); done; done
-    set(mkl-linux-64-file mkl-2021.3.0-intel_520.tar.bz2)
-    set(mkl-osx-64-file mkl-2021.3.0-intel_517.tar.bz2)
-    set(mkl-win-64-file mkl-2021.3.0-intel_524.tar.bz2)
+    set(mkl-linux-64-file mkl-2021.3.0-h06a4308_520.tar.bz2)
+    set(mkl-osx-64-file mkl-2021.3.0-hecd8cb5_517.tar.bz2)
+    set(mkl-win-64-file mkl-2021.3.0-haa95532_524.tar.bz2)
     set(mkl-include-linux-64-file mkl-include-2021.3.0-intel_520.tar.bz2)
     set(mkl-include-osx-64-file mkl-include-2021.3.0-intel_517.tar.bz2)
     set(mkl-include-win-64-file mkl-include-2021.3.0-intel_524.tar.bz2)
@@ -148,7 +148,8 @@ if(MKL_LINKING STREQUAL static)
 else()
     set(MKL_REMOTES mkl mkl mkl-devel)
 endif()
-
+https://anaconda.org/anaconda/mkl/2021.3.0/download/linux-64/mkl-2021.3.0-intel_520.tar.bz2
+https://anaconda.org/anaconda/mkl/2021.3.0/download/linux-64/mkl-2021.3.0-h06a4308_520.tar.bz2
 include(CPM)
 foreach(name IN ITEMS ${MKL_REMOTES})
     CPMAddPackage(

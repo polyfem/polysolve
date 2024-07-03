@@ -148,8 +148,7 @@ if(MKL_LINKING STREQUAL static)
 else()
     set(MKL_REMOTES mkl mkl mkl-devel)
 endif()
-https://anaconda.org/anaconda/mkl/2021.3.0/download/linux-64/mkl-2021.3.0-intel_520.tar.bz2
-https://anaconda.org/anaconda/mkl/2021.3.0/download/linux-64/mkl-2021.3.0-h06a4308_520.tar.bz2
+
 include(CPM)
 foreach(name IN ITEMS ${MKL_REMOTES})
     CPMAddPackage(

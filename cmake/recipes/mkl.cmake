@@ -34,8 +34,8 @@ set_property(CACHE MKL_LINKING PROPERTY STRINGS ${MKL_LINKINK_CHOICES})
 message(STATUS "MKL linking strategy: ${MKL_LINKING}")
 
 # MKL version
-set(MKL_VERSION "2021.3.0" CACHE STRING "MKL version to use (2020.4 or 2021.3.0)")
-set(MKL_VERSION_CHOICES 2020.4 2021.3.0)
+set(MKL_VERSION "2022.2.1" CACHE STRING "MKL version to use (2020.4 or 2021.3.0 2022.2.1)")
+set(MKL_VERSION_CHOICES 2022.2.1 2020.4 2021.3.0)
 set_property(CACHE MKL_VERSION PROPERTY STRINGS ${MKL_VERSION_CHOICES})
 message(STATUS "MKL version: ${MKL_VERSION}")
 
@@ -147,6 +147,34 @@ elseif(MKL_VERSION VERSION_EQUAL 2021.3.0)
     set(mkl-devel-linux-64-file mkl-devel-2021.3.0-h726a3e6_557.tar.bz2)
     set(mkl-devel-osx-64-file mkl-devel-2021.3.0-h08c4f10_555.tar.bz2)
     set(mkl-devel-win-64-file mkl-devel-2021.3.0-hb70f87d_564.tar.bz2)
+elseif(MKL_VERSION VERSION_EQUAL 2022.2.1)
+    # To compute the md5 checksums for each lib, use the following bash script (replace the target version number):
+    # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-md5") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep md5 | cut -d : -f 2); done; done
+    # set(mkl-linux-64-md5 2501643729c00b24fddb9530b339aea7)
+    # set(mkl-win-64-md5 264213ea4c5cb6b6d81ea97f59e757ab)
+
+    # set(mkl-include-linux-64-md5 70b4f9a53401a3d11ce27d7ddb0e2511)
+    # set(mkl-include-win-64-md5 28d785eb22d28512d4e40e5890a817dc)
+
+    # set(mkl-static-linux-64-md5 1469ad60a34269d4d0c5666bc131b82a)
+    # set(mkl-static-win-64-md5 69aef10428893314bc486e81397e1b25)
+
+    set(mkl-devel-linux-64-md5 2432ad963e3f7e4619ffc7f896178fbe)
+    set(mkl-devel-win-64-md5 6128dee67d2b20ff534cf54757f623e0)
+
+    # To compute file names, we use the following bash script:
+    # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-file") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep file | cut -d : -f 2); done; done
+    set(mkl-linux-64-file mkl-2022.2.1-h6508926_16999.tar.bz2)
+    set(mkl-win-64-file mkl-2022.2.1-h4060db9_19760.tar.bz2)
+
+    set(mkl-include-linux-64-file mkl-include-2022.2.1-ha957f24_16999.tar.bz2)
+    set(mkl-include-win-64-file mkl-include-2022.2.1-h4060db9_19760.tar.bz2)
+
+    set(mkl-static-linux-64-file mkl-static-2022.2.1-h6508926_16999.tar.bz2)
+    set(mkl-static-win-64-file mkl-static-2022.2.1-h4060db9_19760.tar.bz2)
+
+    set(mkl-devel-linux-64-file mkl-devel-2022.2.1-h6508926_16999.tar.bz2)
+    set(mkl-devel-win-64-file mkl-devel-2022.2.1-h4060db9_19760.tar.bz2)
 endif()
 
 # On Windows, `mkl-devel` contains the .lib files (needed at link time),

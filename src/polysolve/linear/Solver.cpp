@@ -537,6 +537,7 @@ namespace polysolve::linear
         return "Eigen::BiCGSTAB";
 #endif
 #endif
+#endif
     }
 
     // -----------------------------------------------------------------------------

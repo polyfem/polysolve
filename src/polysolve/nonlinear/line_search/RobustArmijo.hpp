@@ -14,7 +14,7 @@ namespace polysolve::nonlinear::line_search
 
         RobustArmijo(const json &params, spdlog::logger &logger);
 
-        virtual std::string name() override { return "RobustArmijo"; }
+        virtual std::string name() const override { return "RobustArmijo"; }
 
     protected:
         bool criteria(

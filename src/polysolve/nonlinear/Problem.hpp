@@ -10,6 +10,7 @@
 
 namespace polysolve::nonlinear
 {
+    /// @brief Class defining optimization problem to be solved. To be defined by user code
     class Problem
     {
     public:

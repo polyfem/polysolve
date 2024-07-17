@@ -47,8 +47,8 @@ namespace polysolve::nonlinear
         json internal_solver_info = json::array();
 
         const bool is_sparse;
-        const double m_characteristic_length;
-        double m_residual_tolerance;
+        const double characteristic_length;
+        double residual_tolerance;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
 
@@ -71,12 +71,8 @@ namespace polysolve::nonlinear
 
         void reset(const int ndof) override;
         void update_solver_info(json &solver_info, const double per_iteration) override;
-
-        void reset_times() override
-        {
-            assembly_time = 0;
-            inverting_time = 0;
-        }
+        void reset_times() override;
+        void log_times() const override;
     };
 
     class ProjectedNewton : public Newton

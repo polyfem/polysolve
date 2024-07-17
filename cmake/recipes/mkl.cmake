@@ -90,8 +90,8 @@ if(MKL_VERSION VERSION_EQUAL 2022.2.1)
     # set(mkl-static-linux-64-md5 1469ad60a34269d4d0c5666bc131b82a)
     # set(mkl-static-win-64-md5 69aef10428893314bc486e81397e1b25)
 
-    set(mkl-devel-linux-64-md5 2432ad963e3f7e4619ffc7f896178fbe)
-    set(mkl-devel-win-64-md5 6128dee67d2b20ff534cf54757f623e0)
+    # set(mkl-devel-linux-64-md5 2432ad963e3f7e4619ffc7f896178fbe)
+    # set(mkl-devel-win-64-md5 6128dee67d2b20ff534cf54757f623e0)
 
     # To compute file names, we use the following bash script:
     # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-file") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep file | cut -d : -f 2); done; done
@@ -99,13 +99,13 @@ if(MKL_VERSION VERSION_EQUAL 2022.2.1)
     set(mkl-win-64-file mkl-2022.2.1-h4060db9_19760.tar.bz2)
 
     set(mkl-include-linux-64-file mkl-include-2022.2.1-ha957f24_16999.tar.bz2)
-    set(mkl-include-win-64-file mkl-include-2022.2.1-h4060db9_19760.tar.bz2)
+    set(mkl-include-win-64-file mkl-include-2022.2.1-h66d3029_19760.tar.bz2)
 
     set(mkl-static-linux-64-file mkl-static-2022.2.1-h6508926_16999.tar.bz2)
     set(mkl-static-win-64-file mkl-static-2022.2.1-h4060db9_19760.tar.bz2)
 
-    set(mkl-devel-linux-64-file mkl-devel-2022.2.1-h6508926_16999.tar.bz2)
-    set(mkl-devel-win-64-file mkl-devel-2022.2.1-h4060db9_19760.tar.bz2)
+    set(mkl-devel-linux-64-file mkl-devel-2022.2.1-ha957f24_16999.tar.bz2)
+    set(mkl-devel-win-64-file mkl-devel-2022.2.1-h66d3029_19760.tar.bz2)
 endif()
 
 # On Windows, `mkl-devel` contains the .lib files (needed at link time),

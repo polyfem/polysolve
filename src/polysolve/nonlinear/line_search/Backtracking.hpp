@@ -13,7 +13,7 @@ namespace polysolve::nonlinear::line_search
 
         Backtracking(const json &params, spdlog::logger &logger);
 
-        virtual std::string name() override { return "Backtracking"; }
+        virtual std::string name() const override { return "Backtracking"; }
 
         double compute_descent_step_size(
             const TVector &x,

@@ -9,7 +9,7 @@
 
 #include <polysolve/Types.hpp>
 
-#include <spdlog/spdlog.h>
+#include <spdlog/fmt/bundled/color.h>
 
 #include <cfenv>
 
@@ -117,9 +117,9 @@ namespace polysolve::nonlinear::line_search
         }
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("CCD narrow-phase", ccd_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH("CCD narrow-phase", narrow_phase_ccd_time, m_logger);
             m_logger.trace("Performing narrow-phase CCD");
-            step_size = compute_collision_free_step_size(x, delta_x, objFunc, step_size);
+            step_size = compute_max_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
                 return NaN;
         }
@@ -190,11 +190,7 @@ namespace polysolve::nonlinear::line_search
         // Find step that does not result in nan or infinite energy
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
-            // Compute the new energy value without contacts
-            const double energy = objFunc(new_x);
-            const bool is_step_valid = objFunc.is_step_valid(x, new_x);
-
-            if (!std::isfinite(energy) || !is_step_valid)
+            if (!objFunc.is_step_valid(x, new_x) || !std::isfinite(objFunc(new_x)))
             {
                 step_size *= rate;
                 new_x = x + step_size * delta_x;
@@ -217,7 +213,8 @@ namespace polysolve::nonlinear::line_search
         return step_size;
     }
 
-    double LineSearch::compute_collision_free_step_size(
+    // change to max_step_size
+    double LineSearch::compute_max_step_size(
         const TVector &x,
         const TVector &delta_x,
         Problem &objFunc,
@@ -245,5 +242,34 @@ namespace polysolve::nonlinear::line_search
         }
 
         return step_size;
+    }
+
+    void LineSearch::update_solver_info(json &solver_info, const double per_iteration)
+    {
+        solver_info["line_search_iterations"] = iterations();
+        solver_info["time_checking_for_nan_inf"] = checking_for_nan_inf_time / per_iteration;
+        solver_info["time_broad_phase_ccd"] = broad_phase_ccd_time / per_iteration;
+        solver_info["time_ccd"] = narrow_phase_ccd_time / per_iteration;
+        solver_info["time_classical_line_search"] = (classical_line_search_time - constraint_set_update_time) / per_iteration; // Remove double counting
+        solver_info["time_line_search_constraint_set_update"] = constraint_set_update_time / per_iteration;
+    }
+
+    void LineSearch::reset_times()
+    {
+        checking_for_nan_inf_time = 0;
+        broad_phase_ccd_time = 0;
+        narrow_phase_ccd_time = 0;
+        constraint_set_update_time = 0;
+        classical_line_search_time = 0;
+    }
+
+    void LineSearch::log_times() const
+    {
+        m_logger.debug(
+            "[{}][{}] constraint_set_update {:.2e}s, checking_for_nan_inf {:.2e}s, "
+            "broad_phase_ccd {:.2e}s, narrow_phase_ccd {:.2e}s, classical_line_search {:.2e}s",
+            fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"),
+            name(), constraint_set_update_time, checking_for_nan_inf_time,
+            broad_phase_ccd_time, narrow_phase_ccd_time, classical_line_search_time);
     }
 } // namespace polysolve::nonlinear::line_search

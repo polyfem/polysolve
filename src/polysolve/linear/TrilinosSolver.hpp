@@ -84,8 +84,6 @@ namespace polysolve::linear
         double conv_tol_ = 1e-8;
         size_t iterations_;
         double residual_error_;
-        bool is_nullspace_ = true;
-        Eigen::MatrixXd reduced_vertices;
         ML_Epetra::MultiLevelPreconditioner* MLPrec=NULL;
         Epetra_Map *rowMap=NULL;
 

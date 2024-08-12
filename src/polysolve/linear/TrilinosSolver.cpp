@@ -12,7 +12,6 @@ namespace polysolve::linear
     TrilinosSolver::TrilinosSolver()
     {
         precond_num_ = 0;
-// #ifdef HAVE_MPI
         int done_already;
         MPI_Initialized(&done_already);
         if (!done_already)
@@ -25,9 +24,6 @@ namespace polysolve::linear
             MPI_Init(&argc, &argvv);
             CommPtr = new Epetra_MpiComm(MPI_COMM_WORLD);
         }
-// #else
-    //  CommPtr=new Epetra_SerialComm;
-// #endif
     }
 
     ////////////////////////////////////////////////////////////////
@@ -49,10 +45,6 @@ namespace polysolve::linear
             if (params["Trilinos"].contains("tolerance"))
             {
                 conv_tol_ = params["Trilinos"]["tolerance"];
-            }
-            if (params["Trilinos"].contains("is_nullspace"))
-            {
-                is_nullspace_ = params["Trilinos"]["is_nullspace"];
             }
         }
     }
@@ -289,9 +281,7 @@ namespace polysolve::linear
         delete A;
         delete rowMap;
         delete MLPrec;   
-// #ifdef HAVE_MPI
         MPI_Finalize() ;
-// #endif
     }
 }
 

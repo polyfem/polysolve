@@ -4,9 +4,6 @@
 
 #include <memory>
 
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <vector>
 
 #define POLYSOLVE_DELETE_MOVE_COPY(Base) \
     Base(Base &&) = delete;              \

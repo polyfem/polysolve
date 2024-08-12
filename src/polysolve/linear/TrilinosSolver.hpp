@@ -41,11 +41,6 @@
 // column-major matrix, the solver will actually solve A^T x = b.
 //
 
-extern Eigen::MatrixXd init_vertices;
-extern Eigen::MatrixXd test_vertices;
-extern std::vector<int> test_boundary_nodes;
-Eigen::MatrixXd remove_boundary_vertices(const Eigen::MatrixXd &vertices, const std::vector<int> &boundary_nodes);
-
 namespace polysolve::linear
 {
 
@@ -78,6 +73,7 @@ namespace polysolve::linear
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
+        virtual void solve(const Ref<const VectorXd> b, const Ref<const MatrixXd> nullspace, Ref<VectorXd> x);
         
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return "Trilinos AztecOO and ML"; }

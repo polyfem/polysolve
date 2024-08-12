@@ -7,34 +7,6 @@
 #include <unsupported/Eigen/SparseExtra>
 ////////////////////////////////////////////////////////////////////////////////
 
-Eigen::MatrixXd test_vertices;
-Eigen::MatrixXd init_vertices;
-std::vector<int> test_boundary_nodes;
-Eigen::MatrixXd remove_boundary_vertices(const Eigen::MatrixXd &vertices, const std::vector<int> &boundary_nodes)
-{
-    // Remove boundary vertices
-    if (boundary_nodes.empty())
-    {
-        return vertices;
-    }
-    else
-    {
-        std::vector<int> order_nodes = boundary_nodes;
-        std::sort(order_nodes.begin(), order_nodes.end());
-        Eigen::MatrixXd out_vertices;
-        std::vector<int> keep;
-        for (int i = 0; i < vertices.rows(); i++)
-        {
-            if (!std::binary_search(order_nodes.begin(), order_nodes.end(),i))
-            {
-                keep.push_back(i);
-            }
-        }
-        out_vertices = vertices(keep, Eigen::all);
-        return out_vertices;
-    }
-}
-
 namespace polysolve::linear
 {
     TrilinosSolver::TrilinosSolver()
@@ -159,34 +131,100 @@ namespace polysolve::linear
     }
 
 
-    void TrilinosSolver::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
+    void TrilinosSolver::solve(const Eigen::Ref<const VectorXd> rhs, const Eigen::Ref<const MatrixXd> nullspace, Eigen::Ref<VectorXd> result)
     {
         int output=10; //how often to print residual history
         Teuchos::ParameterList MLList;
         TrilinosML_SetDefaultOptions(MLList);
         MLList.set("PDE equations",numPDEs);
 
-        if (is_nullspace_)
+        if (nullspace.cols()==3)
         {
-            if (test_vertices.cols()==3)
-            {
-                reduced_vertices=remove_boundary_vertices(test_vertices,test_boundary_nodes);
-                MLList.set("null space: type","elasticity from coordinates");
-                MLList.set("x-coordinates", reduced_vertices.col(0).data());
-                MLList.set("y-coordinates", reduced_vertices.col(1).data());
-                MLList.set("z-coordinates", reduced_vertices.col(2).data());
-                MLList.set("aggregation: threshold",0.00);
+            Eigen::VectorXd col1 = nullspace.col(0);
+            int size1 = col1.size();
+            double* arr1 = new double[size1];
+            for(int i = 0; i < size1; ++i) {
+                arr1[i] = col1(i);
             }
-            if (test_vertices.cols()==2)
-            {
-                reduced_vertices=remove_boundary_vertices(test_vertices,test_boundary_nodes);
-                MLList.set("null space: type","elasticity from coordinates");
-                MLList.set("x-coordinates", reduced_vertices.col(0).data());
-                MLList.set("y-coordinates", reduced_vertices.col(1).data());
-                MLList.set("aggregation: threshold",0.00);
-            }           
-
+            Eigen::VectorXd col2 = nullspace.col(1);
+            int size2 = col2.size();
+            double* arr2 = new double[size2];
+            for(int i = 0; i < size2; ++i) {
+                arr2[i] = col2(i);
+            }
+            Eigen::VectorXd col3 = nullspace.col(2);
+            int size3 = col3.size();
+            double* arr3 = new double[size3];
+            for(int i = 0; i < size3; ++i) {
+                arr3[i] = col3(i);
+            }
+            MLList.set("null space: type","elasticity from coordinates");
+            MLList.set("x-coordinates", arr1);  // nullspace.col(0).data()
+            MLList.set("y-coordinates", arr2);  // nullspace.col(1).data()
+            MLList.set("z-coordinates", arr3);  // nullspace.col(2).data()
+            MLList.set("aggregation: threshold",0.00);
         }
+        if (nullspace.cols()==2)
+        {
+            Eigen::VectorXd col1 = nullspace.col(0);
+            int size1 = col1.size();
+            double* arr1 = new double[size1];
+            for(int i = 0; i < size1; ++i) {
+                arr1[i] = col1(i);
+            }
+            Eigen::VectorXd col2 = nullspace.col(1);
+            int size2 = col2.size();
+            double* arr2 = new double[size2];
+            for(int i = 0; i < size2; ++i) {
+                arr2[i] = col2(i);
+            }
+            MLList.set("null space: type","elasticity from coordinates");
+            MLList.set("x-coordinates", arr1);  // nullspace.col(0).data()
+            MLList.set("y-coordinates", arr2);  // nullspace.col(1).data()
+            MLList.set("aggregation: threshold",0.00);
+        }
+
+        delete MLPrec;
+        MLPrec = new ML_Epetra::MultiLevelPreconditioner(*A, MLList);
+        Epetra_Vector x(A->RowMap());
+        Epetra_Vector b(A->RowMap());
+        for (size_t i = 0; i < rhs.size(); i++)
+        {
+            x[i]=result[i];
+            b[i]=rhs[i];
+        }
+
+        Epetra_LinearProblem Problem(A,&x,&b);
+        AztecOO solver(Problem);
+        solver.SetAztecOption(AZ_solver, AZ_cg);
+        solver.SetPrecOperator(MLPrec);
+        solver.SetAztecOption(AZ_output, AZ_last);
+
+       int status= solver.Iterate(max_iter_, conv_tol_ );
+        if (status!=0 && status!=-3)
+        {
+            throw std::runtime_error("Early termination, not SPD");
+        }
+
+        if (CommPtr->MyPID() == 0)
+        {
+            residual_error_=solver.ScaledResidual ();
+            iterations_=solver.NumIters();
+        }
+
+        for (size_t i = 0; i < rhs.size(); i++)
+        {
+            result[i]=x[i];
+        }
+
+    }
+
+    void TrilinosSolver::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
+    {
+        int output=10; //how often to print residual history
+        Teuchos::ParameterList MLList;
+        TrilinosML_SetDefaultOptions(MLList);
+        MLList.set("PDE equations",numPDEs);
 
         delete MLPrec;
         MLPrec = new ML_Epetra::MultiLevelPreconditioner(*A, MLList);

@@ -528,10 +528,14 @@ namespace polysolve::linear
 #ifdef POLYSOLVE_WITH_PARDISO
         return "Pardiso";
 #else
+#ifdef POLYSOLVE_WITH_ACCELERATE
+        return "Eigen::AccelerateLDLT";
+#else
 #ifdef POLYSOLVE_WITH_HYPRE
         return "Hypre";
 #else
         return "Eigen::BiCGSTAB";
+#endif
 #endif
 #endif
     }

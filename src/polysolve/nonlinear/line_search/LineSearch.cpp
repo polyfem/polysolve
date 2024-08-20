@@ -119,7 +119,7 @@ namespace polysolve::nonlinear::line_search
         {
             POLYSOLVE_SCOPED_STOPWATCH("CCD narrow-phase", narrow_phase_ccd_time, m_logger);
             m_logger.trace("Performing narrow-phase CCD");
-            step_size = compute_collision_free_step_size(x, delta_x, objFunc, step_size);
+            step_size = compute_max_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
                 return NaN;
         }
@@ -190,11 +190,7 @@ namespace polysolve::nonlinear::line_search
         // Find step that does not result in nan or infinite energy
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
         {
-            // Compute the new energy value without contacts
-            const double energy = objFunc(new_x);
-            const bool is_step_valid = objFunc.is_step_valid(x, new_x);
-
-            if (!std::isfinite(energy) || !is_step_valid)
+            if (!objFunc.is_step_valid(x, new_x) || !std::isfinite(objFunc(new_x)))
             {
                 step_size *= rate;
                 new_x = x + step_size * delta_x;
@@ -217,7 +213,8 @@ namespace polysolve::nonlinear::line_search
         return step_size;
     }
 
-    double LineSearch::compute_collision_free_step_size(
+    // change to max_step_size
+    double LineSearch::compute_max_step_size(
         const TVector &x,
         const TVector &delta_x,
         Problem &objFunc,

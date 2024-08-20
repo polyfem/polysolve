@@ -41,7 +41,7 @@ namespace polysolve::nonlinear
             spdlog::logger &logger,
             const bool strict_validation = true);
 
-        // List available solvers
+        /// @brief List available solvers
         static std::vector<std::string> available_solvers();
 
     public:
@@ -82,10 +82,17 @@ namespace polysolve::nonlinear
         /// @brief If true the solver will not throw an error if the maximum number of iterations is reached
         bool allow_out_of_iterations = false;
 
+
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 
     protected:
+        /// @brief Compute direction in which the argument should be updated 
+        /// @param objFunc Problem to be minimized
+        /// @param x Current input (n x 1)
+        /// @param grad Gradient at current step (n x 1)
+        /// @param[out] direction Current update direction (n x 1)
+        /// @return True if update direction was found, False otherwises
         virtual bool compute_update_direction(
             Problem &objFunc,
             const TVector &x,
@@ -116,6 +123,10 @@ namespace polysolve::nonlinear
 
         FiniteDiffStrategy gradient_fd_strategy = FiniteDiffStrategy::NONE;
         double gradient_fd_eps = 1e-7;
+        /// @brief Check gradient versus finite difference results
+        /// @param objFunc Problem defining relevant objective function
+        /// @param x Current input (n x 1)
+        /// @param grad Current gradient (n x 1)
         virtual void verify_gradient(Problem &objFunc, const TVector &x, const TVector &grad) final;
 
     private:
@@ -128,8 +139,9 @@ namespace polysolve::nonlinear
         // ====================================================================
         //                           Solver state
         // ====================================================================
-
-        // Reset the solver at the start of a minimization
+        
+        /// @brief Reset the solver at the start of a minimization
+        /// @param ndof number of degrees of freedom
         void reset(const int ndof);
 
         std::string descent_strategy_name() const { return m_strategies[m_descent_strategy]->name(); };
@@ -143,8 +155,14 @@ namespace polysolve::nonlinear
         //                            Solver info
         // ====================================================================
 
+        /// @brief Update solver info JSON object
+        /// @param energy 
         void update_solver_info(const double energy);
+
+        /// @brief Reset timing members to 0
         void reset_times();
+
+        /// @brief Log time taken in different phases of the solve
         void log_times() const;
 
         json solver_info;

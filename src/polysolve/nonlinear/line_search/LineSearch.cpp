@@ -97,6 +97,14 @@ namespace polysolve::nonlinear::line_search
         }
 
         // ----------------------------
+        // Export elements to file
+        // ----------------------------
+
+        {
+            objFunc.before_line_search(x, x + delta_x);
+        }
+
+        // ----------------------------
         // Find finite energy step size
         // ----------------------------
         {

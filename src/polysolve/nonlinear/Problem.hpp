@@ -70,6 +70,8 @@ namespace polysolve::nonlinear
 
         // --- Callbacks ------------------------------------------------------
 
+        virtual void before_line_search(const TVector &x0, const TVector &x1) {}
+
         /// @brief Callback function for the start of a line search.
         /// @param x0 Starting point.
         /// @param x1 Ending point.

@@ -1,6 +1,10 @@
 #include "Utils.hpp"
 
+#if defined(SPDLOG_FMT_EXTERNAL)
+#include <fmt/color.h>
+#else
 #include <spdlog/fmt/bundled/color.h>
+#endif
 
 namespace polysolve
 {

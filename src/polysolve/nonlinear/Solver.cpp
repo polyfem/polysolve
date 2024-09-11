@@ -14,7 +14,11 @@
 #include <jse/jse.h>
 
 #include <spdlog/spdlog.h>
+#if defined(SPDLOG_FMT_EXTERNAL)
+#include <fmt/color.h>
+#else
 #include <spdlog/fmt/bundled/color.h>
+#endif
 #include <spdlog/fmt/ostr.h>
 
 #include <finitediff.hpp>

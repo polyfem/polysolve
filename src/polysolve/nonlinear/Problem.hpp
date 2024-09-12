@@ -90,6 +90,8 @@ namespace polysolve::nonlinear
         /// @param new_x New solution.
         virtual void solution_changed(const TVector &new_x) {}
 
+        virtual bool after_line_search_custom_operation(const TVector &x0, const TVector &x1) { return false; }
+
         /// @brief Callback function used to determine if the solver should stop.
         /// @param state Current state of the solver.
         /// @param x Current solution.

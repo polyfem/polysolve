@@ -36,6 +36,9 @@
 #ifdef POLYSOLVE_WITH_AMGCL
 #include "AMGCL.hpp"
 #endif
+#ifdef POLYSOLVE_WITH_TRILINOS
+#include "TrilinosSolver.hpp"
+#endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include "CuSolverDN.cuh"
 #endif
@@ -377,6 +380,12 @@ namespace polysolve::linear
         {
             return std::make_unique<AMGCL>();
 #endif
+#ifdef POLYSOLVE_WITH_TRILINOS
+        }
+        else if (solver == "Trilinos")
+        {
+            return std::make_unique<TrilinosSolver>();
+#endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -498,6 +507,9 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+#endif
+#ifdef POLYSOLVE_WITH_TRILINOS
+            "Trilinos",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

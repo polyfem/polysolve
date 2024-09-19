@@ -55,7 +55,7 @@ namespace polysolve
     template <typename... Args>
     [[noreturn]] void log_and_throw_error(spdlog::logger &logger, const std::string &msg, const Args &...args)
     {
-        log_and_throw_error(logger, fmt::format(msg, args...));
+        log_and_throw_error(logger, fmt::format(fmt::runtime(msg), args...));
     }
 
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);

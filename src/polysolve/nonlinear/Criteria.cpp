@@ -29,7 +29,10 @@ namespace polysolve::nonlinear
 
     void Criteria::print(std::ostream &os) const
     {
-        os << fmt::format(
+        os << print_message();
+    }
+    std::string Criteria::print_message() const {
+        return fmt::format(
             "iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g}",
             iterations, fDelta, gradNorm, xDelta, xDeltaDotGrad);
     }
@@ -61,47 +64,39 @@ namespace polysolve::nonlinear
         return Status::Continue;
     }
 
-    std::ostream &operator<<(std::ostream &os, const Status &s)
-    {
+    std::string_view status_message(Status s) {
         switch (s)
         {
         case Status::NotStarted:
-            os << "Solver not started";
-            break;
+            return "Solver not started";
         case Status::Continue:
-            os << "Convergence criteria not reached";
-            break;
+            return "Convergence criteria not reached";
         case Status::IterationLimit:
-            os << "Iteration limit reached";
-            break;
+            return "Iteration limit reached";
         case Status::XDeltaTolerance:
-            os << "Change in parameter vector too small";
-            break;
+            return "Change in parameter vector too small";
         case Status::FDeltaTolerance:
-            os << "Change in cost function value too small";
-            break;
+            return "Change in cost function value too small";
         case Status::GradNormTolerance:
-            os << "Gradient vector norm too small";
-            break;
+            return "Gradient vector norm too small";
         case Status::ObjectiveCustomStop:
-            os << "Objective function specified to stop";
-            break;
+            return "Objective function specified to stop";
         case Status::NanEncountered:
-            os << "Objective or gradient function returned NaN";
-            break;
+            return "Objective or gradient function returned NaN";
         case Status::NotDescentDirection:
-            os << "Search direction not a descent direction";
-            break;
+            return "Search direction not a descent direction";
         case Status::LineSearchFailed:
-            os << "Line search failed";
-            break;
+            return "Line search failed";
         case Status::UpdateDirectionFailed:
-            os << "Update direction could not be computed";
-            break;
+            return "Update direction could not be computed";
         default:
-            os << "Unknown status";
-            break;
+            return "Unknown status";
         }
+    }
+
+    std::ostream &operator<<(std::ostream &os, const Status &s)
+    {
+        os << status_message(s);
         return os;
     }
 

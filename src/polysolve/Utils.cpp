@@ -1,6 +1,10 @@
 #include "Utils.hpp"
 
+#if defined(SPDLOG_FMT_EXTERNAL)
+#include <fmt/color.h>
+#else
 #include <spdlog/fmt/bundled/color.h>
+#endif
 
 namespace polysolve
 {
@@ -49,7 +53,7 @@ namespace polysolve
 
     void StopWatch::log_msg()
     {
-        const static std::string log_fmt_text =
+        const static auto log_fmt_text =
             fmt::format("[{}] {{}} {{:.3g}}s", fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"));
 
         if (!m_name.empty())
@@ -60,7 +64,7 @@ namespace polysolve
 
     void log_and_throw_error(spdlog::logger &logger, const std::string &msg)
     {
-        logger.error(msg);
+        logger.error("{}", msg);
         throw std::runtime_error(msg);
     }
 

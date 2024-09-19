@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <iostream>
+#include <string_view>
 
 namespace polysolve::nonlinear
 {
@@ -43,9 +44,13 @@ namespace polysolve::nonlinear
         void reset();
 
         void print(std::ostream &os) const;
+        std::string print_message() const;
     };
 
     Status checkConvergence(const Criteria &stop, const Criteria &current);
+
+    std::string_view status_message(Status s);
+    std::string criteria_message(const Criteria& s);
 
     std::ostream &operator<<(std::ostream &os, const Status &s);
 

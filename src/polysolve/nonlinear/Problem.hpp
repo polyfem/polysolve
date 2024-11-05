@@ -5,6 +5,8 @@
 #include "Criteria.hpp"
 #include "PostStepData.hpp"
 
+#include <ipc/utils/eigen_ext.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -83,8 +85,8 @@ namespace polysolve::nonlinear
         virtual void post_step(const PostStepData &data) {}
 
         /// @brief Set the project to PSD flag.
-        /// @param val True if the problem should be projected to PSD, false otherwise.
-        virtual void set_project_to_psd(bool val) {}
+        /// @param val PSD projection method.
+        virtual void set_project_to_psd(ipc::PSDProjectionMethod val) {}
 
         /// @brief Callback function for when the solution changes.
         /// @param new_x New solution.

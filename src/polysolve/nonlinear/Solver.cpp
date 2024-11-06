@@ -66,7 +66,7 @@ namespace polysolve::nonlinear
             }
             else if (solver_name == "RegularizedNewton")
             {
-                return std::make_shared<RegularizedNewton>(true, false, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<RegularizedNewton>(true, PSDProjectionMethod::NONE, solver_params, linear_solver_params, characteristic_length, logger);
             }
             else if (solver_name == "RegularizedProjectedNewton")
             {

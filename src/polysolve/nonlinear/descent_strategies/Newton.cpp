@@ -91,7 +91,7 @@ namespace polysolve::nonlinear
 
     RegularizedNewton::RegularizedNewton(
         const bool sparse,
-        const bool project_to_psd,
+        const PSDProjectionMethod project_to_psd,
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
@@ -246,7 +246,7 @@ namespace polysolve::nonlinear
                                  polysolve::StiffnessMatrix &hessian)
 
     {
-        objFunc.set_project_to_psd(false);
+        objFunc.set_project_to_psd(PSDProjectionMethod::NONE);
         objFunc.hessian(x, hessian);
     }
 
@@ -255,7 +255,7 @@ namespace polysolve::nonlinear
                                           polysolve::StiffnessMatrix &hessian)
 
     {
-        objFunc.set_project_to_psd(true);
+        objFunc.set_project_to_psd(PSDProjectionMethod::CLAMP);
         objFunc.hessian(x, hessian);
     }
 
@@ -282,7 +282,7 @@ namespace polysolve::nonlinear
                                  Eigen::MatrixXd &hessian)
 
     {
-        objFunc.set_project_to_psd(false);
+        objFunc.set_project_to_psd(PSDProjectionMethod::NONE);
         objFunc.hessian(x, hessian);
     }
 
@@ -291,7 +291,7 @@ namespace polysolve::nonlinear
                                           Eigen::MatrixXd &hessian)
 
     {
-        objFunc.set_project_to_psd(true);
+        objFunc.set_project_to_psd(PSDProjectionMethod::CLAMP);
         objFunc.hessian(x, hessian);
     }
 

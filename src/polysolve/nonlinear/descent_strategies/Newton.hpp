@@ -103,7 +103,7 @@ namespace polysolve::nonlinear
     public:
         using Superclass = Newton;
 
-        RegularizedNewton(const bool sparse, const bool project_to_psd,
+        RegularizedNewton(const bool sparse, const PSDProjectionMethod project_to_psd,
                           const json &solver_params,
                           const json &linear_solver_params,
                           const double characteristic_length,
@@ -118,7 +118,7 @@ namespace polysolve::nonlinear
         bool handle_error() override;
 
     private:
-        const bool project_to_psd;
+        const PSDProjectionMethod project_to_psd;
         double reg_weight_min; // needs to be greater than zero
         double reg_weight_max;
         double reg_weight_inc;

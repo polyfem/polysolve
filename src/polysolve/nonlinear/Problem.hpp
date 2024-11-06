@@ -5,6 +5,8 @@
 #include "Criteria.hpp"
 #include "PostStepData.hpp"
 
+#include <polysolve/Utils.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -21,13 +23,6 @@ namespace polysolve::nonlinear
         using THessian = StiffnessMatrix;
 
     public:
-
-        /// @brief Enumeration of implemented PSD projection methods
-        enum class PSDProjectionMethod {
-            NONE,  ///< No PSD projection
-            CLAMP, ///< Clamp negative eigenvalues to zero
-            ABS    ///< Flip negative eigenvalues to positive
-        };
 
         Problem() {}
         virtual ~Problem() = default;

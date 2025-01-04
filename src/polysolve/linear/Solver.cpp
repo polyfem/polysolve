@@ -11,6 +11,12 @@
 #include <fstream>
 
 // -----------------------------------------------------------------------------
+// 
+// Subsequent macros assume a single template parameter and SparseQR fails due to requiring 2 parameters. this is because the OrderingType is not filled in.
+// SparseLU has a default declaration of _OrderingType to use COLAMDOrdering but SparseQR doesn't - so this just mimics that behavior. If Eigen adds such a default in the future this line will need to be guarded to avoid multiple defaults
+namespace Eigen {
+template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename _MatrixType::StorageIndex> > class SparseQR;
+}
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_ACCELERATE
 #include <Eigen/AccelerateSupport>
@@ -293,6 +299,10 @@ namespace polysolve::linear
         else if (solver == "Eigen::SparseLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SparseLU, "Eigen::SparseLU");
+        }
+        else if (solver == "Eigen::SparseQR")
+        {
+            RETURN_DIRECT_SOLVER_PTR(SparseQR, "Eigen::SparseQR");
 #ifdef POLYSOLVE_WITH_ACCELERATE
         }
         else if (solver == "Eigen::AccelerateLLT")
@@ -465,6 +475,7 @@ namespace polysolve::linear
         return {{
             "Eigen::SimplicialLDLT",
             "Eigen::SparseLU",
+            "Eigen::SparseQR",
 #ifdef POLYSOLVE_WITH_ACCELERATE
             "Eigen::AccelerateLLT",
             "Eigen::AccelerateLDLT",

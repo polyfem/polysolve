@@ -42,13 +42,14 @@ jobs:
           libglu1-mesa-dev \
           xorg-dev \
           mpi \
-          ccache
+          ccache \
+          libsuitesparse-dev
           echo 'CACHE_PATH=~/.ccache' >> "$GITHUB_ENV"
 
       - name: Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ccache open-mpi
+          brew install ccache open-mpi suitesparse
           echo 'CACHE_PATH=~/Library/Caches/ccache' >> "$GITHUB_ENV"
 
       - name: Cache Build

@@ -11,6 +11,12 @@
 #include <fstream>
 
 // -----------------------------------------------------------------------------
+// 
+// Subsequent macros assume a single template parameter and SparseQR fails due to requiring 2 parameters. this is because the OrderingType is not filled in.
+// SparseLU has a default declaration of _OrderingType to use COLAMDOrdering but SparseQR doesn't - so this just mimics that behavior. If Eigen adds such a default in the future this line will need to be guarded to avoid multiple defaults
+namespace Eigen {
+template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename _MatrixType::StorageIndex> > class SparseQR;
+}
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_ACCELERATE
 #include <Eigen/AccelerateSupport>
@@ -20,6 +26,24 @@
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
 #include <Eigen/UmfPackSupport>
+#endif
+#ifdef POLYSOLVE_WITH_SPQR
+#include <Eigen/SPQRSupport>
+namespace polysolve::linear {
+    template <>
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix& A, const int precond_num) {
+        m_Solver.compute(A);
+    }
+    template <>
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::factorize(const StiffnessMatrix &A)
+    {
+        m_Solver.compute(A);
+        if (m_Solver.info() == Eigen::NumericalIssue)
+        {
+            throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
+        }
+    }
+}
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
 #include <Eigen/SuperLUSupport>
@@ -293,6 +317,10 @@ namespace polysolve::linear
         else if (solver == "Eigen::SparseLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SparseLU, "Eigen::SparseLU");
+        }
+        else if (solver == "Eigen::SparseQR")
+        {
+            RETURN_DIRECT_SOLVER_PTR(SparseQR, "Eigen::SparseQR");
 #ifdef POLYSOLVE_WITH_ACCELERATE
         }
         else if (solver == "Eigen::AccelerateLLT")
@@ -334,6 +362,12 @@ namespace polysolve::linear
         else if (solver == "Eigen::SuperLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SuperLU, "Eigen::SuperLU");
+#endif
+#ifdef POLYSOLVE_WITH_SPQR
+        }
+        else if (solver == "Eigen::SPQR")
+        {
+            RETURN_DIRECT_SOLVER_PTR(SPQR, "Eigen::SPQR");
 #endif
 #ifdef POLYSOLVE_WITH_MKL
         }
@@ -465,6 +499,7 @@ namespace polysolve::linear
         return {{
             "Eigen::SimplicialLDLT",
             "Eigen::SparseLU",
+            "Eigen::SparseQR",
 #ifdef POLYSOLVE_WITH_ACCELERATE
             "Eigen::AccelerateLLT",
             "Eigen::AccelerateLDLT",
@@ -480,6 +515,9 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
             "Eigen::SuperLU",
+#endif
+#ifdef POLYSOLVE_WITH_SPQR
+            "Eigen::SPQR",
 #endif
 #ifdef POLYSOLVE_WITH_MKL
             "Eigen::PardisoLLT",

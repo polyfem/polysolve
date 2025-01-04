@@ -272,7 +272,7 @@ endif()
 
 # SuperLU solver
 if(POLYSOLVE_WITH_SPQR)
-    include(SPQR)
+    include(spqr)
     if(TARGET SuiteSparse::SPQR)
         target_link_libraries(polysolve_linear PRIVATE SuiteSparse::SPQR)
         target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SPQR)

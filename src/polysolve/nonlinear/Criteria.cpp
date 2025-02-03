@@ -19,6 +19,8 @@ namespace polysolve::nonlinear
 
     void Criteria::reset()
     {
+        constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
+
         iterations = 0;
         xDelta = 0;
         fDelta = 0;
@@ -29,13 +31,18 @@ namespace polysolve::nonlinear
         relGradNorm = 0;
         relXDelta = 0;
         newtonDecrement = 0;
+
+        energy = NaN;
+        alpha = NaN;
+        step = NaN;
     }
 
     void Criteria::print(std::ostream &os) const
     {
         os << print_message();
     }
-    std::string Criteria::print_message() const {
+    std::string Criteria::print_message() const
+    {
         return fmt::format(
             "iters={:d} {}={:g} {}={:g} {}_rel={:g} {}={:g} {}_rel={:g} {}={:g} {}={:g}",
             iterations,
@@ -88,7 +95,8 @@ namespace polysolve::nonlinear
         return Status::Continue;
     }
 
-    std::string_view status_message(Status s) {
+    std::string_view status_message(Status s)
+    {
         switch (s)
         {
         case Status::NotStarted:

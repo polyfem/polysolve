@@ -82,7 +82,7 @@ option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                    
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
 option(POLYSOLVE_WITH_SPQR          "Enable SPQR library"                                ON)
 option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_NOT_ON_APPLE_SILICON})
-option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                           OFF)
+option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                            ON)
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                            OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
@@ -153,6 +153,10 @@ endif()
 
 # Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
 add_library(polysolve_linear)
+if(POLYSOLVE_WITH_CUSOLVER)
+    include(cusolverdn)
+endif()
+
 add_library(polysolve::linear ALIAS polysolve_linear)
 add_subdirectory(src/polysolve)
 add_subdirectory(src/polysolve/linear)
@@ -290,8 +294,8 @@ endif()
 # AMGCL solver
 if(POLYSOLVE_WITH_AMGCL)
     include(amgcl)
-    target_link_libraries(polysolve_linear PUBLIC amgcl::amgcl)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_AMGCL)
+    target_link_libraries(polysolve_linear PUBLIC amgcl::amgcl cuda_target)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_AMGCL)
 endif()
 
 # Spectra (MPL 2.0)
@@ -302,14 +306,11 @@ if(POLYSOLVE_WITH_SPECTRA)
 endif()
 
 # cuSolver solvers
-if(POLYSOLVE_WITH_CUSOLVER)
-    include(cusolverdn)
-    if(TARGET CUDA::cusolver)
-        target_link_libraries(polysolve_linear PUBLIC CUDA::cusolver)
-        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUSOLVER)
-    else()
-        message(WARNING "cuSOLVER not found, solver will not be available.")
-    endif()
+if(TARGET CUDA::cusolver)
+    target_link_libraries(polysolve_linear PUBLIC CUDA::cusolver)
+    target_compile_definitions(polysolve_linear PRIVATE -DPOLYSOLVE_WITH_CUSOLVER)
+else()
+    message(WARNING "cuSOLVER not found, solver will not be available.")
 endif()
 
 # Sanitizers

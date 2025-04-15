@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/Types.hpp>
 #include <polysolve/linear/FEMSolver.hpp>
+#include <polysolve/linear/SPQR.hpp>
 
 #include <polysolve/Utils.hpp>
 
@@ -854,5 +855,69 @@ TEST_CASE("cusolverdn_5cubes", "[solver]")
 
         const double err = (A * x - b).norm();
         REQUIRE(err < 1e-8);
+    }
+}
+
+TEST_CASE("spqr_sparse_product", "[solver]")
+{
+
+    Eigen::MatrixXd A(4, 4);
+    for (int i = 0; i < 4; i++)
+    {
+        A(i, i) = 1.0;
+    }
+    A(0, 1) = 1.0;
+    A(3, 0) = 1.0;
+    std::unique_ptr<Solver> solver;
+    try
+    {
+        solver = Solver::create("Eigen::SPQR", "");
+    }
+    catch (const std::exception &)
+    {
+        return;
+    }
+
+    using Type = EigenDirect<Eigen::SPQR<polysolve::StiffnessMatrix>>;
+
+    Type *typed_solver = dynamic_cast<Type *>(solver.get());
+    REQUIRE(typed_solver != nullptr);
+    // solver->set_parameters(params);
+
+    for (int i = 0; i < 5; ++i)
+    {
+        A = Eigen::MatrixXd::Random(5, 5);
+        auto As = A.sparseView().eval();
+
+        // do a qr so i have a q
+        Eigen::SPQR<StiffnessMatrix> spqr(As);
+        auto Q = spqr.matrixQ();
+
+        // get a random matrix to multiply against
+        Eigen::MatrixXd B(A.rows(), 5);
+        B.setRandom();
+        Eigen::MatrixXd dense = Q * B;
+
+        // make a sparse version
+        auto Bs = B.sparseView().eval();
+        StiffnessMatrix sparse = Q * Bs;
+
+        // check that the result of the product is the same
+        CHECK((dense - sparse).norm() < 1e-10);
+
+        // try to extract the Q matrix as a dense matrix
+        Eigen::MatrixXd Id = Eigen::MatrixXd::Identity(A.rows(), A.rows());
+        Eigen::MatrixXd denseQ = Q * Id;
+
+        // use the product with B to get a weak equivalence once again
+        Eigen::MatrixXd dense2 = denseQ * B;
+        CHECK((dense2 - dense).norm() < 1e-10);
+
+        // now try using a sparse product
+        StiffnessMatrix I(A.rows(), A.rows());
+        I.setIdentity();
+        StiffnessMatrix myQ = Q * I;
+        StiffnessMatrix sparse2 = myQ * Bs;
+        CHECK((sparse2 - sparse).norm() < 1e-10);
     }
 }

@@ -28,22 +28,7 @@ template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename
 #include <Eigen/UmfPackSupport>
 #endif
 #ifdef POLYSOLVE_WITH_SPQR
-#include <Eigen/SPQRSupport>
-namespace polysolve::linear {
-    template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix& A, const int precond_num) {
-        m_Solver.compute(A);
-    }
-    template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::factorize(const StiffnessMatrix &A)
-    {
-        m_Solver.compute(A);
-        if (m_Solver.info() == Eigen::NumericalIssue)
-        {
-            throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
-        }
-    }
-}
+#include "SPQR.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
 #include <Eigen/SuperLUSupport>

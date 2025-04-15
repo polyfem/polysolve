@@ -33,6 +33,10 @@ endif()
 include(polyfem-data)
 target_link_libraries(unit_tests PRIVATE polyfem::data)
 
+if(POLYSOLVE_WITH_SPQR)
+    target_link_libraries(unit_tests PRIVATE SuiteSparse::SPQR)
+endif()
+
 ################################################################################
 # Register tests
 ################################################################################

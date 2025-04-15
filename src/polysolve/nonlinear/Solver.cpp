@@ -299,6 +299,7 @@ namespace polysolve::nonlinear
                 POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
                 energy = objFunc(x);
             }
+            m_current.energy = energy;
 
             if (!std::isfinite(energy))
             {
@@ -413,6 +414,7 @@ namespace polysolve::nonlinear
                 POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
                 rate = m_line_search->line_search(x, delta_x, objFunc);
             }
+            m_current.alpha = rate;
 
             if (std::isnan(rate))
             {
@@ -466,6 +468,7 @@ namespace polysolve::nonlinear
             // Post update
             // -----------
             const double step = (rate * delta_x).norm();
+            m_current.step = step;
 
             // m_logger.debug("[{}][{}] rate={:g} ‖step‖={:g}",
             //                descent_strategy_name(), m_line_search->name(), rate, step);
@@ -480,6 +483,12 @@ namespace polysolve::nonlinear
             }
 
             m_current.fDeltaCount = (m_current.fDelta < m_stop.fDelta) ? (m_current.fDeltaCount + 1) : 0;
+
+            if (m_iteration_callback && m_iteration_callback(m_current))
+            {
+                m_status = Status::ObjectiveCustomStop;
+                m_logger.debug("[{}][{}] Iteration callback decided to stop", descent_strategy_name(), m_line_search->name());
+            }
 
             m_logger.debug(
                 "[{}][{}] {} (stopping criteria: {})",

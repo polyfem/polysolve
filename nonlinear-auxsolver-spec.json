@@ -43,14 +43,14 @@
     },
     {
         "pointer": "/x_delta",
-        "default": 0,
+        "default": 1e-5,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: minimal change of the variables x for the iterations to continue. Computed as the L2 norm of x divide by the time step."
     },
     {
         "pointer": "/grad_norm",
-        "default": 1e-08,
+        "default": 1e-05,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: Minimal gradient norm for the iterations to continue."
@@ -63,7 +63,7 @@
     },
     {
         "pointer": "/max_iterations",
-        "default": 500,
+        "default": 50,
         "type": "int",
         "doc": "Maximum number of iterations for a nonlinear solve."
     },
@@ -86,9 +86,9 @@
     },
     {
         "pointer": "/allow_out_of_iterations",
-        "default": false,
+        "default": true,
         "type": "bool",
-        "doc": "If false (default), an exception will be thrown when the nonlinear solver reaches the maximum number of iterations."
+        "doc": "If false, an exception will be thrown when the nonlinear solver reaches the maximum number of iterations."
     },
     {
         "pointer": "/L-BFGS",
@@ -576,25 +576,25 @@
     },
     {
         "pointer": "/line_search/min_step_size",
-        "default": 1e-10,
+        "default": 1e-8,
         "type": "float",
         "doc": "Mimimum step size"
     },
     {
         "pointer": "/line_search/max_step_size_iter",
-        "default": 30,
+        "default": 20,
         "type": "int",
         "doc": "Number of iterations"
     },
     {
         "pointer": "/line_search/min_step_size_final",
-        "default": 1e-20,
+        "default": 1e-10,
         "type": "float",
         "doc": "Mimimum step size for last descent strategy"
     },
     {
         "pointer": "/line_search/max_step_size_iter_final",
-        "default": 100,
+        "default": 50,
         "type": "int",
         "doc": "Number of iterations for last descent strategy"
     },

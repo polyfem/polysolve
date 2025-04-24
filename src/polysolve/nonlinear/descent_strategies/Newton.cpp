@@ -68,9 +68,6 @@ namespace polysolve::nonlinear
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
-
-        if (residual_tolerance <= 0)
-            log_and_throw_error(logger, "Newton residual_tolerance must be > 0, instead got {}", residual_tolerance);
     }
 
     Newton::Newton(
@@ -145,7 +142,7 @@ namespace polysolve::nonlinear
             is_sparse ? solve_sparse_linear_system(objFunc, x, grad, direction)
                       : solve_dense_linear_system(objFunc, x, grad, direction);
 
-        if (std::isnan(residual) || residual > residual_tolerance * characteristic_length)
+        if (std::isnan(residual) || (residual_tolerance > 0 && residual > residual_tolerance * characteristic_length))
         {
             m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (‖∇f‖={})",
                            name(), residual, residual_tolerance * characteristic_length, grad.norm());

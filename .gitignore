@@ -7,3 +7,4 @@ tests/data
 *.code-workspace
 PolySolveOptions.cmake
 .vs
+src/polysolve/autogen

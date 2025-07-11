@@ -481,6 +481,12 @@ namespace polysolve::nonlinear
 
             m_current.fDeltaCount = (m_current.fDelta < m_stop.fDelta) ? (m_current.fDeltaCount + 1) : 0;
 
+            if (m_iteration_callback && m_iteration_callback(m_current))
+            {
+                m_status = Status::ObjectiveCustomStop;
+                m_logger.debug("[{}][{}] Iteration callback decided to stop", descent_strategy_name(), m_line_search->name());
+            }
+
             m_logger.debug(
                 "[{}][{}] {} (stopping criteria: {})",
                 descent_strategy_name(), m_line_search->name(), m_current.print_message(), m_stop.print_message());

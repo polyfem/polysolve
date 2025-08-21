@@ -412,6 +412,7 @@ namespace polysolve::nonlinear
             {
                 POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
                 rate = m_line_search->line_search(x, delta_x, objFunc);
+                m_current.alpha = rate;
             }
 
             if (std::isnan(rate))

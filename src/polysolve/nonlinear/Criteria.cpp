@@ -37,12 +37,14 @@ namespace polysolve::nonlinear
     }
     std::string Criteria::print_message() const {
         return fmt::format(
-            "iters={:d} {}={:g} {}={:g} {}={:g} {}={:g} {}={:g}",
+            "iters={:d} {}={:g} {}={:g} {}_rel={:g} {}={:g} {}_rel={:g} {}={:g} {}={:g}",
             iterations,
             log::delta("f"), fDelta,
             log::norm(log::grad("f")), gradNorm,
+            log::norm(log::grad("f")), relGradNorm,
             log::norm(log::delta("x")), xDelta,
-            log::delta("x") + log::dot() + log::grad("f(x)"), xDeltaDotGrad
+            log::norm(log::delta("x")), relXDelta,
+            log::delta("x") + log::dot() + log::grad("f(x)"), relXDelta, xDeltaDotGrad
             "1/2" + log::delta("x") + "^TH" + log::(delta("x")), newtonDecrement);
     }
 

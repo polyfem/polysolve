@@ -353,7 +353,7 @@ namespace polysolve::nonlinear
             if (m_current.iterations == 0)
             {
                 initial_delta_x_norm = m_current.xDelta;
-                m_current.xDelta = NaN;
+                m_current.relXDelta = NaN;
             }
             else
             {

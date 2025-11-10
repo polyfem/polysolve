@@ -77,7 +77,7 @@ option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"  
 option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
+option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate"                           OFF)
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)

@@ -99,7 +99,8 @@ namespace polysolve::nonlinear
             direction);
     }
 
-    double BoxConstraintSolver::compute_grad_norm(const Eigen::VectorXd &x,
+    double BoxConstraintSolver::compute_grad_norm(const Problem &objFunc,
+                                                  const Eigen::VectorXd &x,
                                                   const Eigen::VectorXd &grad) const
     {
         auto min = get_lower_bound(x, false);

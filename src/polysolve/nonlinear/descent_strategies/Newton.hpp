@@ -48,6 +48,7 @@ namespace polysolve::nonlinear
 
         const bool is_sparse;
         const double characteristic_length;
+        bool use_adaptive_residual_tolerance;
         double residual_tolerance;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system

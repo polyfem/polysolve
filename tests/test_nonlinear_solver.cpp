@@ -546,7 +546,7 @@ TEST_CASE("nonlinear-box-constraint", "[solver]")
 
                         Eigen::VectorXd gradv;
                         prob->gradient(x, gradv);
-                        CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                        CHECK(solver->compute_grad_norm(*prob, x, gradv) < 1e-7);
                     }
                     catch (const std::exception &)
                     {
@@ -617,7 +617,7 @@ TEST_CASE("nonlinear-box-constraint-input", "[solver]")
 
                     Eigen::VectorXd gradv;
                     prob->gradient(x, gradv);
-                    CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                    CHECK(solver->compute_grad_norm(*prob, x, gradv) < 1e-7);
                 }
                 catch (const std::exception &)
                 {
@@ -675,7 +675,7 @@ TEST_CASE("MMA", "[solver]")
 
                 Eigen::VectorXd gradv;
                 prob->gradient(x, gradv);
-                CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                CHECK(solver->compute_grad_norm(*prob, x, gradv) < 1e-7);
             }
             catch (const std::exception &)
             {

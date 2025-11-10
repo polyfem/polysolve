@@ -21,9 +21,11 @@ namespace polysolve::nonlinear
         // Copies stuff from main newton
         json proj_solver_params = R"({"ProjectedNewton": {}})"_json;
         proj_solver_params["ProjectedNewton"]["residual_tolerance"] = solver_params["Newton"]["residual_tolerance"];
+        proj_solver_params["ProjectedNewton"]["use_adaptive_residual_tolerance"] = solver_params["Newton"]["use_adaptive_residual_tolerance"];
 
         json reg_solver_params = R"({"RegularizedNewton": {}})"_json;
         reg_solver_params["RegularizedNewton"]["residual_tolerance"] = solver_params["Newton"]["residual_tolerance"];
+        reg_solver_params["RegularizedNewton"]["use_adaptive_residual_tolerance"] = solver_params["Newton"]["use_adaptive_residual_tolerance"];
         reg_solver_params["RegularizedNewton"]["reg_weight_min"] = solver_params["Newton"]["reg_weight_min"];
         reg_solver_params["RegularizedNewton"]["reg_weight_max"] = solver_params["Newton"]["reg_weight_max"];
         reg_solver_params["RegularizedNewton"]["reg_weight_inc"] = solver_params["Newton"]["reg_weight_inc"];
@@ -66,6 +68,7 @@ namespace polysolve::nonlinear
           is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
+        use_adaptive_residual_tolerance = solver_params["Newton"]["use_adaptive_residual_tolerance"];
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
 
@@ -176,7 +179,11 @@ namespace polysolve::nonlinear
 
         {
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
-            // TODO: get the correct size
+            if (use_adaptive_residual_tolerance)
+            {
+                linear_solver->set_tolerance(std::max(grad.norm() / 10, residual_tolerance));
+            }
+            // TODO: get the correct siz
             linear_solver->analyze_pattern(hessian, hessian.rows());
 
             try

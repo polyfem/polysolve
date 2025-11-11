@@ -337,6 +337,8 @@ namespace polysolve::nonlinear
             // Check convergence without these values to avoid impossible linear solves.
             m_current.xDelta = NaN;
             m_current.xDeltaDotGrad = NaN;
+            m_current.relXDelta = NaN;
+            m_current.newtonDecrement = NaN;
             m_status = checkConvergence(m_stop_rescaled, m_current);
             if (m_status != Status::Continue)
                 break;

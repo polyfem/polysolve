@@ -106,7 +106,6 @@ namespace polysolve::nonlinear
         virtual double grad_norm_rescaling(const std::string &norm_type) const {return 1;}
         virtual double step_norm_rescaling(const std::string &norm_type) const {return 1;}
         virtual double energy_norm_rescaling(const std::string &norm_type) const {return 1;}
-        virtual double newton_dec_norm_rescaling(const std::string &norm_type) const {return 1;}
 
         virtual double grad_norm(const TVector &x, const std::string &norm_type) const {return x.norm();}
         virtual double step_norm(const TVector &x, const std::string &norm_type) const {return x.norm();}

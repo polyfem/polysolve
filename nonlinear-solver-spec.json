@@ -4,11 +4,11 @@
         "type": "object",
         "optional": [
             "solver",
-            "x_delta",
-            "grad_norm",
-            "rel_grad_norm",
-            "newton_decrement",
-            "rel_x_delta",
+            "x_delta_tol",
+            "grad_norm_tol",
+            "rel_grad_norm_tol",
+            "newton_decrement_tol",
+            "rel_x_delta_tol",
             "first_grad_norm_tol",
             "norm_type",
             "max_iterations",
@@ -45,35 +45,35 @@
         "doc": "Nonlinear solver type"
     },
     {
-        "pointer": "/x_delta",
+        "pointer": "/x_delta_tol",
         "default": 0,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: minimal change of the variables x for the iterations to continue. Computed as the L2 norm of x divide by the time step."
     },
     {
-        "pointer": "/rel_x_delta",
+        "pointer": "/rel_x_delta_tol",
         "default": 0,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: minimal change of the variables x for the iterations to continue relative to first step in nonlinear solve."
     },
     {
-        "pointer": "/rel_grad_norm",
+        "pointer": "/rel_grad_norm_tol",
         "default": 0,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: minimal gradient for the iterations to continue relative to first step in nonlinear solve."
     },
     {
-        "pointer": "/newton_decrement",
+        "pointer": "/newton_decrement_tol",
         "default": 0,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: minimal change of energy (as estimated by Newton decrement) for the iterations to continue."
     },
     {
-        "pointer": "/grad_norm",
+        "pointer": "/grad_norm_tol",
         "default": 1e-08,
         "type": "float",
         "min": 0,
@@ -744,7 +744,7 @@
         "default": null,
         "type": "object",
         "optional": [
-            "f_delta",
+            "f_delta_tol",
             "f_delta_step_tol",
             "derivative_along_delta_x_tol",
             "apply_gradient_fd",
@@ -753,7 +753,7 @@
         "doc": "Nonlinear solver advanced options"
     },
     {
-        "pointer": "/advanced/f_delta",
+        "pointer": "/advanced/f_delta_tol",
         "default": 0,
         "min": 0,
         "type": "float",

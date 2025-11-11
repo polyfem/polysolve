@@ -202,14 +202,14 @@ namespace polysolve::nonlinear
     {
         m_current.reset();
 
-        m_stop.xDelta = solver_params["x_delta"];
-        m_stop.fDelta = solver_params["advanced"]["f_delta"];
-        m_stop.gradNorm = solver_params["grad_norm"];
+        m_stop.xDelta = solver_params["x_delta_tol"];
+        m_stop.fDelta = solver_params["advanced"]["f_delta_tol"];
+        m_stop.gradNorm = solver_params["grad_norm_tol"];
         m_stop.firstGradNorm = solver_params["first_grad_norm_tol"];
         m_stop.xDeltaDotGrad = -solver_params["advanced"]["derivative_along_delta_x_tol"].get<double>();
-        m_stop.relGradNorm = solver_params["rel_grad_norm"];
-        m_stop.relXDelta = solver_params["rel_x_delta"];
-        m_stop.newtonDecrement = solver_params["newton_decrement"];
+        m_stop.relGradNorm = solver_params["rel_grad_norm_tol"];
+        m_stop.relXDelta = solver_params["rel_x_delta_tol"];
+        m_stop.newtonDecrement = solver_params["newton_decrement_tol"];
 
         m_stop.iterations = solver_params["max_iterations"];
         allow_out_of_iterations = solver_params["allow_out_of_iterations"];

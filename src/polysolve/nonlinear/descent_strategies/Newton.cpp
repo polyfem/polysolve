@@ -148,10 +148,21 @@ namespace polysolve::nonlinear
             is_sparse ? solve_sparse_linear_system(objFunc, x, grad, direction)
                       : solve_dense_linear_system(objFunc, x, grad, direction);
 
-        if (std::isnan(residual) || residual > residual_tolerance * characteristic_length)
+        double current_residual_tolerance;
+        if (use_adaptive_residual_tolerance)
+        {
+            current_residual_tolerance = std::max(objFunc.grad_norm(grad, "L2") / 10, objFunc.grad_norm_rescaling("L2") * residual_tolerance);
+        }
+        else
+        {
+            current_residual_tolerance = objFunc.grad_norm_rescaling("L2") * residual_tolerance;
+        }
+
+
+        if (std::isnan(residual) || residual > current_residual_tolerance)
         {
             m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (‖∇f‖={})",
-                           name(), residual, residual_tolerance * characteristic_length, grad.norm());
+                           name(), residual, current_residual_tolerance, objFunc.grad_norm(grad, "L2"));
 
             return false;
         }
@@ -181,9 +192,9 @@ namespace polysolve::nonlinear
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
             if (use_adaptive_residual_tolerance)
             {
-                linear_solver->set_tolerance(std::max(grad.norm() / 10, residual_tolerance));
+                linear_solver->set_tolerance(std::max(objFunc.grad_norm(grad, "L2") / 10, objFunc.grad_norm_rescaling("L2") * residual_tolerance));
             }
-            // TODO: get the correct siz
+            // TODO: get the correct size
             linear_solver->analyze_pattern(hessian, hessian.rows());
 
             try
@@ -202,7 +213,7 @@ namespace polysolve::nonlinear
             linear_solver->solve(-grad, direction); // H Δx = -g
         }
 
-        const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
+        const double residual = objFunc.grad_norm(hessian * direction + grad, "L2"); // H Δx + g = 0
 
         json info;
         linear_solver->get_info(info);

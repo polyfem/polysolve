@@ -77,8 +77,12 @@ namespace polysolve::nonlinear::line_search
                 double b = curr_step_grad_norm - m * step_size;
 
                 double interpolated_half_step_grad_norm = m * half_step_size + b;
+                double relative_err = abs((half_step_grad_norm - interpolated_half_step_grad_norm) / half_step_grad_norm);
 
-                if (abs((half_step_grad_norm - interpolated_half_step_grad_norm) / half_step_grad_norm) < 1e-5)
+                m_logger.trace("interpolating from {} to {}, m={}, b={}", next_step_size, step_size, m, b);
+                m_logger.trace("relative error at {}: {}", half_step_size, relative_err);
+
+                if (relative_err < rel_interpolation_accuracy_tol)
                 {
                     step_size = -1 * b / m;
                     break; 

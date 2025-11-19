@@ -113,7 +113,7 @@ namespace polysolve::nonlinear
             m_stop_rescaled.fDelta = m_stop.fDelta * objFunc.energy_norm_rescaling(norm_type);
             m_stop_rescaled.gradNorm = m_stop.gradNorm * objFunc.grad_norm_rescaling(norm_type);
             m_stop_rescaled.firstGradNorm = m_stop.firstGradNorm * objFunc.grad_norm_rescaling(norm_type);
-            m_stop_rescaled.xDeltaDotGrad = m_stop.xDeltaDotGrad * objFunc.grad_norm_rescaling(norm_type) * objFunc.step_norm_rescaling(norm_type);
+            m_stop_rescaled.xDeltaDotGrad = m_stop.xDeltaDotGrad * objFunc.energy_norm_rescaling(norm_type);
             m_stop_rescaled.relGradNorm = m_stop.relGradNorm;
             m_stop_rescaled.relXDelta = m_stop.relXDelta;
             m_stop_rescaled.newtonDecrement = m_stop.newtonDecrement * objFunc.energy_norm_rescaling(norm_type);

@@ -384,7 +384,7 @@ namespace polysolve::nonlinear
             }
 
             m_current.xDeltaDotGrad = delta_x.dot(grad);
-            m_current.newtonDecrement = m_current.xDeltaDotGrad;
+            m_current.newtonDecrement = -1 * m_current.xDeltaDotGrad;
 
             if (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0)
             {

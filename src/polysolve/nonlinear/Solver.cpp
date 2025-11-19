@@ -362,14 +362,6 @@ namespace polysolve::nonlinear
                 m_current.relXDelta = m_current.xDelta / initial_delta_x_norm;
             }
 
-            if (m_stop_rescaled.newtonDecrement > 0)
-            {
-                polysolve::StiffnessMatrix hessian;
-                objFunc.set_project_to_psd(false);
-                objFunc.hessian(x, hessian);
-                m_current.newtonDecrement = 0.5 * delta_x.transpose() * hessian * delta_x;
-            }
-
             if (!update_direction_successful || std::isnan(m_current.xDelta))
             {
                 const auto current_name = descent_strategy_name();
@@ -392,6 +384,7 @@ namespace polysolve::nonlinear
             }
 
             m_current.xDeltaDotGrad = delta_x.dot(grad);
+            m_current.newtonDecrement = m_current.xDeltaDotGrad;
 
             if (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0)
             {

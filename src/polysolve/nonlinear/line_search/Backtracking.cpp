@@ -58,6 +58,33 @@ namespace polysolve::nonlinear::line_search
             {
                 break; // found a good step size
             }
+
+            if (try_interpolating_step)
+            {
+                double next_step_size = step_ratio * step_size;
+                double half_step_size = 0.5 * (step_ratio * step_size + step_size);
+
+                TVector curr_step_grad, next_step_grad, half_step_grad;
+                objFunc.gradient(new_x, curr_step_grad);
+                objFunc.gradient(x + next_step_size * delta_x, next_step_grad);
+                objFunc.gradient(x + half_step_size * delta_x, half_step_grad);
+                
+                double curr_step_grad_norm = objFunc.grad_norm(curr_step_grad, "L2");
+                double next_step_grad_norm = objFunc.grad_norm(next_step_grad, "L2");
+                double half_step_grad_norm = objFunc.grad_norm(half_step_grad, "L2");
+                
+                double m = (curr_step_grad_norm - next_step_grad_norm) / (step_size - next_step_size);
+                double b = curr_step_grad_norm - m * step_size;
+
+                double interpolated_half_step_grad_norm = m * half_step_size + b;
+
+                if (abs((half_step_grad_norm - interpolated_half_step_grad_norm) / half_step_grad_norm) < 1e-5)
+                {
+                    step_size = -1 * b / m;
+                    break; 
+                }
+
+            }
         }
 
         return step_size;

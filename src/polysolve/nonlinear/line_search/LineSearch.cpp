@@ -63,6 +63,8 @@ namespace polysolve::nonlinear::line_search
 
         default_init_step_size = params["line_search"]["default_init_step_size"];
         step_ratio = params["line_search"]["step_ratio"];
+
+        try_interpolating_step = params["line_search"]["try_interpolating_step"];
     }
 
     double LineSearch::line_search(

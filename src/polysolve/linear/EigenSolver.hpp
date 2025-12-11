@@ -31,10 +31,10 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &K, const int precond_num) override;
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &K) override;
+        virtual void factorize(const StiffnessMatrix &A) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -52,6 +52,11 @@ namespace polysolve::linear
         // Name of the solver
         std::string m_Name;
 
+        // Copy of the input matrix.
+        // We do this because Eigen iterative solver take a
+        // reference and assumes A is always valid.
+        StiffnessMatrix m_A;
+
     public:
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return m_Name; }
@@ -67,10 +72,10 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &K, const int precond_num) override;
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &K) override;
+        virtual void factorize(const StiffnessMatrix &A) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -104,10 +109,10 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &K) override;
+        virtual void factorize(const StiffnessMatrix &A) override;
 
         // Factorize system matrix
-        virtual void factorize_dense(const Eigen::MatrixXd &K) override;
+        virtual void factorize_dense(const Eigen::MatrixXd &A) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;

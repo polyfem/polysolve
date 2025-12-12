@@ -59,6 +59,11 @@ namespace polysolve::linear
         int pre_max_iter_ = 1;
         double conv_tol_ = 1e-10;
 
+        // solver tuning options
+        double theta = 0.5;
+        bool nodal_coarsening = false;
+        bool interp_rbms = false;
+
         HYPRE_Int num_iterations;
         HYPRE_Complex final_res_norm;
 

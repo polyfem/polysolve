@@ -56,7 +56,7 @@ TEST_CASE("jse", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger_jse");
     logger->set_level(spdlog::level::warn);
 
     json input = {};
@@ -81,7 +81,7 @@ TEST_CASE("multi-solver", "[solver]")
     const bool ok = loadMarket(A, path + "/A_2.mat");
     REQUIRE(ok);
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger_multi");
     logger->set_level(spdlog::level::warn);
 
     json input = {};

@@ -139,7 +139,11 @@
         "optional": [
             "max_iter",
             "pre_max_iter",
-            "tolerance"
+            "tolerance",
+            "theta",
+            "nodal_coarsening",
+            "interp_rbms",
+            "dimension"
         ],
         "doc": "Settings for the Hypre solver."
     },
@@ -259,6 +263,30 @@
         "default": 1e-10,
         "type": "float",
         "doc": "Convergence tolerance."
+    },
+    {
+        "pointer": "/Hypre/theta",
+        "default": 0.5,
+        "type": "float",
+        "doc": "Strong threshold."
+    },
+    {
+        "pointer": "/Hypre/interp_rbms",
+        "default": false,
+        "type": "bool",
+        "doc": "Whether or not to interp rbms."
+    },
+    {
+        "pointer": "/Hypre/nodal_coarsening",
+        "default": false,
+        "type": "bool",
+        "doc": "Whether or not to include nodal coarsening options."
+    },
+    {
+        "pointer": "/Hypre/dimension",
+        "default": 1,
+        "type": "int",
+        "doc": "Dimension of problem."
     },
     {
         "pointer": "/AMGCL/solver",

@@ -69,6 +69,9 @@ namespace polysolve::nonlinear
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
         use_adaptive_residual_tolerance = solver_params["Newton"]["use_adaptive_residual_tolerance"];
+        if (use_adaptive_residual_tolerance)
+            log_and_throw_error(logger, "Adaptive residual tolerance not yet implemented!");
+
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
 
@@ -155,7 +158,7 @@ namespace polysolve::nonlinear
         }
         else
         {
-            current_residual_tolerance = objFunc.grad_norm_rescaling("L2") * residual_tolerance;
+            current_residual_tolerance = residual_tolerance;
         }
 
 
@@ -213,7 +216,7 @@ namespace polysolve::nonlinear
             linear_solver->solve(-grad, direction); // H Δx = -g
         }
 
-        const double residual = objFunc.grad_norm(hessian * direction + grad, "L2"); // H Δx + g = 0
+        const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
 
         json info;
         linear_solver->get_info(info);

@@ -65,6 +65,8 @@ namespace polysolve::nonlinear::line_search
         step_ratio = params["line_search"]["step_ratio"];
 
         try_interpolating_step = params["line_search"]["try_interpolating_step"];
+        if (try_interpolating_step)
+            log_and_throw_error(logger, "Interpolating line search not yet tested!");
     }
 
     double LineSearch::line_search(

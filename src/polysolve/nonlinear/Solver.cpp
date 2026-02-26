@@ -246,9 +246,8 @@ namespace polysolve::nonlinear
         m_line_search = line_search::LineSearch::create(params, m_logger);
         solver_info["line_search"] = params["line_search"]["method"];
         m_line_search->use_grad_norm_tol = params["line_search"]["use_grad_norm_tol"];
-        m_line_search->use_grad_norm_tol *= characteristic_length;
         m_line_search->rel_interpolation_accuracy_tol = params["rel_grad_norm_tol"];
-        m_line_search->rel_interpolation_accuracy_tol *= 1e2;
+        // m_line_search->rel_interpolation_accuracy_tol *= 1e2;
         m_line_search->norm_type = params["norm_type"];
     }
 

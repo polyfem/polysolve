@@ -138,7 +138,7 @@ namespace polysolve::nonlinear::line_search
             return step_size;
 
         // TODO: Fix this
-        const bool use_grad_norm = objFunc.grad_norm(initial_grad, norm_type) < use_grad_norm_tol;
+        const bool use_grad_norm = objFunc.grad_norm(initial_grad, norm_type) < use_grad_norm_tol * grad_norm_rescaling;
         const double starting_step_size = step_size;
 
         // ----------------------

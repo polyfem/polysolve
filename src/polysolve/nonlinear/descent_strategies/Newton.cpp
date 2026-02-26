@@ -21,11 +21,9 @@ namespace polysolve::nonlinear
         // Copies stuff from main newton
         json proj_solver_params = R"({"ProjectedNewton": {}})"_json;
         proj_solver_params["ProjectedNewton"]["residual_tolerance"] = solver_params["Newton"]["residual_tolerance"];
-        proj_solver_params["Newton"]["use_adaptive_residual_tolerance"] = solver_params["Newton"]["use_adaptive_residual_tolerance"];
 
         json reg_solver_params = R"({"RegularizedNewton": {}})"_json;
         reg_solver_params["RegularizedNewton"]["residual_tolerance"] = solver_params["Newton"]["residual_tolerance"];
-        reg_solver_params["Newton"]["use_adaptive_residual_tolerance"] = solver_params["Newton"]["use_adaptive_residual_tolerance"];
         reg_solver_params["RegularizedNewton"]["reg_weight_min"] = solver_params["Newton"]["reg_weight_min"];
         reg_solver_params["RegularizedNewton"]["reg_weight_max"] = solver_params["Newton"]["reg_weight_max"];
         reg_solver_params["RegularizedNewton"]["reg_weight_inc"] = solver_params["Newton"]["reg_weight_inc"];
@@ -68,8 +66,7 @@ namespace polysolve::nonlinear
           is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
-        use_adaptive_residual_tolerance = solver_params["Newton"]["use_adaptive_residual_tolerance"];
-        if (use_adaptive_residual_tolerance)
+        if (solver_params.find("Newton") != solver_params.end() && solver_params["Newton"]["use_adaptive_residual_tolerance"])
             log_and_throw_error(logger, "Adaptive residual tolerance not yet implemented!");
 
         if (linear_solver->is_dense() == sparse)
@@ -151,16 +148,7 @@ namespace polysolve::nonlinear
             is_sparse ? solve_sparse_linear_system(objFunc, x, grad, direction)
                       : solve_dense_linear_system(objFunc, x, grad, direction);
 
-        double current_residual_tolerance;
-        if (use_adaptive_residual_tolerance)
-        {
-            current_residual_tolerance = std::max(objFunc.grad_norm(grad, "L2") / 10, objFunc.grad_norm_rescaling("L2") * residual_tolerance);
-        }
-        else
-        {
-            current_residual_tolerance = residual_tolerance;
-        }
-
+        double current_residual_tolerance = residual_tolerance;
 
         if (std::isnan(residual) || residual > current_residual_tolerance)
         {

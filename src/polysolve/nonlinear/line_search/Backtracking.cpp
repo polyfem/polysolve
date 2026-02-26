@@ -52,7 +52,7 @@ namespace polysolve::nonlinear::line_search
                 continue;
             }
 
-            m_logger.trace("ls it: {} {}: {}, {}: {}", cur_iter, log::delta("E"), new_energy - old_energy, log::delta("x"), delta_x.norm());
+            m_logger.trace("ls it: {} {}: {}, {}: {}", cur_iter, log::delta("E"), new_energy - old_energy, log::delta("x"), objFunc.step_norm(delta_x, norm_type));
 
             if (criteria(delta_x, objFunc, use_grad_norm, old_energy, old_grad, new_x, new_energy, step_size))
             {
@@ -108,7 +108,7 @@ namespace polysolve::nonlinear::line_search
         {
             TVector new_grad;
             objFunc.gradient(new_x, new_grad);
-            return new_grad.norm() < old_grad.norm(); // TODO: cache old_grad.norm()
+            return objFunc.grad_norm(new_grad, norm_type) < objFunc.grad_norm(old_grad, norm_type); // TODO cache old grad norm
         }
         return new_energy < old_energy;
     }

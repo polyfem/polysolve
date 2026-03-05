@@ -111,6 +111,23 @@ namespace polysolve::nonlinear::line_search
         }
 
         const double nan_free_step_size = step_size;
+
+        // TODO: Fix this
+        const bool use_grad_norm = initial_grad.norm() < use_grad_norm_tol;
+        const double starting_step_size = step_size;
+
+        // ----------------------
+        // Find descent step size 1
+        // ----------------------
+        {
+            POLYSOLVE_SCOPED_STOPWATCH("energy min in LS", classical_line_search_time, m_logger);
+            step_size = compute_descent_step_size(x, delta_x, objFunc, use_grad_norm, initial_energy, initial_grad, step_size);
+            if (std::isnan(step_size))
+            {
+                // Superclass::save_sampled_values("failed-line-search-values.csv", x, delta_x, objFunc);
+                return NaN;
+            }
+        }
         // -----------------------------
         // Find collision-free step size
         // -----------------------------
@@ -133,12 +150,10 @@ namespace polysolve::nonlinear::line_search
         if (initial_grad.norm() < 1e-30)
             return step_size;
 
-        // TODO: Fix this
-        const bool use_grad_norm = initial_grad.norm() < use_grad_norm_tol;
-        const double starting_step_size = step_size;
+
 
         // ----------------------
-        // Find descent step size
+        // Find descent step size 2
         // ----------------------
         {
             POLYSOLVE_SCOPED_STOPWATCH("energy min in LS", classical_line_search_time, m_logger);

@@ -3,6 +3,7 @@
 #include "Criteria.hpp"
 
 #include <spdlog/fmt/fmt.h>
+#include <polysolve/Utils.hpp>
 
 namespace polysolve::nonlinear
 {
@@ -33,8 +34,12 @@ namespace polysolve::nonlinear
     }
     std::string Criteria::print_message() const {
         return fmt::format(
-            "iters={:d} Δf={:g} ‖∇f‖={:g} ‖Δx‖={:g} Δx⋅∇f(x)={:g}",
-            iterations, fDelta, gradNorm, xDelta, xDeltaDotGrad);
+            "iters={:d} {}={:g} {}={:g} {}={:g} {}={:g}",
+            iterations,
+            log::delta("f"), fDelta,
+            log::norm(log::grad("f")), gradNorm,
+            log::norm(log::delta("x")), xDelta,
+            log::delta("x") + log::dot() + log::grad("f(x)"), xDeltaDotGrad);
     }
 
     Status checkConvergence(const Criteria &stop, const Criteria &current)

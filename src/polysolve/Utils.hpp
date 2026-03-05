@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Types.hpp"
 
@@ -61,5 +61,25 @@ namespace polysolve
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
 
     double extract_param(const std::string &key, const std::string &name, const json &json);
+
+    namespace log
+    {
+#ifdef POLYSOLVE_WITH_UNICODE
+        inline std::string f0() { return "f₀"; }
+        inline std::string dot() { return "⋅"; }
+        inline std::string ge() { return "≥"; }
+        inline std::string delta(const std::string &x) { return std::string("Δ") + x; }
+        inline std::string norm(const std::string &x) { return std::string("‖") + x + "‖"; }
+        inline std::string grad(const std::string &x) { return std::string("∇") + x; }
+#else
+        inline std::string f0() { return "f0"; }
+        inline std::string dot() { return "*"; }
+        inline std::string ge() { return ">="; }
+        inline std::string delta(const std::string &x) { return std::string("d") + x; }
+        inline std::string norm(const std::string &x) { return std::string("norm(") + x + ")"; }
+        inline std::string grad(const std::string &x) { return std::string("grad(") + x + ")"; }
+#endif // POLYSOLVE_WITH_UNICODE
+
+    } // namespace log
 
 } // namespace polysolve

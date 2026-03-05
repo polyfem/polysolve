@@ -74,6 +74,7 @@ endif()
 
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
+option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
 
 # Polysolve options for enabling/disabling optional libraries
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
@@ -321,6 +322,14 @@ endif()
 # Extra warnings (include last for highest priority)
 include(polysolve_warnings)
 target_link_libraries(polysolve_linear PRIVATE polysolve::warnings)
+
+# Unicode
+if(POLYSOLVE_WITH_UNICODE)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_UNICODE)
+    if(MSVC)
+        target_compile_options(polysolve_linear PUBLIC /utf-8)
+    endif()
+endif()
 
 # ---------
 # Nonlinear

@@ -100,7 +100,8 @@ namespace polysolve::linear
     template <typename SparseSolver>
     void EigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
     {
-        m_Solver.factorize(A);
+        m_A = A;
+        m_Solver.factorize(m_A);
     }
 
     // Solve the linear system

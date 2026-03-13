@@ -282,8 +282,8 @@ namespace polysolve::nonlinear
         stop_watch.start();
 
         m_logger.debug(
-            "Starting {} with {} solve f₀={:g} (stopping criteria: {})",
-            descent_strategy_name(), m_line_search->name(), objFunc(x), m_stop.print_message());
+            "Starting {} with {} solve {}={:g} (stopping criteria: {})",
+            descent_strategy_name(), m_line_search->name(), log::f0(), objFunc(x), m_stop.print_message());
 
         update_solver_info(objFunc(x));
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
@@ -377,17 +377,21 @@ namespace polysolve::nonlinear
                 {
                     m_status = Status::NotDescentDirection;
                     log_and_throw_error(
-                        m_logger, "[{}][{}] {} on last strategy (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); stopping",
-                        current_name, m_line_search->name(), status_message(m_status), delta_x.norm(), compute_grad_norm(x, grad),
-                        m_current.xDeltaDotGrad);
+                        m_logger, "[{}][{}] {} on last strategy ({}={:g}; {}={:g}; {}={:g}≥0); stopping",
+                        current_name, m_line_search->name(), status_message(m_status),
+                        log::norm(log::delta("x")), delta_x.norm(),
+                        log::norm("g"), compute_grad_norm(x, grad),
+                        log::delta("x") + log::dot() + "g", m_current.xDeltaDotGrad);
                 }
                 else
                 {
                     m_status = Status::Continue;
                     m_logger.debug(
-                        "[{}][{}] {} (‖Δx‖={:g}; ‖g‖={:g}; Δx⋅g={:g}≥0); reverting to {}",
+                        "[{}][{}] {} ({}={:g}; {}={:g}; {}={:g}{}0); reverting to {}",
                         current_name, m_line_search->name(), status_message(Status::NotDescentDirection),
-                        delta_x.norm(), compute_grad_norm(x, grad), m_current.xDeltaDotGrad,
+                        log::norm(log::delta("x")), delta_x.norm(),
+                        log::norm("g"), compute_grad_norm(x, grad),
+                        log::delta("x") + log::dot() + "g", m_current.xDeltaDotGrad, log::ge(),
                         descent_strategy_name());
                 }
                 continue;
@@ -403,9 +407,9 @@ namespace polysolve::nonlinear
             // --- Variable update ---------------------------------------------
 
             m_logger.trace(
-                "[{}][{}] pre LS iter={:d} f={:g} ‖∇f‖={:g}",
+                "[{}][{}] pre LS iter={:d} f={:g} {}={:g}",
                 descent_strategy_name(), m_line_search->name(),
-                m_current.iterations, energy, m_current.gradNorm);
+                m_current.iterations, energy, log::norm(log::grad("f")), m_current.gradNorm);
 
             // Perform a line_search to compute step scale
             double rate;

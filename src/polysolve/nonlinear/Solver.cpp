@@ -393,9 +393,17 @@ namespace polysolve::nonlinear
 
             m_current.xDeltaDotGrad = delta_x.dot(grad);
 
-            THessian hessian;
-            objFunc.hessian(x, hessian);
-            m_current.newtonDecrement = 0.5 * x.dot(hessian * x);
+            try
+            {
+                THessian hessian;
+                objFunc.hessian(x, hessian);
+                m_current.newtonDecrement = 0.5 * x.dot(hessian * x);
+            }
+            catch (const std::runtime_error& e)
+            {
+                m_logger.error("Error computing Newton decrement: {}", e.what());
+                m_current.newtonDecrement = NaN;
+            }
 
             if (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0)
             {

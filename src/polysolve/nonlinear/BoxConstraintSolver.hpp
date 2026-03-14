@@ -31,7 +31,7 @@ namespace polysolve::nonlinear
                             const double characteristic_length,
                             spdlog::logger &logger);
 
-        double compute_grad_norm(const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const override;
+        double compute_grad_norm(const Problem &objFunc, const Eigen::VectorXd &x, const Eigen::VectorXd &grad) const override;
         Eigen::VectorXd get_lower_bound(const Eigen::VectorXd &x, bool consider_max_change = true) const;
         Eigen::VectorXd get_upper_bound(const Eigen::VectorXd &x, bool consider_max_change = true) const;
         Eigen::VectorXd get_max_change(const Eigen::VectorXd &x) const;

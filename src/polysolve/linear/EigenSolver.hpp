@@ -64,6 +64,8 @@ namespace polysolve::linear
         // Constructor requires a solver name used for finding parameters in the json file passed to set_parameters
         EigenIterative(const std::string &name) { m_Name = name; }
 
+        virtual void set_tolerance(const double tol) override {m_Solver.setTolerance(tol);}
+
     public:
         // Set solver parameters
         virtual void set_parameters(const json &params) override;

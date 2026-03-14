@@ -16,8 +16,11 @@ namespace polysolve::nonlinear
         // Success cases
         IterationLimit,      ///< The maximum number of iterations has been reached
         XDeltaTolerance,     ///< The change in the parameter vector is below the tolerance
+        RelXDeltaTolerance,
         FDeltaTolerance,     ///< The change in the cost function is below the tolerance
         GradNormTolerance,   ///< The norm of the gradient vector is below the tolerance
+        RelGradNormTolerance,
+        NewtonDecrementTolerance,
         ObjectiveCustomStop, ///< The objective function specified to stop
         // Failure cases
         NanEncountered,        ///< The objective function returned NaN
@@ -37,6 +40,9 @@ namespace polysolve::nonlinear
         double gradNorm;      ///< Minimum norm of gradient vector
         double firstGradNorm; ///< Initial norm of gradient vector
         double xDeltaDotGrad; ///< Dot product of parameter vector and gradient vector
+        double relXDelta;
+        double relGradNorm;
+        double newtonDecrement;
         unsigned fDeltaCount; ///< Number of steps where fDelta is satisfied
 
         Criteria();

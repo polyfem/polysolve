@@ -130,11 +130,11 @@ namespace polysolve::nonlinear::line_search
 
         const double collision_free_step_size = step_size;
 
-        if (initial_grad.norm() < 1e-30)
+        if (objFunc.grad_norm(initial_grad, norm_type) < 1e-30)
             return step_size;
 
         // TODO: Fix this
-        const bool use_grad_norm = initial_grad.norm() < use_grad_norm_tol;
+        const bool use_grad_norm = objFunc.grad_norm(initial_grad, norm_type) < use_grad_norm_tol * objFunc.grad_norm_rescaling(norm_type);
         const double starting_step_size = step_size;
 
         // ----------------------
@@ -159,7 +159,7 @@ namespace polysolve::nonlinear::line_search
             m_logger.log(is_final_strategy ? spdlog::level::warn : spdlog::level::debug,
                          "Line search failed to find descent step (f(x)={:g} f(x+αΔx)={:g} α_CCD={:g} α={:g}, ||Δx||={:g}  use_grad_norm={} iter={:d})",
                          initial_energy, cur_energy, starting_step_size,
-                         step_size, delta_x.norm(), use_grad_norm, cur_iter);
+                         step_size, objFunc.step_norm(delta_x, norm_type), use_grad_norm, cur_iter);
             objFunc.solution_changed(x);
 
             // tolerance for rounding error due to multithreading

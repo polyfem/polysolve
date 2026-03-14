@@ -603,8 +603,7 @@
             "default_init_step_size",
             "step_ratio",
             "Armijo",
-            "RobustArmijo",
-            "try_interpolating_step"
+            "RobustArmijo"
         ],
         "doc": "Settings for line-search in the nonlinear solver"
     },
@@ -661,12 +660,6 @@
         "default": 0.5,
         "type": "float",
         "doc": "Ratio used to decrease the step"
-    },
-        {
-        "pointer": "/line_search/try_interpolating_step",
-        "default": false,
-        "type": "bool",
-        "doc": "Before rejecting a given step, try interpolating the gradient and taking a step to the interpolated minimizer. "
     },
     {
         "pointer": "/line_search/Armijo",

@@ -44,8 +44,9 @@ namespace polysolve::nonlinear
             log::norm(log::grad("f")), relGradNorm,
             log::norm(log::delta("x")), xDelta,
             log::norm(log::delta("x")), relXDelta,
-            log::delta("x") + log::dot() + log::grad("f(x)"), relXDelta, xDeltaDotGrad
-            "1/2" + log::delta("x") + "^TH" + log::(delta("x")), newtonDecrement);
+            log::delta("x") + log::dot() + log::grad("f(x)"), xDeltaDotGrad,
+            "1/2" + log::delta("x") + "^TH" + log::delta("x"), newtonDecrement
+        );
     }
 
     Status checkConvergence(const Criteria &stop, const Criteria &current)

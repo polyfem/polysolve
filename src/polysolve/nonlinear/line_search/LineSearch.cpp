@@ -63,10 +63,6 @@ namespace polysolve::nonlinear::line_search
 
         default_init_step_size = params["line_search"]["default_init_step_size"];
         step_ratio = params["line_search"]["step_ratio"];
-
-        try_interpolating_step = params["line_search"]["try_interpolating_step"];
-        if (try_interpolating_step)
-            log_and_throw_error(logger, "Interpolating line search not yet tested!");
     }
 
     double LineSearch::line_search(
@@ -138,7 +134,7 @@ namespace polysolve::nonlinear::line_search
             return step_size;
 
         // TODO: Fix this
-        const bool use_grad_norm = objFunc.grad_norm(initial_grad, norm_type) < use_grad_norm_tol * grad_norm_rescaling;
+        const bool use_grad_norm = objFunc.grad_norm(initial_grad, norm_type) < use_grad_norm_tol * objFunc.grad_norm_rescaling(norm_type);
         const double starting_step_size = step_size;
 
         // ----------------------

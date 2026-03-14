@@ -74,9 +74,7 @@ namespace polysolve::nonlinear::line_search
         double classical_line_search_time;
 
         double use_grad_norm_tol = -1;
-        double grad_norm_rescaling = 1;
-        double rel_interpolation_accuracy_tol = 0;
-        std::string norm_type = "Euclidean";
+        NormType norm_type = NormType::EUCLIDEAN;
 
     protected:
         /// @brief Compute step size to use during line search 

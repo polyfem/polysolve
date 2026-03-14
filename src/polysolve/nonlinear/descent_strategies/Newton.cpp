@@ -16,7 +16,8 @@ namespace polysolve::nonlinear
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
-        spdlog::logger &logger)
+        spdlog::logger &logger,
+        const NormType norm_type)
     {
         // Copies stuff from main newton
         json proj_solver_params = R"({"ProjectedNewton": {}})"_json;
@@ -34,21 +35,21 @@ namespace polysolve::nonlinear
             res.push_back(std::make_unique<Newton>(
                 sparse,
                 solver_params, linear_solver_params,
-                characteristic_length, logger));
+                characteristic_length, logger, norm_type));
 
         const bool use_psd_projection = solver_params["Newton"]["use_psd_projection"];
         if (use_psd_projection)
             res.push_back(std::make_unique<ProjectedNewton>(
                 sparse,
                 proj_solver_params, linear_solver_params,
-                characteristic_length, logger));
+                characteristic_length, logger, norm_type));
 
         const double reg_weight_min = solver_params["Newton"]["reg_weight_min"];
         if (reg_weight_min > 0)
             res.push_back(std::make_unique<RegularizedNewton>(
                 sparse, solver_params["Newton"]["use_psd_projection_in_regularized"],
                 reg_solver_params, linear_solver_params,
-                characteristic_length, logger));
+                characteristic_length, logger, norm_type));
 
         if (res.empty())
             log_and_throw_error(logger, "Newton needs to have at least one of force_psd_projection=false, reg_weight_min>0, or use_psd_projection=true");
@@ -61,13 +62,12 @@ namespace polysolve::nonlinear
                    const json &solver_params,
                    const json &linear_solver_params,
                    const double characteristic_length,
-                   spdlog::logger &logger)
+                   spdlog::logger &logger,
+                   const NormType norm_type)
         : Superclass(solver_params, characteristic_length, logger),
-          is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance)
+          is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance), norm_type(norm_type)
     {
         linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
-        if (solver_params.find("Newton") != solver_params.end() && solver_params["Newton"]["use_adaptive_residual_tolerance"])
-            log_and_throw_error(logger, "Adaptive residual tolerance not yet implemented!");
 
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
@@ -81,8 +81,9 @@ namespace polysolve::nonlinear
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
-        spdlog::logger &logger)
-        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger)
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
     {
     }
 
@@ -91,8 +92,9 @@ namespace polysolve::nonlinear
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
-        spdlog::logger &logger)
-        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger)
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
     {
     }
 
@@ -102,8 +104,9 @@ namespace polysolve::nonlinear
         const json &solver_params,
         const json &linear_solver_params,
         const double characteristic_length,
-        spdlog::logger &logger)
-        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger),
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type),
           project_to_psd(project_to_psd)
     {
         reg_weight_min = extract_param("RegularizedNewton", "reg_weight_min", solver_params);
@@ -153,7 +156,7 @@ namespace polysolve::nonlinear
         if (std::isnan(residual) || residual > current_residual_tolerance)
         {
             m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (‖∇f‖={})",
-                           name(), residual, current_residual_tolerance, objFunc.grad_norm(grad, "L2"));
+                           name(), residual, current_residual_tolerance, objFunc.grad_norm(grad, norm_type));
 
             return false;
         }
@@ -181,10 +184,7 @@ namespace polysolve::nonlinear
 
         {
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
-            if (use_adaptive_residual_tolerance)
-            {
-                linear_solver->set_tolerance(std::max(objFunc.grad_norm(grad, "L2") / 10, objFunc.grad_norm_rescaling("L2") * residual_tolerance));
-            }
+
             // TODO: get the correct size
             linear_solver->analyze_pattern(hessian, hessian.rows());
 
@@ -204,7 +204,7 @@ namespace polysolve::nonlinear
             linear_solver->solve(-grad, direction); // H Δx = -g
         }
 
-        const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
+        const double residual = objFunc.grad_norm(hessian * direction + grad, norm_type); // H Δx + g = 0
 
         json info;
         linear_solver->get_info(info);

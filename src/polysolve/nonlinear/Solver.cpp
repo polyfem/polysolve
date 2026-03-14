@@ -34,7 +34,8 @@ namespace polysolve::nonlinear
             const std::string &solver_name, const json &solver_params,
             const json &linear_solver_params,
             const double characteristic_length,
-            spdlog::logger &logger)
+            spdlog::logger &logger,
+            const NormType norm_type)
         {
             if (solver_name == "BFGS")
             {
@@ -45,36 +46,36 @@ namespace polysolve::nonlinear
 
             else if (solver_name == "DenseNewton" || solver_name == "dense_newton")
             {
-                return std::make_shared<Newton>(false, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<Newton>(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
             else if (solver_name == "DenseProjectedNewton")
             {
-                return std::make_shared<ProjectedNewton>(false, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<ProjectedNewton>(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
             else if (solver_name == "DenseRegularizedNewton")
             {
-                return std::make_shared<RegularizedNewton>(false, false, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<RegularizedNewton>(false, false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
             else if (solver_name == "DenseRegularizedProjectedNewton")
             {
-                return std::make_shared<RegularizedNewton>(false, true, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<RegularizedNewton>(false, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
 
             else if (solver_name == "Newton" || solver_name == "SparseNewton" || solver_name == "sparse_newton")
             {
-                return std::make_shared<Newton>(true, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<Newton>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
             else if (solver_name == "ProjectedNewton")
             {
-                return std::make_shared<ProjectedNewton>(true, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<ProjectedNewton>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
             else if (solver_name == "RegularizedNewton")
             {
-                return std::make_shared<RegularizedNewton>(true, false, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<RegularizedNewton>(true, false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
             else if (solver_name == "RegularizedProjectedNewton")
             {
-                return std::make_shared<RegularizedNewton>(true, true, solver_params, linear_solver_params, characteristic_length, logger);
+                return std::make_shared<RegularizedNewton>(true, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
 
             else if (solver_name == "LBFGS" || solver_name == "L-BFGS")
@@ -111,13 +112,20 @@ namespace polysolve::nonlinear
          {FiniteDiffStrategy::DIRECTIONAL_DERIVATIVE, "DirectionalDerivative"},
          {FiniteDiffStrategy::FULL_FINITE_DIFF, "FullFiniteDiff"}})
 
+    NLOHMANN_JSON_SERIALIZE_ENUM(
+        NormType,
+        {{NormType::EUCLIDEAN, "Euclidean"},
+         {NormType::L2, "L2"},
+         {NormType::Linf, "Linf"}})
+
     // Static constructor
     std::unique_ptr<Solver> Solver::create(
         const json &solver_params_in,
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger,
-        const bool strict_validation)
+        const bool strict_validation,
+        const NormType norm_type)
     {
         json solver_params = solver_params_in; // mutable copy
 
@@ -147,7 +155,7 @@ namespace polysolve::nonlinear
             for (const auto &j : solver_params["solver"])
             {
                 const std::string solver_name = j["type"];
-                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger));
+                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type));
             }
         }
         else
@@ -156,19 +164,19 @@ namespace polysolve::nonlinear
 
             if (solver_name == "DenseNewton" || solver_name == "dense_newton")
             {
-                auto n = Newton::create_solver(false, solver_params, linear_solver_params, characteristic_length, logger);
+                auto n = Newton::create_solver(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
                 for (auto &s : n)
                     solver->add_strategy(s);
             }
             else if (solver_name == "Newton" || solver_name == "SparseNewton" || solver_name == "sparse_newton")
             {
-                auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger);
+                auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
                 for (auto &s : n)
                     solver->add_strategy(s);
             }
             else
             {
-                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger));
+                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type));
             }
 
             if (solver_name != "GradientDescent" && solver_name != "gradient_descent")
@@ -218,7 +226,7 @@ namespace polysolve::nonlinear
 
         m_descent_strategy = 0;
 
-        norm_type_ = solver_params["norm_type"];
+        m_norm_type = solver_params["norm_type"];
 
         set_line_search(solver_params);
 
@@ -246,16 +254,13 @@ namespace polysolve::nonlinear
         m_line_search = line_search::LineSearch::create(params, m_logger);
         solver_info["line_search"] = params["line_search"]["method"];
         m_line_search->use_grad_norm_tol = params["line_search"]["use_grad_norm_tol"];
-        m_line_search->rel_interpolation_accuracy_tol = params["rel_grad_norm_tol"];
-        // m_line_search->rel_interpolation_accuracy_tol *= 1e2;
-        m_line_search->norm_type = params["norm_type"];
     }
 
     void Solver::minimize(Problem &objFunc, TVector &x)
     {
         constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
 
-        reset_stopping_criteria(objFunc, norm_type_);
+        reset_stopping_criteria(objFunc, m_norm_type);
 
         int previous_strategy = m_descent_strategy;
         int current_strategy_iter = 0;
@@ -353,7 +358,7 @@ namespace polysolve::nonlinear
                 update_direction_successful = compute_update_direction(objFunc, x, grad, delta_x);
             }
 
-            m_current.xDelta = objFunc.step_norm(delta_x, norm_type_);
+            m_current.xDelta = objFunc.step_norm(delta_x, m_norm_type);
             if (m_current.iterations == 0)
             {
                 initial_delta_x_norm = m_current.xDelta;
@@ -386,7 +391,10 @@ namespace polysolve::nonlinear
             }
 
             m_current.xDeltaDotGrad = delta_x.dot(grad);
-            m_current.newtonDecrement = -1 * m_current.xDeltaDotGrad;
+
+            THessian hessian;
+            objFunc.hessian(x, hessian);
+            m_current.newtonDecrement = 0.5 * x.dot(hessian * x);
 
             if (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0)
             {
@@ -401,7 +409,7 @@ namespace polysolve::nonlinear
                     log_and_throw_error(
                         m_logger, "[{}][{}] {} on last strategy ({}={:g}; {}={:g}; {}={:g}≥0); stopping",
                         current_name, m_line_search->name(), status_message(m_status),
-                        log::norm(log::delta("x")), objFunc.step_norm(delta_x, norm_type_),
+                        log::norm(log::delta("x")), objFunc.step_norm(delta_x, m_norm_type),
                         log::norm("g"), compute_grad_norm(objFunc, x, grad),
                         log::delta("x") + log::dot() + "g", m_current.xDeltaDotGrad);
                 }
@@ -411,7 +419,7 @@ namespace polysolve::nonlinear
                     m_logger.debug(
                         "[{}][{}] {} ({}={:g}; {}={:g}; {}={:g}{}0); reverting to {}",
                         current_name, m_line_search->name(), status_message(Status::NotDescentDirection),
-                        log::norm(log::delta("x")), objFunc.step_norm(delta_x, norm_type_),
+                        log::norm(log::delta("x")), objFunc.step_norm(delta_x, m_norm_type),
                         log::norm("g"), compute_grad_norm(objFunc, x, grad),
                         log::delta("x") + log::dot() + "g", m_current.xDeltaDotGrad, log::ge(),
                         descent_strategy_name());

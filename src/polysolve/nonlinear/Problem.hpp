@@ -10,6 +10,14 @@
 
 namespace polysolve::nonlinear
 {
+
+    enum class NormType
+    {
+        EUCLIDEAN = 0,
+        L2 = 1,
+        Linf = 2
+    };
+
     /// @brief Class defining optimization problem to be solved. To be defined by user code
     class Problem
     {
@@ -103,12 +111,12 @@ namespace polysolve::nonlinear
         /// @return True if the solver should stop, false otherwise.
         virtual bool stop(const TVector &x) { return false; }
 
-        virtual double grad_norm_rescaling(const std::string &norm_type) const {return 1;}
-        virtual double step_norm_rescaling(const std::string &norm_type) const {return 1;}
-        virtual double energy_norm_rescaling(const std::string &norm_type) const {return 1;}
+        virtual double grad_norm_rescaling(const NormType norm_type) const {return 1;}
+        virtual double step_norm_rescaling(const NormType norm_type) const {return 1;}
+        virtual double energy_norm_rescaling(const NormType norm_type) const {return 1;}
 
-        virtual double grad_norm(const TVector &x, const std::string &norm_type) const {return x.norm();}
-        virtual double step_norm(const TVector &x, const std::string &norm_type) const {return x.norm();}
+        virtual double grad_norm(const TVector &grad, const NormType norm_type) const {return grad.norm();}
+        virtual double step_norm(const TVector &x, const NormType norm_type) const {return x.norm();}
 
         /// --- Misc ----------------------------------------------------------
 

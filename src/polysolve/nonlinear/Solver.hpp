@@ -39,7 +39,8 @@ namespace polysolve::nonlinear
             const json &linear_solver_params,
             const double characteristic_length,
             spdlog::logger &logger,
-            const bool strict_validation = true);
+            const bool strict_validation = true,
+            const NormType norm_type = NormType::EUCLIDEAN);
 
         /// @brief List available solvers
         static std::vector<std::string> available_solvers();
@@ -86,7 +87,7 @@ namespace polysolve::nonlinear
 
         virtual double compute_grad_norm(const Problem &objFunc, const TVector &x, const TVector &grad) const
         {
-            return objFunc.grad_norm(grad, norm_type_);
+            return objFunc.grad_norm(grad, m_norm_type);
         }
 
     protected:
@@ -105,7 +106,7 @@ namespace polysolve::nonlinear
             return m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, direction);
         }
 
-        void reset_stopping_criteria(Problem &objFunc, std::string &norm_type)
+        void reset_stopping_criteria(Problem &objFunc, NormType norm_type)
         {
             m_stop_rescaled.reset();
             m_stop_rescaled.iterations = m_stop.iterations;
@@ -117,7 +118,6 @@ namespace polysolve::nonlinear
             m_stop_rescaled.relGradNorm = m_stop.relGradNorm;
             m_stop_rescaled.relXDelta = m_stop.relXDelta;
             m_stop_rescaled.newtonDecrement = m_stop.newtonDecrement * objFunc.energy_norm_rescaling(norm_type);
-            m_line_search->grad_norm_rescaling = objFunc.grad_norm_rescaling(norm_type);
         }
 
         /// @brief Stopping criteria
@@ -137,7 +137,7 @@ namespace polysolve::nonlinear
         /// @brief Logger to use
         spdlog::logger &m_logger;
         
-        std::string norm_type_;
+        NormType m_norm_type;
 
         // ====================================================================
         //                        Finite Difference Utilities

@@ -89,7 +89,12 @@
         "pointer": "/norm_type",
         "default": "L2",
         "type": "string",
-        "doc": "Norm to use when computing stopping criteria in nonlinear solve."
+        "doc": "Norm to use when computing stopping criteria in nonlinear solve.",
+        "options": [
+            "Euclidean",
+            "L2",
+            "Linf"
+        ]
     },
     {
         "pointer": "/max_iterations",
@@ -156,7 +161,6 @@
         "type": "object",
         "optional": [
             "residual_tolerance",
-            "use_adaptive_residual_tolerance",
             "reg_weight_min",
             "reg_weight_max",
             "reg_weight_inc",
@@ -171,12 +175,6 @@
         "default": 1e-5,
         "type": "float",
         "doc": "Tolerance of the linear system residual. If residual is above, the direction is rejected."
-    },
-    {
-        "pointer": "/Newton/use_adaptive_residual_tolerance",
-        "default": false,
-        "type": "bool",
-        "doc": "Whether or not to adaptively adjust tolerance of linear system residual based on current nonlinear solve residual (only useful for iterative linear solvers)."
     },
     {
         "pointer": "/Newton/reg_weight_min",
@@ -321,8 +319,7 @@
             "type"
         ],
         "optional": [
-            "residual_tolerance",
-            "use_adaptive_residual_tolerance"
+            "residual_tolerance"
         ],
         "doc": "Options for Newton."
     },
@@ -334,8 +331,7 @@
             "type"
         ],
         "optional": [
-            "residual_tolerance",
-            "use_adaptive_residual_tolerance"
+            "residual_tolerance"
         ],
         "doc": "Options for projected Newton."
     },
@@ -348,7 +344,6 @@
         ],
         "optional": [
             "residual_tolerance",
-            "use_adaptive_residual_tolerance",
             "reg_weight_min",
             "reg_weight_max",
             "reg_weight_inc"
@@ -364,7 +359,6 @@
         ],
         "optional": [
             "residual_tolerance",
-            "use_adaptive_residual_tolerance",
             "reg_weight_min",
             "reg_weight_max",
             "reg_weight_inc"
@@ -379,8 +373,7 @@
             "type"
         ],
         "optional": [
-            "residual_tolerance",
-            "use_adaptive_residual_tolerance"
+            "residual_tolerance"
         ],
         "doc": "Options for Newton."
     },
@@ -392,8 +385,7 @@
             "type"
         ],
         "optional": [
-            "residual_tolerance",
-            "use_adaptive_residual_tolerance"
+            "residual_tolerance"
         ],
         "doc": "Options for projected Newton."
     },
@@ -406,7 +398,6 @@
         ],
         "optional": [
             "residual_tolerance",
-            "use_adaptive_residual_tolerance",
             "reg_weight_min",
             "reg_weight_max",
             "reg_weight_inc"
@@ -422,7 +413,6 @@
         ],
         "optional": [
             "residual_tolerance",
-            "use_adaptive_residual_tolerance",
             "reg_weight_min",
             "reg_weight_max",
             "reg_weight_inc"
@@ -528,12 +518,6 @@
         "default": 1e-5,
         "type": "float",
         "doc": "Tolerance of the linear system residual. If residual is above, the direction is rejected."
-    },
-    {
-        "pointer": "/solver/*/use_adaptive_residual_tolerance",
-        "default": false,
-        "type": "bool",
-        "doc": "Whether or not to adaptively adjust tolerance of linear system residual based on current nonlinear solve residual (only useful for iterative linear solvers)."
     },
     {
         "pointer": "/solver/*/reg_weight_min",

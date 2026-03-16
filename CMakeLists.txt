@@ -184,6 +184,34 @@ target_compile_definitions(polysolve_linear PRIVATE POLYSOLVE_LINEAR_SPEC="${PRO
 target_compile_definitions(polysolve PRIVATE POLYSOLVE_NON_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json")
 target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_JSON_SPEC_DIR="${PROJECT_SOURCE_DIR}")
 
+function(embed_resource resource_file_name source_file_name variable_name)
+
+    if(EXISTS "${source_file_name}")
+        if("${source_file_name}" IS_NEWER_THAN "${resource_file_name}")
+            return()
+        endif()
+    endif()
+
+    file(READ "${resource_file_name}" hex_content HEX)
+
+    string(REPEAT "[0-9a-f]" 32 pattern)
+    string(REGEX REPLACE "(${pattern})" "\\1\n" content "${hex_content}")
+
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " content "${content}")
+
+    string(REGEX REPLACE ", $" "" content "${content}")
+
+    set(array_definition "static const unsigned char ${variable_name}[] =\n{\n${content}\n};")
+
+    set(source "// Auto generated file.\n${array_definition}\n")
+
+    file(WRITE "${source_file_name}" "${source}")
+
+endfunction()
+
+embed_resource("${PROJECT_SOURCE_DIR}/linear-solver-spec.json" "${PROJECT_SOURCE_DIR}/src/polysolve/autogen/linear-solver-spec.cpp" "LINEAR_SOLVER_SPEC")
+embed_resource("${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json" "${PROJECT_SOURCE_DIR}/src/polysolve/autogen/nonlinear-solver-spec.cpp" "NONLINEAR_SOLVER_SPEC")
+
 
 ################################################################################
 # Dependencies

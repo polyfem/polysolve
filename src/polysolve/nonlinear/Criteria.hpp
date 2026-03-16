@@ -39,6 +39,9 @@ namespace polysolve::nonlinear
         double xDeltaDotGrad; ///< Dot product of parameter vector and gradient vector
         unsigned fDeltaCount; ///< Number of steps where fDelta is satisfied
 
+        double alpha;  ///< LS alpha
+        double energy; ///< Energy at the current step
+        double step;   ///< alpha * grad.norm()
         Criteria();
 
         void reset();
@@ -50,7 +53,7 @@ namespace polysolve::nonlinear
     Status checkConvergence(const Criteria &stop, const Criteria &current);
 
     std::string_view status_message(Status s);
-    std::string criteria_message(const Criteria& s);
+    std::string criteria_message(const Criteria &s);
 
     std::ostream &operator<<(std::ostream &os, const Status &s);
 

@@ -79,6 +79,8 @@ namespace polysolve::nonlinear
         void set_line_search(const json &params);
         const json &info() const { return solver_info; }
 
+        void set_iteration_callback(std::function<bool(const Criteria &)> callback) { m_iteration_callback = callback; }
+
         /// @brief If true the solver will not throw an error if the maximum number of iterations is reached
         bool allow_out_of_iterations = false;
 
@@ -87,7 +89,7 @@ namespace polysolve::nonlinear
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 
     protected:
-        /// @brief Compute direction in which the argument should be updated 
+        /// @brief Compute direction in which the argument should be updated
         /// @param objFunc Problem to be minimized
         /// @param x Current input (n x 1)
         /// @param grad Gradient at current step (n x 1)
@@ -139,7 +141,7 @@ namespace polysolve::nonlinear
         // ====================================================================
         //                           Solver state
         // ====================================================================
-        
+
         /// @brief Reset the solver at the start of a minimization
         /// @param ndof number of degrees of freedom
         void reset(const int ndof);
@@ -150,6 +152,8 @@ namespace polysolve::nonlinear
         std::vector<std::shared_ptr<DescentStrategy>> m_strategies;
 
         std::vector<int> m_iter_per_strategy;
+
+        std::function<bool(const Criteria &)> m_iteration_callback = nullptr;
 
         // ====================================================================
         //                            Solver info

@@ -26,6 +26,7 @@ namespace polysolve::nonlinear
         firstGradNorm = 0;
         fDeltaCount = 0;
         xDeltaDotGrad = 0;
+        alpha = 1.0;
     }
 
     void Criteria::print(std::ostream &os) const

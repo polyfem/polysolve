@@ -547,7 +547,7 @@ namespace polysolve::nonlinear
             log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", descent_strategy_name(), m_line_search->name());
 
         double tot_time = stop_watch.getElapsedTimeInSec();
-        const bool succeeded = m_status == Status::GradNormTolerance;
+        const bool succeeded = m_status == Status::GradNormTolerance || m_status == Status::RelGradNormTolerance;
         m_logger.log(
             succeeded ? spdlog::level::info : spdlog::level::err,
             "[{}][{}] Finished: {} took {:g}s ({}) (stopping criteria: {})",

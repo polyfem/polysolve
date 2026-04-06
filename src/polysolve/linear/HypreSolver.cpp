@@ -32,6 +32,10 @@ namespace polysolve::linear
             MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
         }
 #endif
+        if (!HYPRE_Initialized())
+        {
+            HYPRE_Initialize();
+        }
     }
 
     // Set solver parameters

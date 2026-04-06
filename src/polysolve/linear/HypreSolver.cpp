@@ -15,7 +15,7 @@ namespace polysolve::linear
     HypreSolver::HypreSolver()
     {
         precond_num_ = 0;
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         int done_already;
 
         MPI_Initialized(&done_already);
@@ -75,7 +75,7 @@ namespace polysolve::linear
         has_matrix_ = true;
         const HYPRE_Int rows = Ain.rows();
         const HYPRE_Int cols = Ain.cols();
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, rows - 1, 0, cols - 1, &A);
 #else
         HYPRE_IJMatrixCreate(0, 0, rows - 1, 0, cols - 1, &A);
@@ -190,14 +190,14 @@ namespace polysolve::linear
         HYPRE_IJVector x;
         HYPRE_ParVector par_x;
 
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, rhs.size() - 1, &b);
 #else
         HYPRE_IJVectorCreate(0, 0, rhs.size() - 1, &b);
 #endif
         HYPRE_IJVectorSetObjectType(b, HYPRE_PARCSR);
         HYPRE_IJVectorInitialize(b);
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, rhs.size() - 1, &x);
 #else
         HYPRE_IJVectorCreate(0, 0, rhs.size() - 1, &x);
@@ -227,7 +227,7 @@ namespace polysolve::linear
 
         /* Create solver */
         HYPRE_Solver solver, precond;
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         HYPRE_ParCSRPCGCreate(MPI_COMM_WORLD, &solver);
 #else
         HYPRE_ParCSRPCGCreate(0, &solver);

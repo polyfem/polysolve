@@ -48,6 +48,18 @@ function(amgcl_import_target)
     )
 
     target_link_libraries(amgcl INTERFACE Boost::boost)
+
+    # AMGCL pollutes all downstream target with their aggressive diagostic flags,
+    # which causes cuda code to vomit warnings every line cause nvcc generates gcc specific intrinsics.
+    # Use hacky regex replacement to purge -Wpedantic, -Wall, and -Wextra.
+    get_target_property(AMGCL_OPTIONS amgcl INTERFACE_COMPILE_OPTIONS)
+    if(AMGCL_OPTIONS)
+        string(REGEX REPLACE ";?-Wpedantic" "" AMGCL_OPTIONS_CLEAN "${AMGCL_OPTIONS}")
+        string(REGEX REPLACE ";?-Wextra" "" AMGCL_OPTIONS_CLEAN "${AMGCL_OPTIONS_CLEAN}")
+        string(REGEX REPLACE ";?-Wall" "" AMGCL_OPTIONS_CLEAN "${AMGCL_OPTIONS_CLEAN}")
+        set_target_properties(amgcl PROPERTIES INTERFACE_COMPILE_OPTIONS "${AMGCL_OPTIONS_CLEAN}")
+    endif()
+
 endfunction()
 
 amgcl_import_target()

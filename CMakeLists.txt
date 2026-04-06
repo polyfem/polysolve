@@ -7,7 +7,7 @@ else()
 endif()
 
 # Check required CMake version
-set(REQUIRED_CMAKE_VERSION "3.18.0")
+set(REQUIRED_CMAKE_VERSION "3.24.0")
 if(POLYSOLVE_TOPLEVEL_PROJECT)
     cmake_minimum_required(VERSION ${REQUIRED_CMAKE_VERSION})
     SET(CMAKE_POLICY_VERSION_MINIMUM ${REQUIRED_CMAKE_VERSION})
@@ -75,6 +75,7 @@ endif()
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
+option(POLYSOLVE_WITH_CUDA          "Enable cuda support"                               OFF)
 
 # Polysolve options for enabling/disabling optional libraries
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
@@ -148,18 +149,56 @@ if(POLYSOLVE_WITH_MKL)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "Select the MSVC runtime library")
 endif()
 
+# Add empty library target. Setup later.
+add_library(polysolve)
+add_library(polysolve::polysolve ALIAS polysolve)
+add_library(polysolve_linear)
+add_library(polysolve::linear ALIAS polysolve_linear)
+
+################################################################################
+# CUDA
+################################################################################
+
+if (POLYSOLVE_WITH_CUDA)
+  # If CMAKE_CUDA_ARCHITECTURES was not specified, set it to native.
+  if(DEFINED CMAKE_CUDA_ARCHITECTURES)
+    message(STATUS "CMAKE_CUDA_ARCHITECTURES was specified, skipping auto-detection")
+  else()
+    message(STATUS "CMAKE_CUDA_ARCHITECTURES was not specified, set it to native")
+    set(CMAKE_CUDA_ARCHITECTURES "native")
+  endif()
+  message(STATUS "Targeting CUDA_ARCHITECTURES \"${CMAKE_CUDA_ARCHITECTURES}\"")
+
+  # Enable CUDA support
+  enable_language(CUDA)
+  set(CMAKE_CUDA_STANDARD 17)
+  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  set_target_properties(polysolve_linear PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+  target_compile_options(polysolve PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+  )
+  target_compile_options(polysolve_linear PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+  )
+
+  if(APPLE)
+      # We need to add the path to the driver (libcuda.dylib) as an rpath,
+      # so that the static cuda runtime can find it at runtime.
+      set_property(TARGET polysolve
+                  PROPERTY
+                  BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+  endif()
+endif()
+
 ################################################################################
 # PolySolve Library
 ################################################################################
 
-# Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
-add_library(polysolve_linear)
-add_library(polysolve::linear ALIAS polysolve_linear)
 add_subdirectory(src/polysolve)
 add_subdirectory(src/polysolve/linear)
 
-add_library(polysolve)
-add_library(polysolve::polysolve ALIAS polysolve)
 add_subdirectory(src/polysolve/nonlinear)
 
 target_link_libraries(polysolve_linear PUBLIC polysolve_coverage_config)
@@ -229,8 +268,8 @@ if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
     target_link_libraries(polysolve_linear PUBLIC HYPRE::HYPRE)
     target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_HYPRE)
-    if(HYPRE_WITH_MPI)
-        target_compile_definitions(polysolve_linear PUBLIC HYPRE_WITH_MPI)
+    if(HYPRE_ENABLE_MPI)
+        target_compile_definitions(polysolve_linear PUBLIC HYPRE_ENABLE_MPI)
     endif()
 endif()
 
@@ -304,6 +343,10 @@ endif()
 
 # cuSolver solvers
 if(POLYSOLVE_WITH_CUSOLVER)
+    if (NOT POLYSOLVE_WITH_CUDA)
+      message(FATAL_ERROR "Expect POLYSOLVE_WITH_CUDA set to ON when CUSOLVER is enabled")
+    endif()
+
     include(cusolverdn)
     if(TARGET CUDA::cusolver)
         target_link_libraries(polysolve_linear PUBLIC CUDA::cusolver)

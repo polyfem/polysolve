@@ -70,6 +70,11 @@ namespace polysolve::nonlinear
                                      const TVector &x,
                                      Eigen::MatrixXd &hessian);
 
+        virtual void compute_hessian(Problem &objFunc,
+                                     const TVector &x,
+                                     NewtonHessian &hessian);
+
+
     public:
         bool compute_update_direction(Problem &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
 
@@ -101,6 +106,10 @@ namespace polysolve::nonlinear
         void compute_hessian(Problem &objFunc,
                              const TVector &x,
                              Eigen::MatrixXd &hessian) override;
+
+        void compute_hessian(Problem &objFunc,
+                                     const TVector &x,
+                                     NewtonHessian &hessian) override;
     };
 
     class RegularizedNewton : public Newton
@@ -141,6 +150,10 @@ namespace polysolve::nonlinear
         void compute_hessian(Problem &objFunc,
                              const TVector &x,
                              Eigen::MatrixXd &hessian) override;
+
+        void compute_hessian(Problem &objFunc,
+                            const TVector &x,
+                            NewtonHessian &hessian) override;
     };
 
 } // namespace polysolve::nonlinear

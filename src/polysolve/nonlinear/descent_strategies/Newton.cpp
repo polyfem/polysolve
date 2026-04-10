@@ -176,20 +176,22 @@ namespace polysolve::nonlinear
                                               TVector &direction)
     {
         polysolve::StiffnessMatrix hessian;
-
         {
             POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
             compute_hessian(objFunc, x, hessian);
         }
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
-
             // TODO: get the correct size
-            linear_solver->analyze_pattern(hessian, hessian.rows());
+            if (objFunc.getSparsityPatternID() == -1)
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("symbolic factorize", this->inverting_time, m_logger);
+                linear_solver->analyze_pattern(hessian, hessian.rows());
+            }
 
             try
             {
+                POLYSOLVE_SCOPED_STOPWATCH("numeric factorize", this->inverting_time, m_logger);
                 linear_solver->factorize(hessian);
             }
             catch (const std::runtime_error &err)
@@ -200,8 +202,10 @@ namespace polysolve::nonlinear
                 // Eigen::saveMarket(hessian, "problematic_hessian.mtx");
                 return std::nan("");
             }
-
-            linear_solver->solve(-grad, direction); // H Δx = -g
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+                linear_solver->solve(-grad, direction); // H Δx = -g
+            }
         }
 
         const double residual = objFunc.grad_norm(hessian * direction + grad, norm_type); // H Δx + g = 0
@@ -321,6 +325,40 @@ namespace polysolve::nonlinear
                 hessian(k, k) += reg_weight;
         }
     }
+
+    void Newton::compute_hessian(Problem &objFunc,
+                                 const TVector &x,
+                                 NewtonHessian &hessian)
+
+    {
+        objFunc.set_project_to_psd(false);
+        hessian = objFunc.evalHessian(x);
+    }
+
+     void ProjectedNewton::compute_hessian(Problem &objFunc,
+                                          const TVector &x,
+                                          NewtonHessian &hessian)
+
+    {
+        objFunc.set_project_to_psd(true);
+        hessian = objFunc.evalHessian(x);
+    }
+
+    void RegularizedNewton::compute_hessian(Problem &objFunc,
+                                            const TVector &x,
+                                            NewtonHessian &hessian)
+
+    {
+        objFunc.set_project_to_psd(project_to_psd);
+        hessian = objFunc.evalHessian(x);
+        if (reg_weight > 0)
+        {
+            // Need to add reg_weight times Identity to the hessian.
+
+        
+        }
+    }
+
     // =======================================================================
 
     bool RegularizedNewton::handle_error()

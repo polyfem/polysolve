@@ -1,6 +1,7 @@
 #pragma once
 
 #include <polysolve/Types.hpp>
+#include <MeshFEM/newton_optimizer/NewtonHessian.hh>
 
 #include "Criteria.hpp"
 #include "PostStepData.hpp"
@@ -60,6 +61,13 @@ namespace polysolve::nonlinear
         {
             throw std::runtime_error("Dense Hessian not implemented.");
         }
+
+        virtual NewtonHessian evalHessian(const TVector &x) { 
+            throw std::runtime_error("evalHessian not implemented.");
+        }
+
+        virtual size_t getSparsityPatternID() const { return -1; }
+
 
         /// @brief Compute the Hessian of the function at x.
         /// @param[in] x Degrees of freedom.

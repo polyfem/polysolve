@@ -268,6 +268,7 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
     json solver_params, linear_solver_params;
     solver_params["line_search"] = {};
     solver_params["max_iterations"] = iters;
+    solver_params["rel_grad_norm_tol"] = 0;
 
     const double characteristic_length = 1;
 

@@ -60,7 +60,7 @@
     },
     {
         "pointer": "/rel_grad_norm_tol",
-        "default": 0,
+        "default": 1e-10,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: minimal gradient for the iterations to continue relative to first step in nonlinear solve."
@@ -74,14 +74,14 @@
     },
     {
         "pointer": "/grad_norm_tol",
-        "default": 1e-08,
+        "default": 1e-10,
         "type": "float",
         "min": 0,
         "doc": "Stopping criterion: Minimal gradient norm for the iterations to continue."
     },
     {
         "pointer": "/first_grad_norm_tol",
-        "default": 1e-10,
+        "default": 1e-12,
         "type": "float",
         "doc": "Minimal gradient norm for the iterations to not start, assume we already are at a minimum."
     },

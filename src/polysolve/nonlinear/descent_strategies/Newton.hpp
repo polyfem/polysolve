@@ -17,7 +17,8 @@ namespace polysolve::nonlinear
             const json &solver_params,
             const json &linear_solver_params,
             const double characteristic_length,
-            spdlog::logger &logger);
+            spdlog::logger &logger,
+            const NormType norm_type);
 
     protected:
         Newton(const bool sparse,
@@ -25,14 +26,16 @@ namespace polysolve::nonlinear
                const json &solver_params,
                const json &linear_solver_params,
                const double characteristic_length,
-               spdlog::logger &logger);
+               spdlog::logger &logger,
+               const NormType norm_type);
 
     public:
         Newton(const bool sparse,
                const json &solver_params,
                const json &linear_solver_params,
                const double characteristic_length,
-               spdlog::logger &logger);
+               spdlog::logger &logger,
+               const NormType norm_type);
 
         std::string name() const override { return internal_name() + "Newton"; }
 
@@ -49,6 +52,7 @@ namespace polysolve::nonlinear
         const bool is_sparse;
         const double characteristic_length;
         double residual_tolerance;
+        const NormType norm_type;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
 
@@ -84,7 +88,8 @@ namespace polysolve::nonlinear
                         const json &solver_params,
                         const json &linear_solver_params,
                         const double characteristic_length,
-                        spdlog::logger &logger);
+                        spdlog::logger &logger,
+                        const NormType norm_type);
 
         std::string name() const override { return internal_name() + "ProjectedNewton"; }
 
@@ -107,7 +112,8 @@ namespace polysolve::nonlinear
                           const json &solver_params,
                           const json &linear_solver_params,
                           const double characteristic_length,
-                          spdlog::logger &logger);
+                          spdlog::logger &logger,
+                          const NormType norm_type);
 
         std::string name() const override
         {

@@ -34,6 +34,10 @@ namespace polysolve::nonlinear::line_search
             const double deltaE_approx = step_size / 2 * delta_x.dot(new_grad + old_grad);
             const double abs_eps_est = step_size / 2 * std::abs(delta_x.dot(new_grad - old_grad));
 
+            //std::cout << "delta E: " << deltaE_approx << std::endl;
+            //std::cout << "abs eps: " << abs_eps_est << std::endl;
+            //std::cout << "armijo crit: " << this->armijo_criteria << std::endl;
+
             if (deltaE_approx + abs_eps_est <= step_size * this->armijo_criteria)
                 return true;
         }

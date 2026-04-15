@@ -39,7 +39,8 @@ namespace polysolve::nonlinear
             const json &linear_solver_params,
             const double characteristic_length,
             spdlog::logger &logger,
-            const bool strict_validation = true);
+            const bool strict_validation = true,
+            const NormType norm_type = NormType::EUCLIDEAN);
 
         /// @brief List available solvers
         static std::vector<std::string> available_solvers();
@@ -64,8 +65,6 @@ namespace polysolve::nonlinear
         /// @param x Initial guess
         void minimize(Problem &objFunc, TVector &x);
 
-        virtual double compute_grad_norm(const TVector &x, const TVector &grad) const;
-
         // ====================================================================
         // Getters and setters
         // ====================================================================
@@ -86,6 +85,11 @@ namespace polysolve::nonlinear
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 
+        virtual double compute_grad_norm(const Problem &objFunc, const TVector &x, const TVector &grad) const
+        {
+            return objFunc.grad_norm(grad, m_norm_type);
+        }
+
     protected:
         /// @brief Compute direction in which the argument should be updated 
         /// @param objFunc Problem to be minimized
@@ -102,8 +106,24 @@ namespace polysolve::nonlinear
             return m_strategies[m_descent_strategy]->compute_update_direction(objFunc, x, grad, direction);
         }
 
+        void reset_stopping_criteria(Problem &objFunc, NormType norm_type)
+        {
+            m_stop_rescaled.reset();
+            m_stop_rescaled.iterations = m_stop.iterations;
+            m_stop_rescaled.xDelta = m_stop.xDelta * objFunc.step_norm_rescaling(norm_type);
+            m_stop_rescaled.fDelta = m_stop.fDelta * objFunc.energy_norm_rescaling(norm_type);
+            m_stop_rescaled.gradNorm = m_stop.gradNorm * objFunc.grad_norm_rescaling(norm_type);
+            m_stop_rescaled.firstGradNorm = m_stop.firstGradNorm * objFunc.grad_norm_rescaling(norm_type);
+            m_stop_rescaled.xDeltaDotGrad = m_stop.xDeltaDotGrad * objFunc.energy_norm_rescaling(norm_type);
+            m_stop_rescaled.relGradNorm = m_stop.relGradNorm;
+            m_stop_rescaled.relXDelta = m_stop.relXDelta;
+            m_stop_rescaled.newtonDecrement = m_stop.newtonDecrement * objFunc.energy_norm_rescaling(norm_type);
+        }
+
         /// @brief Stopping criteria
         Criteria m_stop;
+
+        Criteria m_stop_rescaled;
 
         /// @brief Current criteria
         Criteria m_current;
@@ -116,6 +136,8 @@ namespace polysolve::nonlinear
 
         /// @brief Logger to use
         spdlog::logger &m_logger;
+        
+        NormType m_norm_type;
 
         // ====================================================================
         //                        Finite Difference Utilities

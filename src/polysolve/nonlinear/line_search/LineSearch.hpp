@@ -74,6 +74,7 @@ namespace polysolve::nonlinear::line_search
         double classical_line_search_time;
 
         double use_grad_norm_tol = -1;
+        NormType norm_type = NormType::EUCLIDEAN;
 
     protected:
         /// @brief Compute step size to use during line search 

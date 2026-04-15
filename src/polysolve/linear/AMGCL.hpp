@@ -76,6 +76,8 @@ namespace polysolve::linear
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
 
+        virtual void set_tolerance(const double tol) override {residual_error_ = tol;}
+
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return "AMGCL_Block" + std::to_string(BLOCK_SIZE); }
 

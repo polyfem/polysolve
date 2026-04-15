@@ -268,10 +268,11 @@ void test_solvers(const std::vector<std::string> &solvers, const int iters, cons
     json solver_params, linear_solver_params;
     solver_params["line_search"] = {};
     solver_params["max_iterations"] = iters;
+    solver_params["rel_grad_norm_tol"] = 0;
 
     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test-logger");
     logger->set_level(spdlog::level::info);
     TestProblem::TVector g;
     for (auto &prob : problems)
@@ -370,7 +371,7 @@ void test_solvers_gradient_fd(const bool full_fd)
 
     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("gradient-fd-test-logger");
     logger->set_level(spdlog::level::info);
     TestProblem::TVector g;
     linear_solver_params["solver"] = "Eigen::LDLT";
@@ -448,7 +449,7 @@ TEST_CASE("nonlinear-fallbacks", "[solver]")
 
     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonlinear-fallbacks-test-logger");
     logger->set_level(spdlog::level::info);
     TestProblem::TVector g;
     auto prob = std::make_unique<QuadraticProblem>();
@@ -511,7 +512,7 @@ TEST_CASE("nonlinear-box-constraint", "[solver]")
 
     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonlinear-box-constraint-test-logger");
     logger->set_level(spdlog::level::info);
 
     for (auto &prob : problems)
@@ -546,7 +547,7 @@ TEST_CASE("nonlinear-box-constraint", "[solver]")
 
                         Eigen::VectorXd gradv;
                         prob->gradient(x, gradv);
-                        CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                        CHECK(solver->compute_grad_norm(*prob, x, gradv) < 1e-7);
                     }
                     catch (const std::exception &)
                     {
@@ -576,7 +577,7 @@ TEST_CASE("nonlinear-box-constraint-input", "[solver]")
 
     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger2");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonlinear-box-constraint-input-test-logger");
     logger->set_level(spdlog::level::err);
 
     for (auto &prob : problems)
@@ -617,7 +618,7 @@ TEST_CASE("nonlinear-box-constraint-input", "[solver]")
 
                     Eigen::VectorXd gradv;
                     prob->gradient(x, gradv);
-                    CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                    CHECK(solver->compute_grad_norm(*prob, x, gradv) < 1e-7);
                 }
                 catch (const std::exception &)
                 {
@@ -648,7 +649,7 @@ TEST_CASE("MMA", "[solver]")
 
     const double characteristic_length = 1;
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger");
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("MMA-test-logger");
     logger->set_level(spdlog::level::info);
 
     for (auto &prob : problems)
@@ -675,7 +676,7 @@ TEST_CASE("MMA", "[solver]")
 
                 Eigen::VectorXd gradv;
                 prob->gradient(x, gradv);
-                CHECK(solver->compute_grad_norm(x, gradv) < 1e-7);
+                CHECK(solver->compute_grad_norm(*prob, x, gradv) < 1e-7);
             }
             catch (const std::exception &)
             {

@@ -46,10 +46,7 @@ if(NOT MKL_INTERFACE IN_LIST MKL_INTERFACE_CHOICES)
     message(FATAL_ERROR "Unrecognized option for MKL_INTERFACE: ${MKL_INTERFACE}")
 endif()
 
-# Check option for the threading layer
-if(MKL_THREADING STREQUAL "openmp")
-    message(FATAL_ERROR "openmp dependency not implemented yet")
-elseif(NOT MKL_THREADING IN_LIST MKL_THREADING_CHOICES)
+if(NOT MKL_THREADING IN_LIST MKL_THREADING_CHOICES)
     message(FATAL_ERROR "Unrecognized option for MKL_THREADING: ${MKL_THREADING}")
 endif()
 
@@ -336,9 +333,24 @@ else()
     if(MKL_THREADING STREQUAL sequential)
         mkl_add_imported_library(sequential)
         mkl_set_dependencies(core intel_${MKL_INTERFACE} sequential)
-    else()
+    elseif(MKL_THREADING STREQUAL tbb)
         mkl_add_imported_library(tbb_thread)
         mkl_set_dependencies(core intel_${MKL_INTERFACE} tbb_thread)
+    elseif(MKL_THREADING STREQUAL openmp)
+        # Find the system OpenMP (defines OpenMP::OpenMP_CXX)
+        find_package(OpenMP REQUIRED)
+        
+        # Select the correct MKL threading layer based on the compiler
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            mkl_add_imported_library(gnu_thread)
+            mkl_set_dependencies(core intel_${MKL_INTERFACE} gnu_thread)
+            target_link_libraries(mkl::gnu_thread INTERFACE OpenMP::OpenMP_CXX)
+        else()
+            # For MSVC, Intel, and Clang, we typically use the Intel threading layer
+            mkl_add_imported_library(intel_thread)
+            mkl_set_dependencies(core intel_${MKL_INTERFACE} intel_thread)
+            target_link_libraries(mkl::intel_thread INTERFACE OpenMP::OpenMP_CXX)
+        endif()
     endif()
 
     # Instructions sets specific libraries

@@ -15,7 +15,8 @@
             "Eigen::MINRES",
             "Pardiso",
             "Hypre",
-            "AMGCL"
+            "AMGCL",
+            "CUDA_PCG"
         ],
         "doc": "Settings for the linear solver."
     },
@@ -47,7 +48,8 @@
             "Eigen::ConjugateGradient",
             "Eigen::BiCGSTAB",
             "Eigen::GMRES",
-            "Eigen::MINRES"
+            "Eigen::MINRES",
+            "CUDA_PCG"
         ]
     },
     {
@@ -449,5 +451,53 @@
         "default": 0,
         "type": "float",
         "doc": "Aggregation epsilon strong."
+    },
+    {
+        "pointer": "/CUDA_PCG",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "block_dim",
+            "max_iter",
+            "relative_tolerance",
+            "absolute_tolerance",
+            "use_preconditioned_residual_norm"
+        ],
+        "doc": "Settings for the CUDA PCG solver."
+    },
+    {
+        "pointer": "/CUDA_PCG/block_dim",
+        "default": 1,
+        "type": "int",
+        "options": [
+            1,
+            2,
+            3
+        ],
+        "doc": "Block size of the BSR matrix PCG sovler internally use. Choose 3 for 3d problem, 2 for 2d, etc."
+    },
+    {
+        "pointer": "/CUDA_PCG/max_iter",
+        "default": 100000,
+        "type": "int",
+        "doc": "Maximum number of iterations."
+    },
+    {
+        "pointer": "/CUDA_PCG/relative_tolerance",
+        "default": 1e-3,
+        "type": "float",
+        "doc": "Relative convergence tolerance."
+    },
+    {
+        "pointer": "/CUDA_PCG/absolute_tolerance",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Absolute convergence tolerance."
+    },
+    {
+        "pointer": "/CUDA_PCG/use_preconditioned_residual_norm",
+        "default": false,
+        "type": "bool",
+        "doc": "Use preconditioned residual norm for termination check."
     }
 ]

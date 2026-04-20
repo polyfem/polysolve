@@ -10,7 +10,6 @@ endif()
 set(POLYSOLVE_WARNING_FLAGS
 	-Wall
 	-Wextra
-	-pedantic
 
 	# -Wconversion
 	#-Wunsafe-loop-optimizations # broken with C++11 loops

@@ -585,6 +585,13 @@ namespace polysolve::linear
             {
                 status_ = CudaPCGStatus::ReachMaxIterations;
             }
+
+            SPDLOG_TRACE(
+                "CUDA_PCG iter {}-{}: {:.6f}s residual {:.6e}",
+                iter_window_start,
+                iterations_,
+                elapsed_seconds(iter_window_begin),
+                residual_norm_);
         }
     };
 

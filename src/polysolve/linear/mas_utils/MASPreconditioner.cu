@@ -777,15 +777,18 @@ namespace polysolve::linear::mas
             }
         }
 
-        /// @brief Invert row major upper triangular SPD matrix.
+        /// @brief Invert a packed symmetric matrix in-place using symmetric Gauss-Jordan sweeps.
         template <int N>
-        __global__ void batched_invert_upper_packed(double *d_matrices)
+        __global__ void batched_invert_upper(double *d_matrices,
+                                             bool *success)
         {
             int mat_idx = blockIdx.x;
             constexpr int STORAGE = N * (N + 1) / 2;
             double *d_A = d_matrices + mat_idx * STORAGE;
 
             __shared__ double s_A[STORAGE];
+            __shared__ double s_col[N];
+            __shared__ double s_pivot;
             int tx = threadIdx.x;
 
             for (int i = tx; i < STORAGE; i += N)
@@ -794,86 +797,91 @@ namespace polysolve::linear::mas
             }
             __syncthreads();
 
-            // In-place Cholesky Factorization (A = U^T U). We compute upper not lower.
-            for (int i = 0; i < N; ++i)
+            for (int pivot = 0; pivot < N; ++pivot)
             {
-                if (tx == i)
+                if (tx == 0)
                 {
-                    s_A[index_upper_mat(N, i, i)] = sqrt(s_A[index_upper_mat(N, i, i)]);
-                }
-                __syncthreads();
-
-                if (tx > i)
-                {
-                    s_A[index_upper_mat(N, i, tx)] /= s_A[index_upper_mat(N, i, i)];
-                }
-                __syncthreads();
-
-                if (tx > i)
-                {
-                    double U_i_tx = s_A[index_upper_mat(N, i, tx)];
-                    for (int c = tx; c < N; ++c)
+                    s_pivot = s_A[index_upper_mat(N, pivot, pivot)];
+                    if (!ctd::isfinite(s_pivot) || s_pivot == 0.0)
                     {
-                        s_A[index_upper_mat(N, tx, c)] -= U_i_tx * s_A[index_upper_mat(N, i, c)];
+                        *success = false;
                     }
                 }
                 __syncthreads();
-            }
 
-            // Invert U in-place (U^-1)
-            for (int c = 0; c < N; ++c)
-            {
-                double inv_Ucc = 1.0 / s_A[index_upper_mat(N, c, c)];
-                double new_val = 0.0;
-
-                if (tx < c)
+                if (tx < N)
                 {
-                    double sum = 0.0;
-                    for (int k = tx; k < c; ++k)
+                    if (tx == pivot)
                     {
-                        sum += s_A[index_upper_mat(N, tx, k)] * s_A[index_upper_mat(N, k, c)];
+                        s_col[tx] = 0.0;
                     }
-                    new_val = -sum * inv_Ucc;
-                }
-                __syncthreads();
-
-                if (tx < c)
-                {
-                    s_A[index_upper_mat(N, tx, c)] = new_val;
-                }
-                else if (tx == c)
-                {
-                    s_A[index_upper_mat(N, c, c)] = inv_Ucc;
-                }
-                __syncthreads();
-            }
-
-            // Matrix Multiplication A^-1 = U^-1 * U^-T
-            for (int c = 0; c < N; ++c)
-            {
-                double new_val = 0.0;
-
-                if (tx <= c)
-                {
-                    double sum = 0.0;
-                    for (int k = c; k < N; ++k)
+                    else
                     {
-                        sum += s_A[index_upper_mat(N, tx, k)] * s_A[index_upper_mat(N, c, k)];
+                        int row = ctd::min(tx, pivot);
+                        int col = ctd::max(tx, pivot);
+                        s_col[tx] = s_A[index_upper_mat(N, row, col)];
                     }
-                    new_val = sum;
                 }
                 __syncthreads();
 
-                if (tx <= c)
+                if (tx < N && tx != pivot)
                 {
-                    s_A[index_upper_mat(N, tx, c)] = new_val;
+                    double a_ik = s_col[tx];
+                    for (int col = tx; col < N; ++col)
+                    {
+                        if (col == pivot)
+                        {
+                            continue;
+                        }
+
+                        double updated =
+                            s_A[index_upper_mat(N, tx, col)] - a_ik * s_col[col] / s_pivot;
+                        if (!ctd::isfinite(updated))
+                        {
+                            *success = false;
+                        }
+                        s_A[index_upper_mat(N, tx, col)] = updated;
+                    }
+                }
+                __syncthreads();
+
+                if (tx == pivot)
+                {
+                    double updated = -1.0 / s_pivot;
+                    if (!ctd::isfinite(updated))
+                    {
+                        *success = false;
+                    }
+                    else
+                    {
+                        s_A[index_upper_mat(N, pivot, pivot)] = updated;
+                    }
+                }
+                else if (tx < N)
+                {
+                    double updated = s_col[tx] / s_pivot;
+                    if (!ctd::isfinite(updated))
+                    {
+                        *success = false;
+                    }
+                    else
+                    {
+                        int row = ctd::min(tx, pivot);
+                        int col = ctd::max(tx, pivot);
+                        s_A[index_upper_mat(N, row, col)] = updated;
+                    }
                 }
                 __syncthreads();
             }
 
             for (int i = tx; i < STORAGE; i += N)
             {
-                d_A[i] = s_A[i];
+                double output = -s_A[i];
+                if (!ctd::isfinite(output))
+                {
+                    *success = false;
+                }
+                d_A[i] = output;
             }
         }
 
@@ -884,20 +892,32 @@ namespace polysolve::linear::mas
                 return;
             }
 
+            auto success = cu::make_buffer<bool>(rt.stream, rt.mr, 1, true);
+
             if (block_dim == 1)
             {
-                batched_invert_upper_packed<32><<<mat_num, 32, 0, rt.stream.get()>>>(mats);
-                return;
+                batched_invert_upper<32><<<mat_num, 32, 0, rt.stream.get()>>>(
+                    mats, success.data());
             }
-            if (block_dim == 2)
+            else if (block_dim == 2)
             {
-                batched_invert_upper_packed<64><<<mat_num, 64, 0, rt.stream.get()>>>(mats);
-                return;
+                batched_invert_upper<64><<<mat_num, 64, 0, rt.stream.get()>>>(
+                    mats, success.data());
             }
-            if (block_dim == 3)
+            else if (block_dim == 3)
             {
-                batched_invert_upper_packed<96><<<mat_num, 96, 0, rt.stream.get()>>>(mats);
-                return;
+                batched_invert_upper<96><<<mat_num, 96, 0, rt.stream.get()>>>(
+                    mats, success.data());
+            }
+            else
+            {
+                assert(false);
+            }
+
+            bool host_success = device2host(success.data(), rt);
+            if (!host_success)
+            {
+                throw std::runtime_error("[CudaPCG] MAS packed inverse failed.");
             }
         }
 

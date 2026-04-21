@@ -461,6 +461,7 @@
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
+            "lazy_partitioning",
             "use_preconditioned_residual_norm"
         ],
         "doc": "Settings for the CUDA PCG solver."
@@ -493,6 +494,12 @@
         "default": 1e-10,
         "type": "float",
         "doc": "Absolute convergence tolerance."
+    },
+    {
+        "pointer": "/CUDA_PCG/lazy_partitioning",
+        "default": false,
+        "type": "bool",
+        "doc": "If true, reuse the first METIS partition."
     },
     {
         "pointer": "/CUDA_PCG/use_preconditioned_residual_norm",

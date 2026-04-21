@@ -142,6 +142,7 @@ namespace polysolve::linear
         int true_residual_period_ = 10;
         double abs_tol_ = 1e-20;
         double rel_tol_ = 1e-6;
+        bool lazy_partitioning_ = false;
         bool use_preconditioned_residual_norm_ = true;
 
         int dim_ = 0;          ///< Input matrix A dim.
@@ -207,6 +208,8 @@ namespace polysolve::linear
                 rel_tol_ = params["relative_tolerance"];
             if (params.contains("absolute_tolerance"))
                 abs_tol_ = params["absolute_tolerance"];
+            if (params.contains("lazy_partitioning"))
+                lazy_partitioning_ = params["lazy_partitioning"];
             if (params.contains("use_preconditioned_residual_norm"))
                 use_preconditioned_residual_norm_ = params["use_preconditioned_residual_norm"];
         }
@@ -291,6 +294,7 @@ namespace polysolve::linear
         {
             CudaRuntime rt{*default_stream_, default_mem_pool_->as_ref()};
             auto total_begin = clock::now();
+            int block_n = div_round_up(A.rows(), block_dim_);
 
             // We do:
             // 1. K-way graph parition.
@@ -298,18 +302,27 @@ namespace polysolve::linear
             // 3. Initialize MAS preconditioner.
             // 4. Allocates buffer for PCG loop.
 
-            // Build initial BSR matrix for metis parition.
-            auto phase_begin = clock::now();
-            BSRMatrix topo_matrix{A, block_dim_, {}, rt};
-            SPDLOG_TRACE("CUDA_PCG setup: topology_bsr {:.6f}s", elapsed_seconds(phase_begin));
+            bool rebuild_partition =
+                !lazy_partitioning_ || permutation_.size() != block_n || part_offsets_.empty();
+            if (rebuild_partition)
+            {
+                // Build initial BSR matrix for metis parition.
+                auto phase_begin = clock::now();
+                BSRMatrix topo_matrix{A, block_dim_, {}, rt};
+                SPDLOG_TRACE("CUDA_PCG setup: topology_bsr {:.6f}s", elapsed_seconds(phase_begin));
 
-            // Sort nodes based on parition.
-            phase_begin = clock::now();
-            build_partition_and_perm(topo_matrix.host_topology_view());
-            SPDLOG_TRACE("CUDA_PCG setup: metis_partition {:.6f}s", elapsed_seconds(phase_begin));
+                // Sort nodes based on parition.
+                phase_begin = clock::now();
+                build_partition_and_perm(topo_matrix.host_topology_view());
+                SPDLOG_TRACE("CUDA_PCG setup: metis_partition {:.6f}s", elapsed_seconds(phase_begin));
+            }
+            else
+            {
+                SPDLOG_TRACE("CUDA_PCG setup: reuse_partition");
+            }
 
             // Build new sorted BSR matrix for MAS initialization.
-            phase_begin = clock::now();
+            auto phase_begin = clock::now();
             A_ = BSRMatrix{
                 A,
                 block_dim_,

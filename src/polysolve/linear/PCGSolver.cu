@@ -139,7 +139,7 @@ namespace polysolve::linear
     public:
         int block_dim_ = 3; ///< BSR block dim.
         int max_iter_ = 1e5;
-        int true_residual_period_ = 10;
+        int true_residual_period_ = 4;
         double abs_tol_ = 1e-20;
         double rel_tol_ = 1e-6;
         bool lazy_partitioning_ = false;

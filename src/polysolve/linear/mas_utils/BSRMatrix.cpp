@@ -5,6 +5,7 @@
 #include <cuda/algorithm>
 #include <Eigen/SparseCore>
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <unordered_map>
 #include <vector>
@@ -50,6 +51,47 @@ namespace polysolve::linear::mas
                 quant[i] = std::clamp(static_cast<int>(scaled), 1, MAX_QUANT);
             }
             return quant;
+        }
+
+        /// Average upper and lower part of topology connection weight.
+        void avg_sym_weight(ctd::span<const int> row_ptr,
+                            ctd::span<const int> cols,
+                            ctd::span<double> weights)
+        {
+            struct Sum
+            {
+                double val = 0.0;
+                int count = 0;
+            };
+
+            std::unordered_map<uint64_t, Sum> pair_weight;
+
+            auto ij_to_key = [](int i, int j) -> uint64_t {
+                int u = std::min(i, j);
+                int v = std::max(i, j);
+                return (static_cast<uint64_t>(u) << 32) | static_cast<uint32_t>(v);
+            };
+
+            for (int i = 0; i < row_ptr.size() - 1; ++i)
+            {
+                for (int n = row_ptr[i]; n < row_ptr[i + 1]; ++n)
+                {
+                    int j = cols[n];
+                    Sum &stat = pair_weight[ij_to_key(i, j)];
+                    stat.val += weights[n];
+                    stat.count += 1;
+                }
+            }
+
+            for (int i = 0; i < row_ptr.size() - 1; ++i)
+            {
+                for (int n = row_ptr[i]; n < row_ptr[i + 1]; ++n)
+                {
+                    int j = cols[n];
+                    auto it = pair_weight.find(ij_to_key(i, j));
+                    weights[n] = it->second.val / it->second.count;
+                }
+            }
         }
 
         /// @brief Block CSR matrix builder.
@@ -214,7 +256,13 @@ namespace polysolve::linear::mas
             }
 
             // Metis expect >0 int connection weight.
-            // So we quantize floating point norm.
+            // Symmetrize the two directed weights of each undirected edge first,
+            // then quantize the averaged value for METIS.
+            //
+            // In theory input matrix should be symmetric but in practice small floating point
+            // error accumulate through assembly will result in different quantized weight.
+            // So to prevent metis error we must compute average here.
+            avg_sym_weight(h_topo_rows, h_topo_cols, h_topo_norms);
             h_topo_weights = quantize_weight(h_topo_norms);
 
             non_zeros = h_cols.size();

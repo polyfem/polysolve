@@ -173,8 +173,15 @@ if (POLYSOLVE_WITH_CUDA)
   enable_language(CUDA)
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  set_target_properties(polysolve PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-  set_target_properties(polysolve_linear PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+  set_target_properties(polysolve PROPERTIES
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON
+  )
+  set_target_properties(polysolve_linear PROPERTIES
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON
+  )
 
   # Enable __device__ lambda
   target_compile_options(polysolve PRIVATE

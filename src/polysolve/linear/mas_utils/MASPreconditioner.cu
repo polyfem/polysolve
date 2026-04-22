@@ -15,7 +15,6 @@
 #include <cmath>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
-#include <vector>
 #include <cassert>
 
 namespace polysolve::linear::mas
@@ -31,16 +30,6 @@ namespace polysolve::linear::mas
 
         // This is not tunable.
         constexpr int BANK_SIZE = 32;
-
-        struct HostPaddedTopology
-        {
-            std::vector<int> real_to_padded;
-            std::vector<int> padded_to_real;
-            std::vector<int> row_ptr;
-            std::vector<int> cols;
-            int node_num = 0;
-            int padded_node_num = 0;
-        };
 
         /// @brief Convenience wrapper for CoarseMatrices.
         struct CoarseMatricesRef
@@ -65,58 +54,58 @@ namespace polysolve::linear::mas
             }
         };
 
-        HostPaddedTopology build_padded_topology(TopologyView topo, ctd::span<const int> part_offsets)
+        __global__ void build_padded_maps(ctd::span<const int> part_offsets,
+                                          ctd::span<const int> bsr_rows,
+                                          ctd::span<int> real_to_padded,
+                                          ctd::span<int> padded_to_real,
+                                          ctd::span<int> real_num_per_row)
         {
-            int node_num = topo.row_ptr.size() - 1;
-            int part_num = part_offsets.size() - 1;
-            int padded_node_num = part_num * BANK_SIZE;
-
-            HostPaddedTopology out;
-            out.real_to_padded.resize(node_num, -1);
-            out.padded_to_real.resize(padded_node_num, -1);
-            out.row_ptr.resize(padded_node_num + 1, 0);
-            out.node_num = node_num;
-            out.padded_node_num = padded_node_num;
-
-            // Fill element num for padded space row.
-            for (int part = 0; part < part_num; ++part)
+            int padded_id = blockDim.x * blockIdx.x + threadIdx.x;
+            if (padded_id >= real_num_per_row.size())
             {
-                int part_begin = part_offsets[part];
-                int part_end = part_offsets[part + 1];
-                int part_size = part_end - part_begin;
-                int padded_begin = part * BANK_SIZE;
-                assert(part_size <= BANK_SIZE);
-
-                for (int local_id = 0; local_id < part_size; ++local_id)
-                {
-                    int real_id = part_begin + local_id;
-                    int padded_id = padded_begin + local_id;
-                    out.real_to_padded[real_id] = padded_id;
-                    out.padded_to_real[padded_id] = real_id;
-                    out.row_ptr[padded_id + 1] = topo.row_ptr[real_id + 1] - topo.row_ptr[real_id];
-                }
+                return;
             }
 
-            // Prefix sum to complete padded CSR row ptr.
-            for (int i = 0; i < out.padded_node_num; ++i)
+            int part = padded_id / BANK_SIZE;
+            int local = padded_id % BANK_SIZE;
+            int part_begin = part_offsets[part];
+            int part_end = part_offsets[part + 1];
+            int part_size = part_end - part_begin;
+
+            if (local < part_size)
             {
-                out.row_ptr[i + 1] += out.row_ptr[i];
+                int real_id = part_begin + local;
+                real_to_padded[real_id] = padded_id;
+                padded_to_real[padded_id] = real_id;
+                real_num_per_row[padded_id] = bsr_rows[real_id + 1] - bsr_rows[real_id];
+            }
+            else
+            {
+                padded_to_real[padded_id] = -1;
+                real_num_per_row[padded_id] = 0;
+            }
+        }
+
+        __global__ void fill_padded_cols(ctd::span<const int> bsr_rows,
+                                         ctd::span<const int> bsr_cols,
+                                         ctd::span<const int> real_to_padded,
+                                         ctd::span<const int> padded_rows,
+                                         ctd::span<int> padded_cols)
+        {
+            int real_id = blockDim.x * blockIdx.x + threadIdx.x;
+            int node_num = bsr_rows.size() - 1;
+            if (real_id >= node_num)
+            {
+                return;
             }
 
-            // Fill padded space cols.
-            out.cols.resize(out.row_ptr.back());
-            for (int real_id = 0; real_id < node_num; ++real_id)
+            int padded_id = real_to_padded[real_id];
+            int dst = padded_rows[padded_id];
+            for (int n = bsr_rows[real_id]; n < bsr_rows[real_id + 1]; ++n)
             {
-                int padded_id = out.real_to_padded[real_id];
-                int dst = out.row_ptr[padded_id];
-                for (int n = topo.row_ptr[real_id]; n < topo.row_ptr[real_id + 1]; ++n)
-                {
-                    out.cols[dst] = out.real_to_padded[topo.cols[n]];
-                    ++dst;
-                }
+                padded_cols[dst] = real_to_padded[bsr_cols[n]];
+                ++dst;
             }
-
-            return out;
         }
 
         /// @brief Get coarse space CCO id.
@@ -973,6 +962,11 @@ namespace polysolve::linear::mas
 
         BSRView view = A.view();
         assert(view.block_dim >= 1 && view.block_dim <= 3);
+        assert(part_offsets.back() == view.dim);
+        for (int i = 0; i + 1 < static_cast<int>(part_offsets.size()); ++i)
+        {
+            assert(part_offsets[i + 1] - part_offsets[i] <= BANK_SIZE);
+        }
 
         initialized_ = false;
         block_dim_ = view.block_dim;
@@ -981,28 +975,55 @@ namespace polysolve::linear::mas
         auto total_begin = clock::now();
         auto phase_begin = clock::now();
 
-        // Build host padded topology.
-        HostPaddedTopology topo = build_padded_topology(A.host_topology_view(), part_offsets);
-        SPDLOG_TRACE("CUDA_PCG MAS: build_padded_topology {:.6f}s", elapsed_seconds(phase_begin));
+        // Build padded topology.
+        int node_num = view.dim;
+        int part_num = part_offsets.size() - 1;
+        int padded_node_num = part_num * BANK_SIZE;
 
-        // Transfer host padded topology to device.
-        phase_begin = clock::now();
-        padded_topology_.node_num = topo.node_num;
-        padded_topology_.padded_node_num = topo.padded_node_num;
-        padded_topology_.real_to_padded =
-            cu::make_buffer<int>(rt.stream, rt.mr, topo.real_to_padded.size(), cu::no_init);
-        padded_topology_.padded_to_real =
-            cu::make_buffer<int>(rt.stream, rt.mr, topo.padded_to_real.size(), cu::no_init);
-        padded_topology_.rows =
-            cu::make_buffer<int>(rt.stream, rt.mr, topo.row_ptr.size(), cu::no_init);
-        padded_topology_.cols =
-            cu::make_buffer<int>(rt.stream, rt.mr, topo.cols.size(), cu::no_init);
-        cu::copy_bytes(rt.stream, topo.real_to_padded, *padded_topology_.real_to_padded);
-        cu::copy_bytes(rt.stream, topo.padded_to_real, *padded_topology_.padded_to_real);
-        cu::copy_bytes(rt.stream, topo.row_ptr, *padded_topology_.rows);
-        cu::copy_bytes(rt.stream, topo.cols, *padded_topology_.cols);
+        auto d_part_offsets = cu::make_buffer<int>(rt.stream, rt.mr, part_offsets.size(), cu::no_init);
+        cu::copy_bytes(rt.stream, part_offsets, d_part_offsets);
+
+        padded_topology_.node_num = node_num;
+        padded_topology_.padded_node_num = padded_node_num;
+        padded_topology_.real_to_padded = cu::make_buffer<int>(rt.stream, rt.mr, node_num, -1);
+        padded_topology_.padded_to_real = cu::make_buffer<int>(rt.stream, rt.mr, padded_node_num, -1);
+        padded_topology_.rows = cu::make_buffer<int>(rt.stream, rt.mr, padded_node_num + 1, cu::no_init);
+        padded_topology_.cols = cu::make_buffer<int>(rt.stream, rt.mr, view.non_zeros, cu::no_init);
+
+        auto read_num_per_row = cu::make_buffer<int>(rt.stream, rt.mr, padded_node_num, 0);
+        build_padded_maps<<<div_round_up(padded_node_num, 128), 128, 0, rt.stream.get()>>>(
+            d_part_offsets,
+            view.rows,
+            *(padded_topology_.real_to_padded),
+            *(padded_topology_.padded_to_real),
+            read_num_per_row);
+
+        // Build padded space row_ptr.
+        size_t cub_tmp_size = 0;
+        cub::DeviceScan::ExclusiveSum(nullptr,
+                                      cub_tmp_size,
+                                      read_num_per_row.data(),
+                                      padded_topology_.rows->data(),
+                                      padded_node_num,
+                                      rt.stream.get());
+        auto cub_tmp = cu::make_buffer<char>(rt.stream, rt.mr, cub_tmp_size, cu::no_init);
+        cub::DeviceScan::ExclusiveSum(cub_tmp.data(),
+                                      cub_tmp_size,
+                                      read_num_per_row.data(),
+                                      padded_topology_.rows->data(),
+                                      padded_node_num,
+                                      rt.stream.get());
+        host2device(padded_topology_.rows->data() + padded_node_num, view.non_zeros, rt);
+
+        fill_padded_cols<<<div_round_up(node_num, 128), 128, 0, rt.stream.get()>>>(
+            view.rows,
+            view.cols,
+            *(padded_topology_.real_to_padded),
+            *(padded_topology_.rows),
+            *(padded_topology_.cols));
+
         rt.stream.sync();
-        SPDLOG_TRACE("CUDA_PCG MAS: copy_padded_topology {:.6f}s", elapsed_seconds(phase_begin));
+        SPDLOG_TRACE("CUDA_PCG MAS: build_padded_topology_device {:.6f}s", elapsed_seconds(phase_begin));
 
         // Build coarse space hierarchy.
         phase_begin = clock::now();

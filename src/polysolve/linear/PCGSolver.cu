@@ -16,6 +16,8 @@
 #include <cuda/std/span>
 #include <cuda/std/optional>
 
+#include <spdlog/spdlog.h>
+
 #include <chrono>
 #include <stdexcept>
 #include <string>
@@ -320,7 +322,7 @@ namespace polysolve::linear
                 // Sort nodes based on parition.
                 phase_begin = clock::now();
                 build_partition_and_perm(adj);
-                SPDLOG_INFO("CUDA_PCG setup: graph_partition {:.6f}s", elapsed_seconds(phase_begin));
+                SPDLOG_TRACE("CUDA_PCG setup: graph_partition {:.6f}s", elapsed_seconds(phase_begin));
             }
             else
             {

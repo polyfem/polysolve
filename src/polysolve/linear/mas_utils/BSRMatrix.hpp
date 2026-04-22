@@ -5,8 +5,6 @@
 
 #include <cuda/std/span>
 
-#include <vector>
-
 namespace polysolve::linear::mas
 {
     struct BSRView
@@ -17,13 +15,6 @@ namespace polysolve::linear::mas
         ctd::span<const int> rows;
         ctd::span<const int> cols;
         ctd::span<const double> vals;
-    };
-
-    // Host CSR-style topology. May include self (diagonal).
-    struct TopologyView
-    {
-        ctd::span<const int> row_ptr;
-        ctd::span<const int> cols;
     };
 
     /// @brief Block CSR matrix.
@@ -44,14 +35,6 @@ namespace polysolve::linear::mas
             return BSRView{dim_, block_dim_, non_zeros_, *rows_, *cols_, *vals_};
         }
 
-        TopologyView host_topology_view() const
-        {
-            return TopologyView{
-                h_rows_,
-                h_cols_,
-            };
-        }
-
     private:
         int dim_ = 0;
         int block_dim_ = 0;
@@ -59,10 +42,6 @@ namespace polysolve::linear::mas
         Buf<int> rows_;
         Buf<int> cols_;
         Buf<double> vals_;
-
-        // Host copy of matrix sparsity pattern. Used by MAS topology build.
-        std::vector<int> h_rows_;
-        std::vector<int> h_cols_;
     };
 
 } // namespace polysolve::linear::mas

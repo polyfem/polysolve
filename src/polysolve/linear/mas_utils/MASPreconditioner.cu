@@ -130,8 +130,8 @@ namespace polysolve::linear::mas
         }
 
         /// @brief Build local CCO mapping from input space -> coarse space lv 0 and collapse topology.
-        /// @param row_ptr CSR graph topology (does not include self).
-        /// @param cols CSR graph topology (does not include self).
+        /// @param row_ptr CSR graph topology (may include self).
+        /// @param cols CSR graph topology (may include self).
         /// @param padded_to_real Padded id -> real id. -1 denotes padding.
         /// @param cco_num_per_bank CCO number per bank.
         /// @param local_cco_ids Bank local CCO id at coarse space lv 0.
@@ -225,8 +225,8 @@ namespace polysolve::linear::mas
         /// @brief Build bank neighbor mask and collapse topology.
         /// @param level Target coarse space level.
         /// @param coarse_space_map Coarse space map.
-        /// @param row_ptr CSR graph topology (does not include self).
-        /// @param cols CSR graph topology (does not include self).
+        /// @param row_ptr CSR graph topology (may include self).
+        /// @param cols CSR graph topology (may include self).
         /// @param padded_to_real Padded id -> real id. -1 denotes padding.
         /// @param neighbors Bank local neighbor mask.
         __global__ void build_neighbor_masks_lvx(int level,
@@ -377,8 +377,8 @@ namespace polysolve::linear::mas
         /// Coarse space map real node id layout:
         /// | node0_lv0 node0_lv1 ... node0_lv_max | node1_lv0 ... node1_lv_max | ... |
         ///
-        /// @param row_ptr CSR graph topology (does not include self).
-        /// @param cols CSR graph topology (does not include self).
+        /// @param row_ptr CSR graph topology (may include self).
+        /// @param cols CSR graph topology (may include self).
         /// @param real_to_padded Real id -> padded id.
         /// @param padded_to_real Padded id -> real id. -1 denotes virtual padding.
         /// @rt Cuda runtime config.

@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include <polysolve/linear/mas_utils/BSRAdjacency.hpp>
 #include <polysolve/linear/mas_utils/BSRMatrix.hpp>
 #include <polysolve/linear/mas_utils/CuSparseWrapper.hpp>
 #include <polysolve/linear/mas_utils/CudaUtils.cuh>
@@ -223,11 +224,17 @@ namespace polysolve::linear
 
         void analyze_pattern(const StiffnessMatrix &, const int) {}
 
-        void build_partition_and_perm(TopologyView topo)
+        void build_partition_and_perm(const BSRAdjacency &adj)
         {
             int part_num = 0;
             std::vector<int> part_id;
-            metis_partition(topo.row_ptr, topo.cols, topo.weights, 32, part_num, part_id);
+            metis_partition(
+                adj.row_ptr,
+                adj.cols,
+                adj.weights,
+                32,
+                part_num,
+                part_id);
 
             part_offsets_ = build_part_offsets(part_id, part_num);
             permutation_ = build_permutation(part_id, part_offsets_);
@@ -306,15 +313,15 @@ namespace polysolve::linear
                 !lazy_partitioning_ || permutation_.size() != block_n || part_offsets_.empty();
             if (rebuild_partition)
             {
-                // Build initial BSR matrix for metis parition.
+                // Build adjacency for metis parition.
                 auto phase_begin = clock::now();
-                BSRMatrix topo_matrix{A, block_dim_, {}, rt};
-                SPDLOG_TRACE("CUDA_PCG setup: topology_bsr {:.6f}s", elapsed_seconds(phase_begin));
+                BSRAdjacency adj{A, block_dim_};
+                SPDLOG_TRACE("CUDA_PCG setup: topology_adj {:.6f}s", elapsed_seconds(phase_begin));
 
                 // Sort nodes based on parition.
                 phase_begin = clock::now();
-                build_partition_and_perm(topo_matrix.host_topology_view());
-                SPDLOG_TRACE("CUDA_PCG setup: metis_partition {:.6f}s", elapsed_seconds(phase_begin));
+                build_partition_and_perm(adj);
+                SPDLOG_INFO("CUDA_PCG setup: metis_partition {:.6f}s", elapsed_seconds(phase_begin));
             }
             else
             {

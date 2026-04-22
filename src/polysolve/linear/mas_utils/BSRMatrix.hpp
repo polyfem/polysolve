@@ -19,12 +19,11 @@ namespace polysolve::linear::mas
         ctd::span<const double> vals;
     };
 
-    // CSR adjacency without self.
+    // Host CSR-style topology. May include self (diagonal).
     struct TopologyView
     {
         ctd::span<const int> row_ptr;
         ctd::span<const int> cols;
-        ctd::span<const int> weights;
     };
 
     /// @brief Block CSR matrix.
@@ -48,9 +47,8 @@ namespace polysolve::linear::mas
         TopologyView host_topology_view() const
         {
             return TopologyView{
-                h_topo_rows_,
-                h_topo_cols_,
-                h_topo_weights_,
+                h_rows_,
+                h_cols_,
             };
         }
 
@@ -58,14 +56,13 @@ namespace polysolve::linear::mas
         int dim_ = 0;
         int block_dim_ = 0;
         int non_zeros_ = 0;
-        int topology_non_zeros_ = 0;
         Buf<int> rows_;
         Buf<int> cols_;
         Buf<double> vals_;
 
-        std::vector<int> h_topo_rows_;
-        std::vector<int> h_topo_cols_;
-        std::vector<int> h_topo_weights_;
+        // Host copy of matrix sparsity pattern. Used by MAS topology build.
+        std::vector<int> h_rows_;
+        std::vector<int> h_cols_;
     };
 
 } // namespace polysolve::linear::mas

@@ -499,7 +499,7 @@
         "pointer": "/CUDA_PCG/lazy_partitioning",
         "default": true,
         "type": "bool",
-        "doc": "If true, reuse the first METIS partition."
+        "doc": "If true, reuse the first graph partition."
     },
     {
         "pointer": "/CUDA_PCG/use_preconditioned_residual_norm",

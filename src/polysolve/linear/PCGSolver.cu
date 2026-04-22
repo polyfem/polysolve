@@ -27,8 +27,7 @@
 #include <polysolve/linear/mas_utils/CudaUtils.cuh>
 #include <polysolve/linear/mas_utils/InnerProduct.hpp>
 #include <polysolve/linear/mas_utils/MASPreconditioner.hpp>
-#include <polysolve/linear/mas_utils/MetisPartition.hpp>
-#include <spdlog/spdlog.h>
+#include <polysolve/linear/mas_utils/GraphPartition.hpp>
 
 namespace polysolve::linear
 {
@@ -162,12 +161,12 @@ namespace polysolve::linear
 
         BSRMatrix A_;
         MASPreconditioner mas_precond_;
-        std::vector<int> permutation_;     ///< Permutation from metis partition.
-        std::vector<int> inv_permutation_; ///< Permutation from metis partition.
-        std::vector<int> part_offsets_;    ///< Metis partition offset for sorted blocks.
+        std::vector<int> permutation_;     ///< Permutation from graph partition.
+        std::vector<int> inv_permutation_; ///< Permutation from graph partition.
+        std::vector<int> part_offsets_;    ///< Partition offsets for sorted blocks.
         CuSparseBSR sparse_A_;             ///< CuSparse handle of A.
-        Buf<int> d_permutation_;           ///< Permutation from metis partition.
-        Buf<int> d_inv_permutation_;       ///< Permutation from metis partition.
+        Buf<int> d_permutation_;           ///< Permutation from graph partition.
+        Buf<int> d_inv_permutation_;       ///< Permutation from graph partition.
         Buf<char> spmv_workspace_;         ///< CuSparse temp.
 
         // PCG variables.
@@ -224,11 +223,11 @@ namespace polysolve::linear
 
         void analyze_pattern(const StiffnessMatrix &, const int) {}
 
-        void build_partition_and_perm(const BSRAdjacency &adj)
+        void build_partition_and_perm(BSRAdjacency &adj)
         {
             int part_num = 0;
             std::vector<int> part_id;
-            metis_partition(
+            graph_partition(
                 adj.row_ptr,
                 adj.cols,
                 adj.weights,
@@ -313,7 +312,7 @@ namespace polysolve::linear
                 !lazy_partitioning_ || permutation_.size() != block_n || part_offsets_.empty();
             if (rebuild_partition)
             {
-                // Build adjacency for metis parition.
+                // Build adjacency for graph partition.
                 auto phase_begin = clock::now();
                 BSRAdjacency adj{A, block_dim_};
                 SPDLOG_TRACE("CUDA_PCG setup: topology_adj {:.6f}s", elapsed_seconds(phase_begin));
@@ -321,7 +320,7 @@ namespace polysolve::linear
                 // Sort nodes based on parition.
                 phase_begin = clock::now();
                 build_partition_and_perm(adj);
-                SPDLOG_INFO("CUDA_PCG setup: metis_partition {:.6f}s", elapsed_seconds(phase_begin));
+                SPDLOG_INFO("CUDA_PCG setup: graph_partition {:.6f}s", elapsed_seconds(phase_begin));
             }
             else
             {

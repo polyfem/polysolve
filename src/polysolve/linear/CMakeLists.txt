@@ -31,8 +31,8 @@ if(POLYSOLVE_WITH_CUDA)
         mas_utils/InnerProduct.hpp
         mas_utils/MASPreconditioner.cu
         mas_utils/MASPreconditioner.hpp
-        mas_utils/MetisPartition.cpp
-        mas_utils/MetisPartition.hpp
+        mas_utils/GraphPartition.cpp
+        mas_utils/GraphPartition.hpp
     )
 
 endif()

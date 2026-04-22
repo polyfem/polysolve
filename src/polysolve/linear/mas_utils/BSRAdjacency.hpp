@@ -2,11 +2,12 @@
 
 #include <polysolve/Types.hpp>
 
+#include <cstdint>
 #include <vector>
 
 namespace polysolve::linear::mas
 {
-    /// Host-only CSR adjacency for METIS partitioning.
+    /// Host-only CSR adjacency for graph partitioning.
     /// Self-excluding, with symmetrized + quantized positive integer weights.
     class BSRAdjacency
     {
@@ -16,7 +17,7 @@ namespace polysolve::linear::mas
 
         std::vector<int> row_ptr;
         std::vector<int> cols;
-        std::vector<int> weights;
+        std::vector<int64_t> weights;
     };
 
 } // namespace polysolve::linear::mas

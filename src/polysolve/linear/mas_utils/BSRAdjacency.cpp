@@ -16,7 +16,7 @@ namespace polysolve::linear::mas
 {
     namespace
     {
-        std::vector<int> quantize_weight(cuda::std::span<const double> weight)
+        std::vector<int64_t> quantize_weight(cuda::std::span<const double> weight)
         {
             if (weight.empty())
             {
@@ -29,15 +29,15 @@ namespace polysolve::linear::mas
             double w_range = max_w - min_w;
             if (w_range <= 0.0)
             {
-                return std::vector<int>(weight.size(), 1);
+                return std::vector<int64_t>(weight.size(), 1);
             }
 
             constexpr int MAX_QUANT = 1000000;
-            std::vector<int> quant(weight.size());
+            std::vector<int64_t> quant(weight.size());
             for (int i = 0; i < static_cast<int>(weight.size()); ++i)
             {
                 double scaled = (weight[i] - min_w) / w_range * MAX_QUANT;
-                quant[i] = std::clamp(static_cast<int>(scaled), 1, MAX_QUANT);
+                quant[i] = static_cast<int64_t>(std::clamp(static_cast<int>(scaled), 1, MAX_QUANT));
             }
             return quant;
         }
@@ -92,7 +92,7 @@ namespace polysolve::linear::mas
                                   int dim,
                                   std::vector<int> &row_ptr,
                                   std::vector<int> &cols,
-                                  std::vector<int> &weights)
+                                  std::vector<int64_t> &weights)
         {
             using Iter = Eigen::SparseMatrix<double, Eigen::RowMajor>::InnerIterator;
 
@@ -153,7 +153,7 @@ namespace polysolve::linear::mas
                 row_ptr[i + 1] += row_ptr[i];
             }
 
-            // Stabilize weights for METIS: symmetrize, then quantize.
+            // Stabilize weights for the graph partitioner: symmetrize, then quantize.
             avg_sym_weight(row_ptr, cols, norms);
             weights = quantize_weight(norms);
         }

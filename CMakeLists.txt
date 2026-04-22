@@ -414,11 +414,11 @@ if(POLYSOLVE_WITH_CUDA)
   target_link_libraries(polysolve PUBLIC CCCL::CCCL)
 endif()
 
-# METIS
+# KaMinPar
+# KaMinPar requires onetbb
 if(POLYSOLVE_WITH_CUDA)
-  include(metis)
-  target_link_libraries(polysolve_linear PUBLIC metis::metis)
-  target_link_libraries(polysolve PUBLIC metis::metis)
+  include(kaminpar)
+  target_link_libraries(polysolve_linear PRIVATE KaMinPar::KaMinPar)
 endif()
 
 

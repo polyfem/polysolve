@@ -17,5 +17,25 @@ set(SOURCES
     SaddlePointSolver.hpp
 )
 
+if(POLYSOLVE_WITH_CUDA)
+    list(APPEND SOURCES
+        PCGSolver.cu
+        PCGSolver.hpp
+        mas_utils/BSRAdjacency.cpp
+        mas_utils/BSRAdjacency.hpp
+        mas_utils/BSRMatrix.cu
+        mas_utils/BSRMatrix.hpp
+        mas_utils/CuSparseWrapper.hpp
+        mas_utils/CudaUtils.cuh
+        mas_utils/InnerProduct.cu
+        mas_utils/InnerProduct.hpp
+        mas_utils/MASPreconditioner.cu
+        mas_utils/MASPreconditioner.hpp
+        mas_utils/GraphPartition.cpp
+        mas_utils/GraphPartition.hpp
+    )
+
+endif()
+
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCES})
 target_sources(polysolve_linear PRIVATE ${SOURCES})

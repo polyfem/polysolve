@@ -127,6 +127,13 @@ TEST_CASE("all", "[solver]")
         json params;
         params[s]["tolerance"] = 1e-10;
         solver->set_parameters(params);
+        if (s == "CUDA_PCG")
+        {
+            params[s]["relative_tolerance"] = 0.0;
+            params[s]["absolute_tolerance"] = 1e-8;
+            params[s]["use_preconditioned_residual_norm"] = false;
+            solver->set_parameters(params);
+        }
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());
@@ -193,6 +200,41 @@ TEST_CASE("eigen_params", "[solver]")
         }
     }
 }
+
+#ifdef POLYSOLVE_WITH_CUDA
+// Test block dim 1, 2, 3
+TEST_CASE("cuda_pcg_block_dims", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    for (int block_dim : {1, 2, 3})
+    {
+        auto solver = Solver::create("CUDA_PCG", "");
+        json params;
+        params["CUDA_PCG"]["block_dim"] = block_dim;
+        params["CUDA_PCG"]["relative_tolerance"] = 0.0;
+        params["CUDA_PCG"]["absolute_tolerance"] = 1e-8;
+        params["CUDA_PCG"]["use_preconditioned_residual_norm"] = false;
+        solver->set_parameters(params);
+
+        Eigen::VectorXd b(A.rows());
+        b.setRandom();
+        Eigen::VectorXd x(b.size());
+        x.setZero();
+
+        solver->analyze_pattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+
+        const double err = (A * x - b).norm();
+        INFO("block_dim: " + std::to_string(block_dim));
+        REQUIRE(err < 1e-8);
+    }
+}
+#endif
 
 TEST_CASE("pre_factor", "[solver]")
 {

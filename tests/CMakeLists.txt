@@ -30,6 +30,10 @@ if(POLYSOLVE_WITH_AMGCL)
     target_compile_definitions(unit_tests PRIVATE -DPOLYSOLVE_WITH_AMGCL)
 endif()
 
+if (POLYFEM_WITH_CUDA)
+    target_compile_definitions(unit_tests PUBLIC POLYSOLVE_WITH_CUDA)
+endif()
+
 include(polyfem-data)
 target_link_libraries(unit_tests PRIVATE polyfem::data)
 

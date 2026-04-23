@@ -201,6 +201,7 @@ TEST_CASE("eigen_params", "[solver]")
     }
 }
 
+#ifdef POLYSOLVE_WITH_CUDA
 // Test block dim 1, 2, 3
 TEST_CASE("cuda_pcg_block_dims", "[solver]")
 {
@@ -233,6 +234,7 @@ TEST_CASE("cuda_pcg_block_dims", "[solver]")
         REQUIRE(err < 1e-8);
     }
 }
+#endif
 
 TEST_CASE("pre_factor", "[solver]")
 {

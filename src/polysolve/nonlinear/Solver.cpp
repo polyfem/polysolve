@@ -26,6 +26,8 @@
 #include <iomanip>
 #include <fstream>
 
+#include <polysolve/autogen/nonlinear-solver-spec.cpp>
+
 namespace polysolve::nonlinear
 {
     namespace
@@ -129,18 +131,10 @@ namespace polysolve::nonlinear
     {
         json solver_params = solver_params_in; // mutable copy
 
-        json rules;
         jse::JSE jse;
 
         jse.strict = strict_validation;
-        const std::string input_spec = POLYSOLVE_NON_LINEAR_SPEC;
-        std::ifstream file(input_spec);
-
-        if (file.is_open())
-            file >> rules;
-        else
-            log_and_throw_error(logger, "unable to open {} rules", input_spec);
-
+        json rules = json::parse(NONLINEAR_SOLVER_SPEC);
         const bool valid_input = jse.verify_json(solver_params, rules);
 
         if (!valid_input)

@@ -10,6 +10,8 @@
 
 #include <fstream>
 
+#include <polysolve/autogen/linear-solver-spec.cpp>
+
 // -----------------------------------------------------------------------------
 // 
 // Subsequent macros assume a single template parameter and SparseQR fails due to requiring 2 parameters. this is because the OrderingType is not filled in.
@@ -137,17 +139,10 @@ namespace polysolve::linear
     {
         json params = params_in; // mutable copy
 
-        json rules;
         jse::JSE jse;
 
         jse.strict = strict_validation;
-        const std::string input_spec = POLYSOLVE_LINEAR_SPEC;
-        std::ifstream file(input_spec);
-
-        if (file.is_open())
-            file >> rules;
-        else
-            log_and_throw_error(logger, "unable to open {} rules", input_spec);
+        json rules = json::parse(LINEAR_SOLVER_SPEC);
 
         apply_default_solver(rules);
         select_valid_solver(params, logger);

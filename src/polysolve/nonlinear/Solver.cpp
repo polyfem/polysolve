@@ -3,6 +3,8 @@
 
 #include "PostStepData.hpp"
 
+#include "solver-spec.hpp"
+
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"
 #include "descent_strategies/ADAM.hpp"
@@ -129,18 +131,10 @@ namespace polysolve::nonlinear
     {
         json solver_params = solver_params_in; // mutable copy
 
-        json rules;
         jse::JSE jse;
 
         jse.strict = strict_validation;
-        const std::string input_spec = POLYSOLVE_NON_LINEAR_SPEC;
-        std::ifstream file(input_spec);
-
-        if (file.is_open())
-            file >> rules;
-        else
-            log_and_throw_error(logger, "unable to open {} rules", input_spec);
-
+        json rules = jse::embed::non_linear_spec::solver_spec::spec();
         const bool valid_input = jse.verify_json(solver_params, rules);
 
         if (!valid_input)
@@ -401,7 +395,7 @@ namespace polysolve::nonlinear
                     objFunc.hessian(x, hessian);
                     m_current.newtonDecrement = 0.5 * x.dot(hessian * x);
                 }
-                catch (const std::runtime_error& e)
+                catch (const std::runtime_error &e)
                 {
                     m_logger.error("Error computing Newton decrement: {}", e.what());
                     m_current.newtonDecrement = NaN;

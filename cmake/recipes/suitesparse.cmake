@@ -14,7 +14,7 @@
 # compared to simplicial mode. This is optional and can be disabled by setting WITH_LICENSE to LGPL.
 #---------------------------------------------------------------------------------------------------
 
-if(TARGET SuiteSparse::CHOLMOD)
+if(TARGET SuiteSparse::CHOLMOD AND TARGET SuiteSparse::UMFPACK)
     return()
 endif()
 
@@ -45,7 +45,8 @@ include(blas)
 include(lapack)
 
 if(NOT TARGET BLAS::BLAS OR NOT TARGET LAPACK::LAPACK)
-    message(FATAL_ERROR "BLAS/LAPACK configuration error")
+    message(WARNING "SuiteSparse requires BLAS and LAPACK; SuiteSparse solvers will not be available.")
+    return()
 endif()
 
 function(suitesparse_import_target)
@@ -115,7 +116,8 @@ suitesparse_import_target()
 
 foreach(name IN ITEMS cholmod SuiteSparse::CHOLMOD)
     if(NOT TARGET ${name})
-        message(FATAL_ERROR "SuiteSparse error: missing '${name}' target.")
+        message(WARNING "SuiteSparse error: missing '${name}' target.")
+        return()
     endif()
 endforeach()
 
@@ -123,7 +125,8 @@ endforeach()
 if(WITH_LICENSE STREQUAL LGPL)
     get_target_property(target_type cholmod TYPE)
     if(NOT ${target_type} STREQUAL "SHARED_LIBRARY")
-        message(FATAL_ERROR "SuiteSparse error: 'cholmod' should be SHARED_LIBRARY, but is ${target_type}.")
+        message(WARNING "SuiteSparse error: 'cholmod' should be SHARED_LIBRARY, but is ${target_type}.")
+        return()
     endif()
 endif()
 

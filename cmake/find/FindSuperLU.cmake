@@ -22,7 +22,7 @@ find_library(SUPERLU_LIBRARIES superlu PATHS $ENV{SUPERLUDIR} ${LIB_INSTALL_DIR}
 ################################################################################
 
 # check version specific macros
-include(CheckCSourceCompiles)
+include(CheckCXXSourceCompiles)
 include(CMakePushCheckState)
 cmake_push_check_state()
 
@@ -30,7 +30,7 @@ set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${SUPERLU_INCLUDES})
 set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${SUPERLU_LIBRARIES})
 
 # check wether version is new enough >= 4.0
-check_c_source_compiles("
+check_cxx_source_compiles("
 typedef int int_t;
 #include <supermatrix.h>
 #include <slu_util.h>
@@ -42,7 +42,7 @@ int main()
 }" SUPERLU_MIN_VERSION_4)
 
 # check whether version is at least 4.3
-check_c_source_compiles("
+check_cxx_source_compiles("
 #include <slu_ddefs.h>
 int main(void)
 {
@@ -51,7 +51,7 @@ int main(void)
 SUPERLU_MIN_VERSION_4_3)
 
 # check whether version is at least 5.0
-check_c_source_compiles("
+check_cxx_source_compiles("
 typedef int int_t;
 #include <supermatrix.h>
 #include <slu_util.h>

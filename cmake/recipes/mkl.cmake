@@ -12,6 +12,16 @@
 if(TARGET mkl::mkl)
     return()
 endif()
+if(TARGET mkl_mkl_internal)
+    return()
+endif()
+
+include(polysolve_optional_dependency)
+
+if(POLYSOLVE_ON_ARM)
+    polysolve_note_disabled_dependency("MKL" "MKL is disabled for ARM targets.")
+    return()
+endif()
 
 message(STATUS "Third-party: creating target 'mkl::mkl'")
 
@@ -30,7 +40,7 @@ message(STATUS "MKL threading layer: ${MKL_THREADING}")
 # Linking options
 set(MKL_LINKING "static" CACHE STRING "Linking strategy to use with MKL (static, dynamic or sdl)")
 set(MKL_LINKING_CHOICES static dynamic sdl)
-set_property(CACHE MKL_LINKING PROPERTY STRINGS ${MKL_LINKINK_CHOICES})
+set_property(CACHE MKL_LINKING PROPERTY STRINGS ${MKL_LINKING_CHOICES})
 message(STATUS "MKL linking strategy: ${MKL_LINKING}")
 
 # MKL version
@@ -75,6 +85,11 @@ elseif(UNIX)
     set(MKL_PLATFORM linux-64)
 endif()
 
+if(NOT MKL_PLATFORM)
+    message(WARNING "MKL is not supported on this platform.")
+    return()
+endif()
+
 if(MKL_VERSION VERSION_EQUAL 2022.2.1)
     # To compute the md5 checksums for each lib, use the following bash script (replace the target version number):
     # for f in mkl mkl-include mkl-static mkl-devel; do for os in linux osx win; do cat <(printf "$f-$os-64-md5") <(conda search --override-channel --channel intel $f=2021.3.0 --platform $os-64 -i | grep md5 | cut -d : -f 2); done; done
@@ -114,6 +129,13 @@ else()
     set(MKL_REMOTES mkl-include mkl mkl-devel)
 endif()
 
+foreach(name IN ITEMS ${MKL_REMOTES})
+    if(NOT DEFINED ${name}-${MKL_PLATFORM}-file)
+        message(WARNING "MKL package '${name}' is not available for ${MKL_PLATFORM}.")
+        return()
+    endif()
+endforeach()
+
 include(CPM)
 foreach(name IN ITEMS ${MKL_REMOTES})
     CPMAddPackage(
@@ -151,11 +173,12 @@ endif()
 
 # Note: Since CMake 3.17, find_library accepts a REQUIRED arg that stops processing
 # if the file is not found, thus removing the need for this assert() function.
-function(mkl_assert_is_found var)
+macro(mkl_assert_is_found var)
     if(NOT ${var})
-        message(FATAL_ERROR "Could not find " ${var})
+        message(WARNING "Could not find ${var}.")
+        return()
     endif()
-endfunction()
+endmacro()
 
 # Creates one IMPORTED target for each requested library
 function(mkl_add_imported_library name)
@@ -227,8 +250,8 @@ function(mkl_add_imported_library name)
         target_link_libraries(mkl::${name} INTERFACE mkl::core)
     endif()
 
-    # Add as dependency to the meta target mkl::mkl
-    target_link_libraries(mkl::mkl INTERFACE mkl::${name})
+    # Add as dependency to the meta target mkl_mkl_internal
+    target_link_libraries(mkl_mkl_internal INTERFACE mkl::${name})
 endfunction()
 
 # On Windows, creates an IMPORTED target for each given .dll
@@ -256,7 +279,7 @@ function(mkl_add_shared_libraries)
             IMPORTED_LOCATION "${${DLLVAR}}"
         )
 
-        # Set as dependency to the meta target mkl::mkl. We cannot directly use `target_link_libraries`, since a MODULE
+        # Set as dependency to the meta target mkl_mkl_internal. We cannot directly use `target_link_libraries`, since a MODULE
         # target represents a runtime dependency and cannot be linked against. Instead, we populate a custom property
         # mkl_RUNTIME_DEPENDENCIES, which we use to manually copy dlls into an executable folder.
         #
@@ -265,7 +288,7 @@ function(mkl_add_shared_libraries)
         #
         # See also this thread for explicit tracking of runtime requirements:
         # https://gitlab.kitware.com/cmake/cmake/-/issues/20417
-        set_property(TARGET mkl::mkl PROPERTY mkl_RUNTIME_DEPENDENCIES mkl::${name} APPEND)
+        set_property(TARGET mkl_mkl_internal PROPERTY mkl_RUNTIME_DEPENDENCIES mkl::${name} APPEND)
     endforeach()
 endfunction()
 
@@ -298,8 +321,9 @@ endfunction()
 ################################################################################
 
 
-# Create a proper imported target for MKL
-add_library(mkl::mkl INTERFACE IMPORTED GLOBAL)
+# Create the internal target first. The public mkl::mkl alias is only exposed
+# after a compile/link probe succeeds.
+add_library(mkl_mkl_internal INTERFACE IMPORTED GLOBAL)
 
 # Find header directory
 find_path(MKL_INCLUDE_DIR
@@ -311,7 +335,7 @@ find_path(MKL_INCLUDE_DIR
 )
 mkl_assert_is_found(MKL_INCLUDE_DIR)
 message(STATUS "MKL include dir: ${MKL_INCLUDE_DIR}")
-target_include_directories(mkl::mkl INTERFACE ${MKL_INCLUDE_DIR})
+target_include_directories(mkl_mkl_internal INTERFACE ${MKL_INCLUDE_DIR})
 
 if(MKL_LINKING STREQUAL sdl)
     # Link against a single dynamic lib
@@ -370,14 +394,14 @@ endif()
 
 # Compile definitions.
 if(MKL_INTERFACE STREQUAL "ilp64")
-    target_compile_definitions(mkl::mkl INTERFACE MKL_ILP64)
+    target_compile_definitions(mkl_mkl_internal INTERFACE MKL_ILP64)
 endif()
 
 # Also requires the math system library (-lm)?
 if(NOT MSVC)
     find_library(LIBM_LIBRARY m)
     mkl_assert_is_found(LIBM_LIBRARY)
-    target_link_libraries(mkl::mkl INTERFACE ${LIBM_LIBRARY})
+    target_link_libraries(mkl_mkl_internal INTERFACE ${LIBM_LIBRARY})
 endif()
 
 # If using TBB, we need to specify the dependency
@@ -385,3 +409,25 @@ if(MKL_THREADING STREQUAL "tbb")
     include(onetbb)
     target_link_libraries(mkl::tbb_thread INTERFACE TBB::tbb)
 endif()
+
+set(POLYSOLVE_MKL_CHECK_SOURCE [[
+#include <mkl.h>
+int main()
+{
+    MKLVersion version;
+    mkl_get_version(&version);
+    return 0;
+}
+]])
+polysolve_check_linkable_target(POLYSOLVE_MKL_LINKABLE
+    NAME MKL
+    TARGET mkl_mkl_internal
+    SOURCE_VAR POLYSOLVE_MKL_CHECK_SOURCE
+)
+
+if(NOT POLYSOLVE_MKL_LINKABLE)
+    polysolve_note_disabled_dependency("MKL" "${POLYSOLVE_MKL_LINKABLE_REASON}")
+    return()
+endif()
+
+add_library(mkl::mkl ALIAS mkl_mkl_internal)

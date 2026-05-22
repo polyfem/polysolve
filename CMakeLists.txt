@@ -64,12 +64,22 @@ project(PolySolve
         DESCRIPTION "Easy-to-use wrapper for linear solver"
         LANGUAGES CXX)
 
-if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND APPLE)
-    set(POLYSOLVE_NOT_ON_APPLE_SILICON OFF)
+set(POLYSOLVE_ON_ARM OFF)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR};${CMAKE_HOST_SYSTEM_PROCESSOR};${CMAKE_OSX_ARCHITECTURES}" POLYSOLVE_ARCHITECTURES)
+if(POLYSOLVE_ARCHITECTURES MATCHES "(^|[^a-z0-9_])(arm64|aarch64)([^a-z0-9_]|$)")
+    set(POLYSOLVE_ON_ARM ON)
+endif()
+
+if(APPLE AND POLYSOLVE_ON_ARM)
     set(POLYSOLVE_ON_APPLE_SILICON ON)
 else()
-    set(POLYSOLVE_NOT_ON_APPLE_SILICON ON)
     set(POLYSOLVE_ON_APPLE_SILICON OFF)
+endif()
+
+if(POLYSOLVE_ON_ARM)
+    set(POLYSOLVE_WITH_MKL_DEFAULT OFF)
+else()
+    set(POLYSOLVE_WITH_MKL_DEFAULT ON)
 endif()
 
 # Polysolve options
@@ -82,7 +92,7 @@ option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                    
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
 option(POLYSOLVE_WITH_SUPERLU       "Enable SuperLU library"                             ON)
 option(POLYSOLVE_WITH_SPQR          "Enable SPQR library"                                ON)
-option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_NOT_ON_APPLE_SILICON})
+option(POLYSOLVE_WITH_MKL           "Enable MKL library"  ${POLYSOLVE_WITH_MKL_DEFAULT})
 option(POLYSOLVE_WITH_CUSOLVER      "Enable cuSOLVER library"                           OFF)
 option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                            OFF)
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
@@ -133,6 +143,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/find/")
 # General CMake utils
 include(polysolve_cpm_cache)
 include(polysolve_use_colors)
+include(polysolve_optional_dependency)
 
 # Sort projects inside the solution
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -142,7 +153,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Since MKL comes precompiled with /MD on Windows, we need to use the same MSVC runtime library flag
 # globally for the whole project (otherwise in Debug we will have a mismatch between /MD and /MDd).
-if(POLYSOLVE_WITH_MKL)
+if(MSVC AND POLYSOLVE_WITH_MKL)
     # Set MSVC runtime library globally for all targets
     message(STATUS "Forcing /MD globally due MKL being enabled")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "Select the MSVC runtime library")
@@ -195,18 +206,26 @@ target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_JSON_SPEC_DIR="${PR
 
 # Accelerate solver (Include before Eigen)
 if(POLYSOLVE_WITH_ACCELERATE)
-    include(CPM)
-    CPMAddPackage(
-        NAME eigen
-        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-        GIT_TAG 969c31eefcdfaab11da763bea3f7502086673ab0
-        DOWNLOAD_ONLY ON
-    )
-    set(BLA_VENDOR Apple)
-    find_package(BLAS REQUIRED)
-    find_package(LAPACK REQUIRED)
-    target_link_libraries(polysolve_linear PRIVATE BLAS::BLAS LAPACK::LAPACK)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_ACCELERATE)
+    include(accelerate)
+    if(TARGET polysolve::accelerate)
+        target_link_libraries(polysolve_linear PRIVATE polysolve::accelerate)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_ACCELERATE)
+    else()
+        polysolve_note_disabled_dependency("Accelerate" "Target 'polysolve::accelerate' was not created.")
+    endif()
+endif()
+
+# MKL library (probe before Eigen so Eigen only uses MKL when it is usable)
+if(POLYSOLVE_WITH_MKL)
+    if(POLYSOLVE_ON_ARM)
+        polysolve_note_disabled_dependency("MKL" "MKL is disabled for ARM targets.")
+    else()
+        include(mkl)
+    endif()
+endif()
+
+if(EIGEN_WITH_MKL AND NOT TARGET mkl::mkl)
+    set(EIGEN_WITH_MKL OFF CACHE BOOL "Use Eigen with MKL" FORCE)
 endif()
 
 include(eigen)
@@ -227,23 +246,30 @@ target_link_libraries(polysolve_linear PUBLIC jse::jse)
 # Hypre (GNU Lesser General Public License)
 if(POLYSOLVE_WITH_HYPRE)
     include(hypre)
-    target_link_libraries(polysolve_linear PUBLIC HYPRE::HYPRE)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_HYPRE)
-    if(HYPRE_WITH_MPI)
-        target_compile_definitions(polysolve_linear PUBLIC HYPRE_WITH_MPI)
+    if(TARGET HYPRE::HYPRE)
+        target_link_libraries(polysolve_linear PUBLIC HYPRE::HYPRE)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_HYPRE)
+        if(HYPRE_WITH_MPI)
+            target_compile_definitions(polysolve_linear PUBLIC HYPRE_WITH_MPI)
+        endif()
+    else()
+        polysolve_note_disabled_dependency("HYPRE" "Target 'HYPRE::HYPRE' was not created.")
     endif()
 endif()
 
 # CHOLMOD solver
 if(POLYSOLVE_WITH_CHOLMOD)
     include(suitesparse)
-    target_link_libraries(polysolve_linear PRIVATE SuiteSparse::CHOLMOD)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CHOLMOD)
+    if(TARGET SuiteSparse::CHOLMOD)
+        target_link_libraries(polysolve_linear PRIVATE SuiteSparse::CHOLMOD)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CHOLMOD)
+    else()
+        polysolve_note_disabled_dependency("CHOLMOD" "Target 'SuiteSparse::CHOLMOD' was not created.")
+    endif()
 endif()
 
-# MKL library
-if(POLYSOLVE_WITH_MKL)
-    include(mkl)
+# MKL solver support
+if(TARGET mkl::mkl)
     target_link_libraries(polysolve_linear PRIVATE mkl::mkl)
     target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_MKL)
 endif()
@@ -255,15 +281,19 @@ if(POLYSOLVE_WITH_PARDISO)
         target_link_libraries(polysolve_linear PRIVATE Pardiso::Pardiso)
         target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_PARDISO)
     else()
-        message(WARNING "Pardiso not found, solver will not be available.")
+        polysolve_note_disabled_dependency("Pardiso" "Target 'Pardiso::Pardiso' was not created.")
     endif()
 endif()
 
 # UmfPack solver
 if(POLYSOLVE_WITH_UMFPACK)
     include(suitesparse)
-    target_link_libraries(polysolve_linear PRIVATE SuiteSparse::UMFPACK)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_UMFPACK)
+    if(TARGET SuiteSparse::UMFPACK)
+        target_link_libraries(polysolve_linear PRIVATE SuiteSparse::UMFPACK)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_UMFPACK)
+    else()
+        polysolve_note_disabled_dependency("UMFPACK" "Target 'SuiteSparse::UMFPACK' was not created.")
+    endif()
 endif()
 
 # SuperLU solver
@@ -273,33 +303,41 @@ if(POLYSOLVE_WITH_SUPERLU)
         target_link_libraries(polysolve_linear PRIVATE SuperLU::SuperLU)
         target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SUPERLU)
     else()
-        message(WARNING "SuperLU not found, solver will not be available.")
+        polysolve_note_disabled_dependency("SuperLU" "Target 'SuperLU::SuperLU' was not created.")
     endif()
 endif()
 
-# SuperLU solver
+# SPQR solver
 if(POLYSOLVE_WITH_SPQR)
     include(spqr)
     if(TARGET SuiteSparse::SPQR)
         target_link_libraries(polysolve_linear PRIVATE SuiteSparse::SPQR)
         target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SPQR)
     else()
-        message(WARNING "SPQR Not found, solver will not be available.")
+        polysolve_note_disabled_dependency("SPQR" "Target 'SuiteSparse::SPQR' was not created.")
     endif()
 endif()
 
 # AMGCL solver
 if(POLYSOLVE_WITH_AMGCL)
     include(amgcl)
-    target_link_libraries(polysolve_linear PUBLIC amgcl::amgcl)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_AMGCL)
+    if(TARGET amgcl::amgcl)
+        target_link_libraries(polysolve_linear PUBLIC amgcl::amgcl)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_AMGCL)
+    else()
+        polysolve_note_disabled_dependency("AMGCL" "Target 'amgcl::amgcl' was not created.")
+    endif()
 endif()
 
 # Spectra (MPL 2.0)
 if(POLYSOLVE_WITH_SPECTRA)
     include(spectra)
-    target_link_libraries(polysolve_linear PUBLIC Spectra::Spectra)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SPECTRA)
+    if(TARGET Spectra::Spectra)
+        target_link_libraries(polysolve_linear PUBLIC Spectra::Spectra)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SPECTRA)
+    else()
+        polysolve_note_disabled_dependency("Spectra" "Target 'Spectra::Spectra' was not created.")
+    endif()
 endif()
 
 # cuSolver solvers

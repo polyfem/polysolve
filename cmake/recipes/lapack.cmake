@@ -18,12 +18,18 @@ message(STATUS "Third-party: creating target 'LAPACK::LAPACK'")
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm64" OR "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm64")
     # Use Accelerate on macOS M1
     set(BLA_VENDOR Apple)
-    find_package(LAPACK REQUIRED)
-elseif(POLYSOLVE_WITH_MKL)
+    find_package(LAPACK QUIET)
+elseif(POLYSOLVE_WITH_MKL AND TARGET mkl::mkl)
     # Use MKL if enabled
     include(mkl)
-    add_library(LAPACK::LAPACK ALIAS mkl::mkl)
+    if(TARGET mkl::mkl)
+        add_library(LAPACK::LAPACK ALIAS mkl::mkl)
+    endif()
 else()
     # otherwise find system version
-    find_package(LAPACK REQUIRED)
+    find_package(LAPACK QUIET)
+endif()
+
+if(NOT TARGET LAPACK::LAPACK)
+    message(WARNING "LAPACK not found.")
 endif()

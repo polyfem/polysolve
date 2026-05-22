@@ -13,6 +13,33 @@ if(TARGET nlohmann_json::nlohmann_json)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
+set(POLYSOLVE_NLOHMANN_JSON_CHECK_SOURCE [[
+#include <nlohmann/json.hpp>
+int main()
+{
+    nlohmann::json data = {{"ok", true}};
+    return data["ok"].get<bool>() ? 0 : 1;
+}
+]])
+
+polysolve_find_system_dependency(NLOHMANN_JSON_SYSTEM_FOUND
+    NAME nlohmann_json
+    PACKAGE nlohmann_json
+    TARGET nlohmann_json::nlohmann_json
+    CONFIG
+    SOURCE_VAR POLYSOLVE_NLOHMANN_JSON_CHECK_SOURCE
+)
+if(NLOHMANN_JSON_SYSTEM_FOUND)
+    return()
+endif()
+
+polysolve_should_fetch_dependency(NLOHMANN_JSON_SHOULD_FETCH nlohmann_json)
+if(NOT NLOHMANN_JSON_SHOULD_FETCH)
+    message(FATAL_ERROR "nlohmann_json is required to build PolySolve.")
+endif()
+
 message(STATUS "Third-party: creating target 'nlohmann_json::nlohmann_json'")
 
 # nlohmann_json is a big repo for a single header, so we just download the release archive

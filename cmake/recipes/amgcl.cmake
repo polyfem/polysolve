@@ -14,6 +14,38 @@ if(TARGET amgcl::amgcl)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
+set(POLYSOLVE_AMGCL_CHECK_SOURCE [[
+#include <amgcl/backend/builtin.hpp>
+#include <amgcl/make_solver.hpp>
+#include <amgcl/preconditioner/runtime.hpp>
+#include <amgcl/solver/runtime.hpp>
+int main()
+{
+    using Backend = amgcl::backend::builtin<double>;
+    using Solver = amgcl::make_solver<amgcl::runtime::preconditioner<Backend>, amgcl::runtime::solver::wrapper<Backend>>;
+    return sizeof(Solver) > 0 ? 0 : 1;
+}
+]])
+
+polysolve_find_system_dependency(AMGCL_SYSTEM_FOUND
+    NAME AMGCL
+    PACKAGE amgcl
+    TARGET amgcl::amgcl
+    CONFIG
+    SOURCE_VAR POLYSOLVE_AMGCL_CHECK_SOURCE
+)
+if(AMGCL_SYSTEM_FOUND)
+    return()
+endif()
+
+polysolve_should_fetch_dependency(AMGCL_SHOULD_FETCH AMGCL)
+if(NOT AMGCL_SHOULD_FETCH)
+    polysolve_note_disabled_dependency("AMGCL" "AMGCL was not found and fetching is disabled.")
+    return()
+endif()
+
 message(STATUS "Third-party: creating target 'amgcl::amgcl'")
 
 function(amgcl_import_target)

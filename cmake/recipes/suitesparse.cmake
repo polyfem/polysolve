@@ -18,6 +18,87 @@ if(TARGET SuiteSparse::CHOLMOD AND TARGET SuiteSparse::UMFPACK)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
+set(POLYSOLVE_CHOLMOD_CHECK_SOURCE [[
+#include <cholmod.h>
+int main()
+{
+    cholmod_common common;
+    cholmod_start(&common);
+    cholmod_finish(&common);
+    return 0;
+}
+]])
+
+set(POLYSOLVE_UMFPACK_CHECK_SOURCE [[
+#include <umfpack.h>
+int main()
+{
+    double control[UMFPACK_CONTROL];
+    umfpack_di_defaults(control);
+    return 0;
+}
+]])
+
+set(POLYSOLVE_SUITESPARSE_SPQR_CHECK_SOURCE [[
+#include <SuiteSparseQR.hpp>
+int main()
+{
+    cholmod_common common;
+    cholmod_l_start(&common);
+    SuiteSparseQR_factorization<double> *qr = nullptr;
+    SuiteSparseQR_free(&qr, &common);
+    cholmod_l_finish(&common);
+    return 0;
+}
+]])
+
+set(SUITESPARSE_SYSTEM_FOUND OFF)
+
+polysolve_find_system_dependency(SUITESPARSE_CHOLMOD_SYSTEM_FOUND
+    NAME SuiteSparse
+    PACKAGE SuiteSparse
+    TARGET SuiteSparse::CHOLMOD
+    CONFIG
+    SOURCE_VAR POLYSOLVE_CHOLMOD_CHECK_SOURCE
+)
+if(SUITESPARSE_CHOLMOD_SYSTEM_FOUND)
+    set(SUITESPARSE_SYSTEM_FOUND ON)
+endif()
+
+polysolve_find_system_dependency(SUITESPARSE_UMFPACK_SYSTEM_FOUND
+    NAME SuiteSparse
+    PACKAGE SuiteSparse
+    TARGET SuiteSparse::UMFPACK
+    CONFIG
+    SOURCE_VAR POLYSOLVE_UMFPACK_CHECK_SOURCE
+)
+if(SUITESPARSE_UMFPACK_SYSTEM_FOUND)
+    set(SUITESPARSE_SYSTEM_FOUND ON)
+endif()
+
+polysolve_find_system_dependency(SUITESPARSE_SPQR_SYSTEM_FOUND
+    NAME SuiteSparse
+    PACKAGE SuiteSparse
+    TARGET SuiteSparse::SPQR
+    CONFIG
+    SOURCE_VAR POLYSOLVE_SUITESPARSE_SPQR_CHECK_SOURCE
+)
+if(SUITESPARSE_SPQR_SYSTEM_FOUND)
+    set(SUITESPARSE_SYSTEM_FOUND ON)
+endif()
+
+if(SUITESPARSE_SYSTEM_FOUND)
+    return()
+endif()
+
+polysolve_should_fetch_dependency(SUITESPARSE_SHOULD_FETCH SuiteSparse)
+if(NOT SUITESPARSE_SHOULD_FETCH)
+    message(WARNING "SuiteSparse was not found and fetching is disabled; SuiteSparse solvers will not be available.")
+    return()
+endif()
+
 message(STATUS "Third-party: creating targets 'SuiteSparse::CHOLMOD'")
 
 include(CMakeDependentOption)

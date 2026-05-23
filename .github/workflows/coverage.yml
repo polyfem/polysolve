@@ -17,7 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        threading: [TBB]
         include:
           - os: ubuntu-latest
             name: Linux
@@ -44,8 +43,8 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.CACHE_PATH }}
-          key: ${{ runner.os }}-Release-${{ matrix.threading }}-cache-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-Release-${{ matrix.threading }}-cache
+          key: ${{ runner.os }}-Release-cache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-Release-cache
 
       - name: Prepare ccache
         run: |

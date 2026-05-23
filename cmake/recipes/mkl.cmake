@@ -405,11 +405,15 @@ if(NOT MSVC)
 endif()
 
 # If using TBB, we need to specify the dependency
+set(POLYSOLVE_MKL_LINK_CHECK ON)
 set(POLYSOLVE_MKL_CHECK_LINK_LIBRARIES)
 if(MKL_THREADING STREQUAL "tbb")
     include(onetbb)
     target_link_libraries(mkl::tbb_thread INTERFACE TBB::tbb)
-    list(APPEND POLYSOLVE_MKL_CHECK_LINK_LIBRARIES TBB::tbb)
+    # When oneTBB is fetched from source, TBB::tbb is a build-tree target. CMake's
+    # source-file try_compile cannot carry that target through MKL's imported
+    # target graph, so the real build validates this path.
+    set(POLYSOLVE_MKL_LINK_CHECK OFF)
 elseif(MKL_THREADING STREQUAL "openmp")
     list(APPEND POLYSOLVE_MKL_CHECK_LINK_LIBRARIES OpenMP::OpenMP_CXX)
 endif()
@@ -423,16 +427,18 @@ int main()
     return 0;
 }
 ]])
-polysolve_check_linkable_target(POLYSOLVE_MKL_LINKABLE
-    NAME MKL
-    TARGET mkl_mkl_internal
-    SOURCE_VAR POLYSOLVE_MKL_CHECK_SOURCE
-    LINK_LIBRARIES ${POLYSOLVE_MKL_CHECK_LINK_LIBRARIES}
-)
+if(POLYSOLVE_MKL_LINK_CHECK)
+    polysolve_check_linkable_target(POLYSOLVE_MKL_LINKABLE
+        NAME MKL
+        TARGET mkl_mkl_internal
+        SOURCE_VAR POLYSOLVE_MKL_CHECK_SOURCE
+        LINK_LIBRARIES ${POLYSOLVE_MKL_CHECK_LINK_LIBRARIES}
+    )
 
-if(NOT POLYSOLVE_MKL_LINKABLE)
-    polysolve_note_disabled_dependency("MKL" "${POLYSOLVE_MKL_LINKABLE_REASON}")
-    return()
+    if(NOT POLYSOLVE_MKL_LINKABLE)
+        polysolve_note_disabled_dependency("MKL" "${POLYSOLVE_MKL_LINKABLE_REASON}")
+        return()
+    endif()
 endif()
 
 add_library(mkl::mkl ALIAS mkl_mkl_internal)

@@ -23,7 +23,8 @@ elseif(POLYSOLVE_WITH_MKL AND TARGET mkl::mkl)
     # Use MKL if enabled
     include(mkl)
     if(TARGET mkl::mkl)
-        add_library(LAPACK::LAPACK ALIAS mkl::mkl)
+        add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
+        target_link_libraries(LAPACK::LAPACK INTERFACE mkl::mkl)
     endif()
 else()
     # otherwise find system version

@@ -13,6 +13,44 @@ if(TARGET Boost::boost)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
+set(POLYSOLVE_BOOST_CHECK_SOURCE [[
+#include <boost/version.hpp>
+int main()
+{
+    return BOOST_VERSION >= 107100 ? 0 : 1;
+}
+]])
+
+polysolve_find_system_dependency(BOOST_SYSTEM_FOUND
+    NAME Boost
+    PACKAGE Boost
+    VERSION 1.71
+    TARGET Boost::boost
+    SOURCE_VAR POLYSOLVE_BOOST_CHECK_SOURCE
+)
+if(BOOST_SYSTEM_FOUND)
+    return()
+endif()
+
+polysolve_find_system_dependency(BOOST_HEADERS_SYSTEM_FOUND
+    NAME Boost
+    PACKAGE Boost
+    VERSION 1.71
+    TARGET Boost::headers
+    SOURCE_VAR POLYSOLVE_BOOST_CHECK_SOURCE
+)
+if(BOOST_HEADERS_SYSTEM_FOUND)
+    add_library(Boost::boost ALIAS Boost::headers)
+    return()
+endif()
+
+polysolve_should_fetch_dependency(BOOST_SHOULD_FETCH Boost)
+if(NOT BOOST_SHOULD_FETCH)
+    message(FATAL_ERROR "Boost is required to build PolySolve with AMGCL.")
+endif()
+
 message(STATUS "Third-party: creating targets 'Boost::boost'...")
 
 set(PREVIOUS_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})

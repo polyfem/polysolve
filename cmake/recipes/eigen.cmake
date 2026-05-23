@@ -13,9 +13,66 @@ if(TARGET Eigen3::Eigen)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
 option(EIGEN_WITH_MKL "Use Eigen with MKL" OFF)
 option(EIGEN_DONT_VECTORIZE "Disable Eigen vectorization" OFF)
 option(EIGEN_MPL2_ONLY "Enable Eigen MPL2 license only" OFF)
+
+set(POLYSOLVE_EIGEN_CHECK_SOURCE [[
+#include <Eigen/Core>
+int main()
+{
+    Eigen::Matrix2d matrix = Eigen::Matrix2d::Identity();
+    return matrix.rows() == 2 ? 0 : 1;
+}
+]])
+
+function(eigen_target)
+    set(target Eigen3::Eigen)
+    get_target_property(aliased_target ${target} ALIASED_TARGET)
+    if(aliased_target)
+        set(target ${aliased_target})
+    endif()
+
+    if(EIGEN_MPL2_ONLY)
+        target_compile_definitions(${target} INTERFACE EIGEN_MPL2_ONLY)
+    endif()
+
+    if(EIGEN_DONT_VECTORIZE)
+        target_compile_definitions(${target} INTERFACE EIGEN_DONT_VECTORIZE)
+    endif()
+
+    if(EIGEN_WITH_MKL)
+        # TODO: Checks that, on 64bits systems, `mkl::mkl` is using the LP64 interface
+        # (by looking at the compile definition of the target)
+        include(mkl)
+        if(TARGET mkl::mkl)
+            target_link_libraries(${target} INTERFACE mkl::mkl)
+            target_compile_definitions(${target} INTERFACE
+                EIGEN_USE_MKL_ALL
+                EIGEN_USE_LAPACKE_STRICT
+            )
+        endif()
+    endif()
+endfunction()
+
+polysolve_find_system_dependency(EIGEN_SYSTEM_FOUND
+    NAME Eigen
+    PACKAGE Eigen3
+    TARGET Eigen3::Eigen
+    CONFIG
+    SOURCE_VAR POLYSOLVE_EIGEN_CHECK_SOURCE
+)
+if(EIGEN_SYSTEM_FOUND)
+    eigen_target()
+    return()
+endif()
+
+polysolve_should_fetch_dependency(EIGEN_SHOULD_FETCH Eigen)
+if(NOT EIGEN_SHOULD_FETCH)
+    message(FATAL_ERROR "Eigen is required to build PolySolve.")
+endif()
 
 message(STATUS "Third-party: creating target 'Eigen3::Eigen'")
 
@@ -36,24 +93,7 @@ target_include_directories(Eigen3_Eigen SYSTEM INTERFACE
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-if(EIGEN_MPL2_ONLY)
-    target_compile_definitions(Eigen3_Eigen INTERFACE EIGEN_MPL2_ONLY)
-endif()
-
-if(EIGEN_DONT_VECTORIZE)
-    target_compile_definitions(Eigen3_Eigen INTERFACE EIGEN_DONT_VECTORIZE)
-endif()
-
-if(EIGEN_WITH_MKL)
-    # TODO: Checks that, on 64bits systems, `mkl::mkl` is using the LP64 interface
-    # (by looking at the compile definition of the target)
-    include(mkl)
-    target_link_libraries(Eigen3_Eigen INTERFACE mkl::mkl)
-    target_compile_definitions(Eigen3_Eigen INTERFACE
-        EIGEN_USE_MKL_ALL
-        EIGEN_USE_LAPACKE_STRICT
-    )
-endif()
+eigen_target()
 
 # On Windows, enable natvis files to improve debugging experience
 if(WIN32 AND eigen_SOURCE_DIR)

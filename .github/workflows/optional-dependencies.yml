@@ -1,0 +1,157 @@
+name: Optional Dependencies
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  forced-missing:
+    name: Forced missing (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 10
+
+      - name: Configure contract test
+        run: >
+          cmake
+          -S tests/cmake/optional_dependencies
+          -B build/optional-dependencies-forced-missing
+          -DPOLYSOLVE_WITH_ACCELERATE=ON
+          -DPOLYSOLVE_WITH_CHOLMOD=OFF
+          -DPOLYSOLVE_WITH_UMFPACK=OFF
+          -DPOLYSOLVE_WITH_SUPERLU=ON
+          -DPOLYSOLVE_WITH_SPQR=ON
+          -DPOLYSOLVE_WITH_MKL=OFF
+          -DPOLYSOLVE_WITH_CUSOLVER=OFF
+          -DPOLYSOLVE_WITH_PARDISO=ON
+          -DPOLYSOLVE_WITH_HYPRE=OFF
+          -DPOLYSOLVE_WITH_AMGCL=OFF
+          -DPOLYSOLVE_WITH_SPECTRA=OFF
+          -DCMAKE_DISABLE_FIND_PACKAGE_BLAS=ON
+          -DCMAKE_DISABLE_FIND_PACKAGE_LAPACK=ON
+          -DCMAKE_DISABLE_FIND_PACKAGE_SUPERLU=ON
+          -DCMAKE_DISABLE_FIND_PACKAGE_Pardiso=ON
+          -DCMAKE_DISABLE_FIND_PACKAGE_SPQR=ON
+          -DPOLYSOLVE_EXPECT_ACCELERATE=OFF
+          -DPOLYSOLVE_EXPECT_SUPERLU=OFF
+          -DPOLYSOLVE_EXPECT_SPQR=OFF
+          -DPOLYSOLVE_EXPECT_PARDISO=OFF
+
+  all-off:
+    name: All optional solvers off (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 10
+
+      - name: Configure contract test
+        run: >
+          cmake
+          -S tests/cmake/optional_dependencies
+          -B build/optional-dependencies-all-off
+          -DPOLYSOLVE_WITH_ACCELERATE=OFF
+          -DPOLYSOLVE_WITH_CHOLMOD=OFF
+          -DPOLYSOLVE_WITH_UMFPACK=OFF
+          -DPOLYSOLVE_WITH_SUPERLU=OFF
+          -DPOLYSOLVE_WITH_SPQR=OFF
+          -DPOLYSOLVE_WITH_MKL=OFF
+          -DPOLYSOLVE_WITH_CUSOLVER=OFF
+          -DPOLYSOLVE_WITH_PARDISO=OFF
+          -DPOLYSOLVE_WITH_HYPRE=OFF
+          -DPOLYSOLVE_WITH_AMGCL=OFF
+          -DPOLYSOLVE_WITH_SPECTRA=OFF
+
+  accelerate:
+    name: Accelerate available (macOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 10
+
+      - name: Configure contract test
+        run: >
+          cmake
+          -S tests/cmake/optional_dependencies
+          -B build/optional-dependencies-accelerate
+          -DPOLYSOLVE_WITH_ACCELERATE=ON
+          -DPOLYSOLVE_WITH_CHOLMOD=OFF
+          -DPOLYSOLVE_WITH_UMFPACK=OFF
+          -DPOLYSOLVE_WITH_SUPERLU=OFF
+          -DPOLYSOLVE_WITH_SPQR=OFF
+          -DPOLYSOLVE_WITH_MKL=OFF
+          -DPOLYSOLVE_WITH_CUSOLVER=OFF
+          -DPOLYSOLVE_WITH_PARDISO=OFF
+          -DPOLYSOLVE_WITH_HYPRE=OFF
+          -DPOLYSOLVE_WITH_AMGCL=OFF
+          -DPOLYSOLVE_WITH_SPECTRA=OFF
+          -DPOLYSOLVE_EXPECT_ACCELERATE=ON
+
+      - name: Build polysolve_linear
+        run: cmake --build build/optional-dependencies-accelerate --target polysolve_linear --parallel 2
+
+  suitesparse:
+    name: SuiteSparse available (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 10
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -o Acquire::Retries=3 install \
+            libblas-dev \
+            liblapack-dev \
+            libsuitesparse-dev
+
+      - name: Configure contract test
+        run: >
+          cmake
+          -S tests/cmake/optional_dependencies
+          -B build/optional-dependencies-suitesparse
+          -DPOLYSOLVE_WITH_ACCELERATE=OFF
+          -DPOLYSOLVE_WITH_CHOLMOD=ON
+          -DPOLYSOLVE_WITH_UMFPACK=ON
+          -DPOLYSOLVE_WITH_SUPERLU=OFF
+          -DPOLYSOLVE_WITH_SPQR=OFF
+          -DPOLYSOLVE_WITH_MKL=OFF
+          -DPOLYSOLVE_WITH_CUSOLVER=OFF
+          -DPOLYSOLVE_WITH_PARDISO=OFF
+          -DPOLYSOLVE_WITH_HYPRE=OFF
+          -DPOLYSOLVE_WITH_AMGCL=OFF
+          -DPOLYSOLVE_WITH_SPECTRA=OFF
+          -DPOLYSOLVE_EXPECT_CHOLMOD=ON
+          -DPOLYSOLVE_EXPECT_UMFPACK=ON
+
+      - name: Build polysolve_linear
+        run: cmake --build build/optional-dependencies-suitesparse --target polysolve_linear --parallel 2

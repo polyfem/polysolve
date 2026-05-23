@@ -17,6 +17,33 @@ if(TARGET spdlog::spdlog)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
+set(POLYSOLVE_SPDLOG_CHECK_SOURCE [[
+#include <spdlog/spdlog.h>
+int main()
+{
+    spdlog::info("polysolve dependency check");
+    return 0;
+}
+]])
+
+polysolve_find_system_dependency(SPDLOG_SYSTEM_FOUND
+    NAME spdlog
+    PACKAGE spdlog
+    TARGET spdlog::spdlog
+    CONFIG
+    SOURCE_VAR POLYSOLVE_SPDLOG_CHECK_SOURCE
+)
+if(SPDLOG_SYSTEM_FOUND)
+    return()
+endif()
+
+polysolve_should_fetch_dependency(SPDLOG_SHOULD_FETCH spdlog)
+if(NOT SPDLOG_SHOULD_FETCH)
+    message(FATAL_ERROR "spdlog is required to build PolySolve.")
+endif()
+
 message(STATUS "Third-party: creating target 'spdlog::spdlog'")
 
 option(SPDLOG_INSTALL "Generate the install target" ON)

@@ -13,6 +13,33 @@ if(TARGET TBB::tbb)
     return()
 endif()
 
+include(polysolve_optional_dependency)
+
+set(POLYSOLVE_TBB_CHECK_SOURCE [[
+#include <oneapi/tbb/task_arena.h>
+int main()
+{
+    oneapi::tbb::task_arena arena;
+    return arena.max_concurrency() > 0 ? 0 : 1;
+}
+]])
+
+polysolve_find_system_dependency(TBB_SYSTEM_FOUND
+    NAME oneTBB
+    PACKAGE TBB
+    TARGET TBB::tbb
+    CONFIG
+    SOURCE_VAR POLYSOLVE_TBB_CHECK_SOURCE
+)
+if(TBB_SYSTEM_FOUND)
+    return()
+endif()
+
+polysolve_should_fetch_dependency(TBB_SHOULD_FETCH oneTBB)
+if(NOT TBB_SHOULD_FETCH)
+    message(FATAL_ERROR "oneTBB is required for MKL TBB threading.")
+endif()
+
 message(STATUS "Third-party: creating target 'TBB::tbb' (OneTBB)")
 
 # Emscripten sets CMAKE_SYSTEM_PROCESSOR to "x86". Change it to "WASM" to prevent TBB from

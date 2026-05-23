@@ -37,6 +37,6 @@ find_library(PARDISO_LIBRARIES
 )
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(PARDISO DEFAULT_MSG PARDISO_LIBRARIES)
+find_package_handle_standard_args(Pardiso DEFAULT_MSG PARDISO_LIBRARIES)
 
 mark_as_advanced(PARDISO_LIBRARIES)

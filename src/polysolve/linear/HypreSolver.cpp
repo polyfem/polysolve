@@ -15,7 +15,7 @@ namespace polysolve::linear
     HypreSolver::HypreSolver()
     {
         precond_num_ = 0;
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         int done_already;
 
         MPI_Initialized(&done_already);
@@ -32,6 +32,10 @@ namespace polysolve::linear
             MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
         }
 #endif
+        if (!HYPRE_Initialized())
+        {
+            HYPRE_Initialize();
+        }
     }
 
     // Set solver parameters
@@ -91,7 +95,7 @@ namespace polysolve::linear
         has_matrix_ = true;
         const HYPRE_Int rows = Ain.rows();
         const HYPRE_Int cols = Ain.cols();
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, rows - 1, 0, cols - 1, &A);
 #else
         HYPRE_IJMatrixCreate(0, 0, rows - 1, 0, cols - 1, &A);
@@ -285,7 +289,7 @@ namespace polysolve::linear
 
         /* Create solver */
         HYPRE_Solver solver, precond;
-#ifdef HYPRE_WITH_MPI
+#ifdef HYPRE_ENABLE_MPI
         HYPRE_ParCSRPCGCreate(MPI_COMM_WORLD, &solver);
 #else
         HYPRE_ParCSRPCGCreate(0, &solver);

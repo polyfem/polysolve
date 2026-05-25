@@ -202,7 +202,7 @@ TEST_CASE("eigen_params", "[solver]")
 }
 
 // Test block dim 1, 2, 3
-TEST_CASE("cuda_pcg_block_dims", "[solver]")
+TEST_CASE("mas_block_dim", "[.][solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;

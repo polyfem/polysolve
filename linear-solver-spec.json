@@ -485,7 +485,7 @@
     },
     {
         "pointer": "/MAS/relative_tolerance",
-        "default": 0.0,
+        "default": 1e-4,
         "type": "float",
         "doc": "Relative convergence tolerance."
     },

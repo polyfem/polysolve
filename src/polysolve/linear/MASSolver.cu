@@ -134,11 +134,11 @@ namespace polysolve::linear
     class MASSolver::MASSolverImpl
     {
     public:
-        int block_dim_ = 3; ///< BSR block dim.
-        int max_iter_ = 1e5;
+        int block_dim_ = 1; ///< BSR block dim.
+        int max_iter_ = 5000;
         int true_residual_period_ = 4;
-        double abs_tol_ = 1e-20;
-        double rel_tol_ = 1e-6;
+        double abs_tol_ = 1e-8;
+        double rel_tol_ = 1e-5;
         bool lazy_partitioning_ = false;
         bool use_preconditioned_residual_norm_ = false;
 

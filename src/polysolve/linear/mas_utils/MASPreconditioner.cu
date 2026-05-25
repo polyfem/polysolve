@@ -24,7 +24,7 @@ namespace polysolve::linear::mas
     {
         using clock = std::chrono::steady_clock;
 
-        double elapsed_seconds(const std::chrono::time_point<clock> &begin)
+        [[maybe_unused]] double elapsed_seconds(const std::chrono::time_point<clock> &begin)
         {
             return std::chrono::duration<double>(clock::now() - begin).count();
         }

@@ -68,6 +68,10 @@ namespace polysolve::linear
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include "CuSolverDN.cuh"
 #endif
+#ifdef POLYSOLVE_WITH_CUDA
+#include "MASSolver.hpp"
+#endif
+
 #include <unsupported/Eigen/IterativeSolvers>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -396,6 +400,12 @@ namespace polysolve::linear
         {
             return std::make_unique<CuSolverDN<float>>();
 #endif
+#ifdef POLYSOLVE_WITH_CUDA
+        }
+        else if (solver == "MAS")
+        {
+            return std::make_unique<MASSolver>();
+#endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
@@ -527,6 +537,9 @@ namespace polysolve::linear
 #ifdef POLYSOLVE_WITH_CUSOLVER
             "cuSolverDN",
             "cuSolverDN_float",
+#endif
+#ifdef POLYSOLVE_WITH_CUDA
+            "MAS",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

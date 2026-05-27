@@ -417,6 +417,19 @@ if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
   target_link_libraries(polysolve_linear PRIVATE KaMinPar::KaMinPar)
 endif()
 
+# MeshFEM
+# Color errors/warnings.
+list(APPEND CMAKE_MODULE_PATH ${THIRD_PARTY_DIR}/MeshFEM_dev/cmake)
+# include(UseColors)
+set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
+
+if (NOT TARGET MeshFEM)
+    option(MESHFEM_ENABLE_BENCHMARKING "" ON)
+    option(MESHFEM_WITH_IPC_TOOLKIT "" OFF) # avoid conflicting IPC toolkit versions.
+    add_subdirectory(${THIRD_PARTY_DIR}/MeshFEM_dev)
+endif()
+target_link_libraries(polysolve_linear PUBLIC MeshFEM)
+
 # ---------
 # Nonlinear
 # ---------
@@ -441,20 +454,6 @@ endif()
 # Extra warnings (include last for highest priority)
 include(polysolve_warnings)
 target_link_libraries(polysolve PRIVATE polysolve::warnings)
-
-# MeshFEM
-set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
-
-if (NOT TARGET MeshFEM)
-    option(MESHFEM_ENABLE_BENCHMARKING "" ON)
-    option(MESHFEM_WITH_IPC_TOOLKIT "" OFF) # avoid conflicting IPC toolkit versions.
-    add_subdirectory(${THIRD_PARTY_DIR}/MeshFEM_dev)
-endif()
-target_link_libraries(polysolve PUBLIC MeshFEM)
-
-# Color errors/warnings.
-list(APPEND CMAKE_MODULE_PATH ${THIRD_PARTY_DIR}/MeshFEM_dev/cmake)
-include(UseColors)
 
 ################################################################################
 # Specs

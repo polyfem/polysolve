@@ -512,7 +512,11 @@ namespace polysolve::nonlinear
             //                descent_strategy_name(), m_line_search->name(), rate, step);
 
             update_solver_info(energy);
-            objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
+            
+            {
+                POLYSOLVE_SCOPED_STOPWATCH("Post_step", post_step, m_logger);
+                objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
+            }
 
             if (objFunc.stop(x))
             {
@@ -579,6 +583,7 @@ namespace polysolve::nonlinear
         update_direction_time = 0;
         line_search_time = 0;
         constraint_set_update_time = 0;
+        post_step = 0;
         if (m_line_search)
             m_line_search->reset_times();
         for (auto &s : m_strategies)
@@ -596,17 +601,44 @@ namespace polysolve::nonlinear
 
         double per_iteration = m_current.iterations ? m_current.iterations : 1;
 
-        solver_info["total_time"] = total_time;
-        solver_info["time_obj_fun"] = obj_fun_time / per_iteration;
-        solver_info["time_grad"] = grad_time / per_iteration;
-        // Do not save update_direction_time as it is redundant with the strategies
-        solver_info["time_line_search"] = line_search_time / per_iteration;
-        solver_info["time_constraint_set_update"] = constraint_set_update_time / per_iteration;
+        // solver_info["total_time"] = total_time;
+        // solver_info["time_obj_fun"] = obj_fun_time / per_iteration;
+        // solver_info["time_grad"] = grad_time / per_iteration;
+        // // Do not save update_direction_time as it is redundant with the strategies
+        // solver_info["time_line_search"] = line_search_time / per_iteration;
+        // solver_info["time_constraint_set_update"] = constraint_set_update_time / per_iteration;
 
-        for (auto &s : m_strategies)
-            s->update_solver_info(solver_info, per_iteration);
+        
+        // for (auto &s : m_strategies)
+        //     s->update_solver_info(solver_info, per_iteration);
+        // if (m_line_search)
+        //     m_line_search->update_solver_info(solver_info, per_iteration);
+
+        solver_info["Newton iterations per time step::total_time"] = total_time;
+        solver_info["Newton iterations per time step::function_evaluation"] = obj_fun_time;
+        solver_info["Newton iterations per time step::gradient_evaluation"] = grad_time;
+        // Do not save update_direction_time as it is redundant with the strategies
+        solver_info["Newton iterations per time step::line_search"] = line_search_time;
+        solver_info["Newton iterations per time step::time_constraint_set_update"] = constraint_set_update_time;
+        solver_info["Newton iterations per time step::update_direction_time"] = update_direction_time;
+        solver_info["Newton iterations per time step::post_step"] = post_step;
+       
+        
+        std::vector<double> update_direction_times = {0.0, 0.0, 0.0, 0.0};
+        size_t numStrategies = size(m_strategies);
+        for (size_t i = 0; i < numStrategies; i++){
+            auto &s = m_strategies[i];
+            s->update_times(update_direction_times); 
+        }
+
+        solver_info["Newton iterations per time step::update_direction::hessian_assembly"] = update_direction_times[0];
+        solver_info["Newton iterations per time step::update_direction::linear_solve::symbolic_factorizer"] = update_direction_times[1];
+        solver_info["Newton iterations per time step::update_direction::linear_solve::numeric_factorizer"] = update_direction_times[2];
+        solver_info["Newton iterations per time step::update_direction::linear_solve::solve"] = update_direction_times[3];
+        
         if (m_line_search)
             m_line_search->update_solver_info(solver_info, per_iteration);
+
     }
 
     void Solver::log_times() const

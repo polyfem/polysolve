@@ -5,12 +5,14 @@
 
 #include <polysolve/linear/Solver.hpp>
 
+
 namespace polysolve::nonlinear
 {
     class Newton : public DescentStrategy
     {
     public:
         using Superclass = DescentStrategy;
+        // using HessianVariant = std::variant<polysolve::StiffnessMatrix, Eigen::MatrixXd, NewtonHessian>;
 
         static std::vector<std::shared_ptr<DescentStrategy>> create_solver(
             const bool sparse,
@@ -54,25 +56,24 @@ namespace polysolve::nonlinear
         double residual_tolerance;
         const NormType norm_type;
 
+        int last_analyzed_pattern_id = -1; // Cache the last analyzed sparsity pattern ID to avoid redundant symbolic factorizations
+
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
 
+        // Benchmarking variables
         double assembly_time;
         double inverting_time;
+        double linear_solve_time;
+        double symbolic_factorizer_time;
+        double numeric_factorizer_time;
+        double solve_time;
 
     protected:
         std::string internal_name() const { return is_sparse ? "Sparse" : "Dense"; }
 
         virtual void compute_hessian(Problem &objFunc,
                                      const TVector &x,
-                                     polysolve::StiffnessMatrix &hessian);
-
-        virtual void compute_hessian(Problem &objFunc,
-                                     const TVector &x,
-                                     Eigen::MatrixXd &hessian);
-
-        virtual void compute_hessian(Problem &objFunc,
-                                     const TVector &x,
-                                     NewtonHessian &hessian);
+                                     Hessian &hessian);
 
 
     public:
@@ -80,6 +81,7 @@ namespace polysolve::nonlinear
 
         void reset(const int ndof) override;
         void update_solver_info(json &solver_info, const double per_iteration) override;
+        virtual void update_times(std::vector<double> &linear_times) override;
         void reset_times() override;
         void log_times() const override;
     };
@@ -101,15 +103,7 @@ namespace polysolve::nonlinear
     protected:
         void compute_hessian(Problem &objFunc,
                              const TVector &x,
-                             polysolve::StiffnessMatrix &hessian) override;
-
-        void compute_hessian(Problem &objFunc,
-                             const TVector &x,
-                             Eigen::MatrixXd &hessian) override;
-
-        void compute_hessian(Problem &objFunc,
-                                     const TVector &x,
-                                     NewtonHessian &hessian) override;
+                             Hessian &hessian) override;
     };
 
     class RegularizedNewton : public Newton
@@ -145,15 +139,7 @@ namespace polysolve::nonlinear
     protected:
         void compute_hessian(Problem &objFunc,
                              const TVector &x,
-                             polysolve::StiffnessMatrix &hessian) override;
-
-        void compute_hessian(Problem &objFunc,
-                             const TVector &x,
-                             Eigen::MatrixXd &hessian) override;
-
-        void compute_hessian(Problem &objFunc,
-                            const TVector &x,
-                            NewtonHessian &hessian) override;
+                             Hessian &hessian) override;
     };
 
 } // namespace polysolve::nonlinear

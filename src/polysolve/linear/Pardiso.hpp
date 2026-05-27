@@ -44,10 +44,10 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyze_pattern(const Hessian &A, const int precond_num) override;
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &A) override;
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;

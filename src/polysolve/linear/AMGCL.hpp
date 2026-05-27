@@ -68,10 +68,10 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override { precond_num_ = precond_num; }
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &H) override;
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -119,23 +119,23 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override
         {
             if (block_size_ == 2)
             {
-                block2_solver_.analyze_pattern(A, precond_num);
+                block2_solver_.analyze_pattern(H, precond_num);
                 return;
             }
             else if (block_size_ == 3)
             {
-                block3_solver_.analyze_pattern(A, precond_num);
+                block3_solver_.analyze_pattern(H, precond_num);
                 return;
             }
             precond_num_ = precond_num;
         }
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &H) override;
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;

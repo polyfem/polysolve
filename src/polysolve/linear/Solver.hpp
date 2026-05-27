@@ -93,10 +93,16 @@ namespace polysolve::linear
         virtual void get_info(json &params) const {};
 
         /// Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}
+        virtual void analyze_pattern(const Hessian &A, const int precond_num) {}
 
         /// Factorize system matrix
         virtual void factorize(const StiffnessMatrix &A) {}
+
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}
+
+        /// Factorize system matrix
+        virtual void factorize(const Hessian &A) {}
+
 
         /// Analyze sparsity pattern of a dense matrix
         virtual void analyze_pattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}

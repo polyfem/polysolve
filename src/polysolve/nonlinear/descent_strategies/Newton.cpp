@@ -175,23 +175,22 @@ namespace polysolve::nonlinear
                                               const TVector &grad,
                                               TVector &direction)
     {
-        polysolve::StiffnessMatrix hessian;
+        Hessian hessian(std::in_place_type<NewtonHessian>);
         {
             POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
             compute_hessian(objFunc, x, hessian);
         }
-
         {
             // TODO: get the correct size
             if (objFunc.getSparsityPatternID() == -1)
             {
-                POLYSOLVE_SCOPED_STOPWATCH("symbolic factorize", this->inverting_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH("symbolic factorize", this->symbolic_factorizer_time, m_logger);
                 linear_solver->analyze_pattern(hessian, hessian.rows());
             }
 
             try
             {
-                POLYSOLVE_SCOPED_STOPWATCH("numeric factorize", this->inverting_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH("numeric factorize", this->numeric_factorizer_time, m_logger);
                 linear_solver->factorize(hessian);
             }
             catch (const std::runtime_error &err)
@@ -203,7 +202,7 @@ namespace polysolve::nonlinear
                 return std::nan("");
             }
             {
-                POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->linear_solve_time, m_logger);
                 linear_solver->solve(-grad, direction); // H Δx = -g
             }
         }
@@ -222,15 +221,14 @@ namespace polysolve::nonlinear
                                              const TVector &grad,
                                              TVector &direction)
     {
-        Eigen::MatrixXd hessian;
-
+        Hessian hessian_v(std::in_place_type<Eigen::MatrixXd>);
         {
             POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
-            compute_hessian(objFunc, x, hessian);
+            compute_hessian(objFunc, x, hessian_v);
         }
-
+        const Eigen::MatrixXd &hessian = hessian_v.get<Eigen::MatrixXd>();
         {
-            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->solve_time, m_logger);
 
             try
             {
@@ -260,8 +258,7 @@ namespace polysolve::nonlinear
 
     void Newton::compute_hessian(Problem &objFunc,
                                  const TVector &x,
-                                 polysolve::StiffnessMatrix &hessian)
-
+                                 Hessian &hessian)
     {
         objFunc.set_project_to_psd(false);
         objFunc.hessian(x, hessian);
@@ -269,8 +266,7 @@ namespace polysolve::nonlinear
 
     void ProjectedNewton::compute_hessian(Problem &objFunc,
                                           const TVector &x,
-                                          polysolve::StiffnessMatrix &hessian)
-
+                                          Hessian &hessian)
     {
         objFunc.set_project_to_psd(true);
         objFunc.hessian(x, hessian);
@@ -278,85 +274,31 @@ namespace polysolve::nonlinear
 
     void RegularizedNewton::compute_hessian(Problem &objFunc,
                                             const TVector &x,
-                                            polysolve::StiffnessMatrix &hessian)
-
-    {
-        if (x.size() != x_cache.size() || x != x_cache)
-        {
-            objFunc.set_project_to_psd(project_to_psd);
-            objFunc.hessian(x, hessian_cache);
-            x_cache = x;
-        }
-        hessian = hessian_cache;
-        if (reg_weight > 0)
-        {
-            hessian += reg_weight * sparse_identity(hessian.rows(), hessian.cols());
-        }
-    }
-
-    void Newton::compute_hessian(Problem &objFunc,
-                                 const TVector &x,
-                                 Eigen::MatrixXd &hessian)
-
-    {
-        objFunc.set_project_to_psd(false);
-        objFunc.hessian(x, hessian);
-    }
-
-    void ProjectedNewton::compute_hessian(Problem &objFunc,
-                                          const TVector &x,
-                                          Eigen::MatrixXd &hessian)
-
-    {
-        objFunc.set_project_to_psd(true);
-        objFunc.hessian(x, hessian);
-    }
-
-    void RegularizedNewton::compute_hessian(Problem &objFunc,
-                                            const TVector &x,
-                                            Eigen::MatrixXd &hessian)
-
+                                            Hessian &hessian)
     {
         objFunc.set_project_to_psd(project_to_psd);
         objFunc.hessian(x, hessian);
-        if (reg_weight > 0)
-        {
-            for (int k = 0; k < x.size(); k++)
-                hessian(k, k) += reg_weight;
-        }
-    }
 
-    void Newton::compute_hessian(Problem &objFunc,
-                                 const TVector &x,
-                                 NewtonHessian &hessian)
-
-    {
-        objFunc.set_project_to_psd(false);
-        hessian = objFunc.evalHessian(x);
-    }
-
-     void ProjectedNewton::compute_hessian(Problem &objFunc,
-                                          const TVector &x,
-                                          NewtonHessian &hessian)
-
-    {
-        objFunc.set_project_to_psd(true);
-        hessian = objFunc.evalHessian(x);
-    }
-
-    void RegularizedNewton::compute_hessian(Problem &objFunc,
-                                            const TVector &x,
-                                            NewtonHessian &hessian)
-
-    {
-        objFunc.set_project_to_psd(project_to_psd);
-        hessian = objFunc.evalHessian(x);
-        if (reg_weight > 0)
-        {
-            // Need to add reg_weight times Identity to the hessian.
-
-        
-        }
+        // std::visit([&](auto &h) {
+        //     using T = std::decay_t<decltype(h)>;
+        //     if constexpr (std::is_same_v<T, polysolve::StiffnessMatrix>) {
+        //         if (x.size() != x_cache.size() || x != x_cache) {
+        //             objFunc.hessian(x, hessian_cache);
+        //             x_cache = x;
+        //         }
+        //         h = hessian_cache;
+        //         if (reg_weight > 0)
+        //             h += reg_weight * sparse_identity(h.rows(), h.cols());
+        //     } else if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
+        //         objFunc.hessian(x, h);
+        //         if (reg_weight > 0)
+        //             for (int k = 0; k < x.size(); k++)
+        //                 h(k, k) += reg_weight;
+        //     } else if constexpr (std::is_same_v<T, NewtonHessian>) {
+        //         h = objFunc.evalHessian(x);
+        //         // TODO: add reg_weight * identity
+        //     }
+        // }, hessian);
     }
 
     // =======================================================================
@@ -381,6 +323,18 @@ namespace polysolve::nonlinear
     {
         assembly_time = 0;
         inverting_time = 0;
+        linear_solve_time = 0;
+        symbolic_factorizer_time = 0;
+        numeric_factorizer_time = 0;
+        solve_time = 0;
+    }
+
+     void Newton::update_times(std::vector<double> &linear_times)
+    {
+        linear_times[0] += assembly_time;
+        linear_times[1] += symbolic_factorizer_time;
+        linear_times[2] += numeric_factorizer_time;
+        linear_times[3] += is_sparse ? linear_solve_time : solve_time;
     }
 
     void Newton::log_times() const

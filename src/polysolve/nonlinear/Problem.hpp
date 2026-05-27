@@ -1,7 +1,6 @@
 #pragma once
 
 #include <polysolve/Types.hpp>
-#include <MeshFEM/newton_optimizer/NewtonHessian.hh>
 
 #include "Criteria.hpp"
 #include "PostStepData.hpp"
@@ -54,13 +53,13 @@ namespace polysolve::nonlinear
         /// @param[out] grad Gradient of the function at x.
         virtual void gradient(const TVector &x, TVector &grad) = 0;
 
-        /// @brief Compute the Hessian of the function at x.
-        /// @param[in] x Degrees of freedom.
-        /// @param[out] hessian Hessian of the function at x.
-        virtual void hessian(const TVector &x, TMatrix &hessian)
-        {
-            throw std::runtime_error("Dense Hessian not implemented.");
-        }
+        // /// @brief Compute the Hessian of the function at x.
+        // /// @param[in] x Degrees of freedom.
+        // /// @param[out] hessian Hessian of the function at x.
+        // virtual void hessian(const TVector &x, Hessian &hessian)
+        // {
+        //     throw std::runtime_error("Dense Hessian not implemented.");
+        // }
 
         virtual NewtonHessian evalHessian(const TVector &x) { 
             throw std::runtime_error("evalHessian not implemented.");
@@ -72,7 +71,7 @@ namespace polysolve::nonlinear
         /// @brief Compute the Hessian of the function at x.
         /// @param[in] x Degrees of freedom.
         /// @param[out] hessian Hessian of the function at x.
-        virtual void hessian(const TVector &x, THessian &hessian) = 0;
+        virtual void hessian(const TVector &x, Hessian &hessian) = 0;
 
         /// @brief Determine if the step from x0 to x1 is valid.
         /// @param x0 Starting point.

@@ -180,10 +180,6 @@ if(POLYSOLVE_LARGE_INDEX)
     target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_LARGE_INDEX)
 endif()
 
-target_compile_definitions(polysolve_linear PRIVATE POLYSOLVE_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/linear-solver-spec.json")
-target_compile_definitions(polysolve PRIVATE POLYSOLVE_NON_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json")
-target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_JSON_SPEC_DIR="${PROJECT_SOURCE_DIR}")
-
 
 ################################################################################
 # Dependencies
@@ -358,9 +354,26 @@ target_link_libraries(polysolve PRIVATE polysolve::warnings)
 
 
 ################################################################################
-# Compiler options
+# Specs
 ################################################################################
 
+
+jse_add_spec(linear_spec
+	ALIAS polysolve::linear::spec
+    INPUT "${PROJECT_SOURCE_DIR}/linear-solver-spec.json"
+    OUTPUT "${PROJECT_SOURCE_DIR}/src/polysolve/linear/solver-spec.hpp"
+	INCLUDE_DIRS "${PROJECT_SOURCE_DIR}"
+)
+
+jse_add_spec(non_linear_spec
+	ALIAS polysolve::polysolve::spec
+    INPUT "${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json"
+    OUTPUT "${PROJECT_SOURCE_DIR}/src/polysolve/nonlinear/solver-spec.hpp"
+	INCLUDE_DIRS "${PROJECT_SOURCE_DIR}"
+)
+
+target_link_libraries(polysolve_linear PUBLIC polysolve::linear::spec)
+target_link_libraries(polysolve PUBLIC polysolve::polysolve::spec)
 
 ################################################################################
 # Tests

@@ -4,6 +4,7 @@
 #include "Solver.hpp"
 #include "EigenSolver.hpp"
 #include "SaddlePointSolver.hpp"
+#include "solver-spec.hpp"
 
 #include <jse/jse.h>
 #include <spdlog/spdlog.h>
@@ -11,11 +12,13 @@
 #include <fstream>
 
 // -----------------------------------------------------------------------------
-// 
+//
 // Subsequent macros assume a single template parameter and SparseQR fails due to requiring 2 parameters. this is because the OrderingType is not filled in.
 // SparseLU has a default declaration of _OrderingType to use COLAMDOrdering but SparseQR doesn't - so this just mimics that behavior. If Eigen adds such a default in the future this line will need to be guarded to avoid multiple defaults
-namespace Eigen {
-template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename _MatrixType::StorageIndex> > class SparseQR;
+namespace Eigen
+{
+    template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename _MatrixType::StorageIndex>>
+    class SparseQR;
 }
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_ACCELERATE
@@ -29,9 +32,11 @@ template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename
 #endif
 #ifdef POLYSOLVE_WITH_SPQR
 #include <Eigen/SPQRSupport>
-namespace polysolve::linear {
+namespace polysolve::linear
+{
     template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix& A, const int precond_num) {
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
+    {
         m_Solver.compute(A);
     }
     template <>
@@ -43,7 +48,7 @@ namespace polysolve::linear {
             throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
         }
     }
-}
+} // namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
 #include <Eigen/SuperLUSupport>
@@ -137,18 +142,10 @@ namespace polysolve::linear
     {
         json params = params_in; // mutable copy
 
-        json rules;
         jse::JSE jse;
 
         jse.strict = strict_validation;
-        const std::string input_spec = POLYSOLVE_LINEAR_SPEC;
-        std::ifstream file(input_spec);
-
-        if (file.is_open())
-            file >> rules;
-        else
-            log_and_throw_error(logger, "unable to open {} rules", input_spec);
-
+        json rules = jse::embed::linear_spec::solver_spec::spec();
         apply_default_solver(rules);
         select_valid_solver(params, logger);
 

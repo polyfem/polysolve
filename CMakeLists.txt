@@ -149,12 +149,6 @@ if(POLYSOLVE_WITH_MKL)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "Select the MSVC runtime library")
 endif()
 
-# Add empty library target. Setup later.
-add_library(polysolve)
-add_library(polysolve::polysolve ALIAS polysolve)
-add_library(polysolve_linear)
-add_library(polysolve::linear ALIAS polysolve_linear)
-
 ################################################################################
 # CUDA
 ################################################################################
@@ -173,7 +167,19 @@ if (POLYSOLVE_WITH_CUDA)
   enable_language(CUDA)
   set(CMAKE_CUDA_STANDARD 17)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
 
+################################################################################
+# PolySolve Library
+################################################################################
+
+# Add empty library target. Setup later.
+add_library(polysolve)
+add_library(polysolve::polysolve ALIAS polysolve)
+add_library(polysolve_linear)
+add_library(polysolve::linear ALIAS polysolve_linear)
+
+if (POLYSOLVE_WITH_CUDA)
   set_target_properties(polysolve PROPERTIES
       CUDA_SEPARABLE_COMPILATION ON
       CUDA_RESOLVE_DEVICE_SYMBOLS ON
@@ -206,10 +212,6 @@ if (POLYSOLVE_WITH_CUDA)
                   BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
   endif()
 endif()
-
-################################################################################
-# PolySolve Library
-################################################################################
 
 add_subdirectory(src/polysolve)
 add_subdirectory(src/polysolve/linear)

@@ -17,7 +17,7 @@ set(SOURCES
     SaddlePointSolver.hpp
 )
 
-if(POLYSOLVE_WITH_CUDA)
+if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
     list(APPEND SOURCES
         MASSolver.cu
         MASSolver.hpp

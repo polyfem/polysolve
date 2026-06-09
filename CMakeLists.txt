@@ -247,6 +247,12 @@ if(POLYSOLVE_WITH_CUDA)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDA)
 endif()
 
+# Graph partition library Kaminpar does not support windows.
+if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
+  target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_MAS)
+  target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_MAS)
+endif()
+
 ################################################################################
 # Dependencies
 ################################################################################
@@ -413,7 +419,7 @@ endif()
 
 # KaMinPar
 # KaMinPar requires onetbb
-if(POLYSOLVE_WITH_CUDA)
+if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
   include(kaminpar)
   target_link_libraries(polysolve_linear PRIVATE KaMinPar::KaMinPar)
 endif()

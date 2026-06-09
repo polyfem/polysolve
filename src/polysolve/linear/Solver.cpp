@@ -68,7 +68,7 @@ namespace polysolve::linear
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include "CuSolverDN.cuh"
 #endif
-#ifdef POLYSOLVE_WITH_CUDA
+#ifdef POLYSOLVE_WITH_MAS
 #include "MASSolver.hpp"
 #endif
 
@@ -400,7 +400,7 @@ namespace polysolve::linear
         {
             return std::make_unique<CuSolverDN<float>>();
 #endif
-#ifdef POLYSOLVE_WITH_CUDA
+#ifdef POLYSOLVE_WITH_MAS
         }
         else if (solver == "MAS")
         {
@@ -538,7 +538,7 @@ namespace polysolve::linear
             "cuSolverDN",
             "cuSolverDN_float",
 #endif
-#ifdef POLYSOLVE_WITH_CUDA
+#ifdef POLYSOLVE_WITH_MAS
             "MAS",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE

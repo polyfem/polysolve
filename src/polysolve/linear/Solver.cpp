@@ -4,7 +4,7 @@
 #include "Solver.hpp"
 #include "EigenSolver.hpp"
 #include "SaddlePointSolver.hpp"
-#include "solver-spec.hpp"
+#include "linear-solver-spec.hpp"
 
 #include <jse/jse.h>
 #include <spdlog/spdlog.h>

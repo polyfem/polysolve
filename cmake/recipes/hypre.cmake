@@ -36,37 +36,6 @@ include(CPM)
 CPMAddPackage(
     NAME hypre
     GITHUB_REPOSITORY hypre-space/hypre
-    GIT_TAG v3.1.0
+    GIT_TAG 7e247a231ebdeb44b06c7c9d3b5bee3bac21123f
     SOURCE_SUBDIR src
 )
-
-# HYPRE v3.1.0 relies on transitive Thrust includes that were removed in CCCL 3.2+.
-# Patch HYPRE source.
-if (POLYSOLVE_WITH_CUDA)
-    function(polysolve_prepend_hypre_include file_path include_line)
-        if(NOT EXISTS "${file_path}")
-            message(FATAL_ERROR "Expected HYPRE source file does not exist: ${file_path}")
-        endif()
-
-        file(READ "${file_path}" file_contents)
-        string(FIND "${file_contents}" "${include_line}" include_pos)
-        if(include_pos EQUAL -1)
-            file(WRITE "${file_path}" "${include_line}\n${file_contents}")
-        endif()
-    endfunction()
-
-    polysolve_prepend_hypre_include(
-        "${hypre_SOURCE_DIR}/src/utilities/device_utils.c"
-        "#include <thrust/pair.h>")
-    polysolve_prepend_hypre_include(
-        "${hypre_SOURCE_DIR}/src/seq_mv/csr_matop_device.c"
-        "#include <thrust/pair.h>")
-    polysolve_prepend_hypre_include(
-        "${hypre_SOURCE_DIR}/src/IJ_mv/IJMatrix_parcsr_device.c"
-        "#include <thrust/iterator/reverse_iterator.h>")
-    polysolve_prepend_hypre_include(
-        "${hypre_SOURCE_DIR}/src/IJ_mv/IJVector_parcsr_device.c"
-        "#include <thrust/iterator/reverse_iterator.h>")
-
-    file(REMOVE "${hypre_SOURCE_DIR}/src/utilities/version")
-endif()

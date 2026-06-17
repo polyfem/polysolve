@@ -455,18 +455,20 @@ target_link_libraries(polysolve PRIVATE polysolve::warnings)
 ################################################################################
 
 
+set(POLYSOLVE_GENERATED_SPEC_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/polysolve")
+
 jse_add_spec(linear_spec
 	ALIAS polysolve::linear::spec
     INPUT "${PROJECT_SOURCE_DIR}/linear-solver-spec.json"
-    OUTPUT "${PROJECT_SOURCE_DIR}/src/polysolve/linear/solver-spec.hpp"
-	INCLUDE_DIRS "${PROJECT_SOURCE_DIR}"
+    OUTPUT "${POLYSOLVE_GENERATED_SPEC_DIR}/linear-solver-spec.hpp"
+    NAMESPACE "jse::embed::linear_spec::solver_spec"
 )
 
 jse_add_spec(non_linear_spec
 	ALIAS polysolve::polysolve::spec
     INPUT "${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json"
-    OUTPUT "${PROJECT_SOURCE_DIR}/src/polysolve/nonlinear/solver-spec.hpp"
-	INCLUDE_DIRS "${PROJECT_SOURCE_DIR}"
+    OUTPUT "${POLYSOLVE_GENERATED_SPEC_DIR}/nonlinear-solver-spec.hpp"
+    NAMESPACE "jse::embed::non_linear_spec::solver_spec"
 )
 
 target_link_libraries(polysolve_linear PUBLIC polysolve::linear::spec)

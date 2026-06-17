@@ -3,7 +3,7 @@
 
 #include "PostStepData.hpp"
 
-#include "solver-spec.hpp"
+#include "nonlinear-solver-spec.hpp"
 
 #include "descent_strategies/BFGS.hpp"
 #include "descent_strategies/Newton.hpp"

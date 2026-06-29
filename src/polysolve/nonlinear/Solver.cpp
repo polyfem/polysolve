@@ -402,7 +402,7 @@ namespace polysolve::nonlinear
                 }
             }
 
-            if (m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0)
+            if (!objFunc.is_residual() && m_strategies[m_descent_strategy]->is_direction_descent() && m_current.gradNorm != 0 && m_current.xDeltaDotGrad >= 0)
             {
                 const std::string current_name = descent_strategy_name();
 

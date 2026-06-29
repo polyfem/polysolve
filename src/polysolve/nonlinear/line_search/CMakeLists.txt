@@ -5,6 +5,8 @@ set(SOURCES
 	Armijo.hpp
 	Backtracking.cpp
 	Backtracking.hpp
+	ResidualBacktracking.cpp
+	ResidualBacktracking.hpp
 	NoLineSearch.cpp
 	NoLineSearch.hpp
 	RobustArmijo.cpp

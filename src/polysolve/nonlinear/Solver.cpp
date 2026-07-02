@@ -354,6 +354,12 @@ namespace polysolve::nonlinear
                 update_direction_successful = compute_update_direction(objFunc, x, grad, delta_x);
             }
 
+            // Optional caller-installed filter (e.g. projecting out the
+            // closing components of contact pairs pinned at a numerical
+            // floor) applied before the direction is vetted and searched.
+            if (m_direction_filter && update_direction_successful)
+                m_direction_filter(x, delta_x);
+
             m_current.xDelta = objFunc.step_norm(delta_x, m_norm_type);
             if (m_current.iterations == 0)
             {

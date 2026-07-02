@@ -80,6 +80,11 @@ namespace polysolve::nonlinear
 
         void set_iteration_callback(std::function<bool(const Criteria &)> callback) { m_iteration_callback = callback; }
 
+        /// @brief Set a filter applied to every computed update direction
+        ///        before it is vetted and line-searched (e.g. one-sided
+        ///        projection of constraint-violating components).
+        void set_direction_filter(std::function<void(const TVector &, TVector &)> filter) { m_direction_filter = filter; }
+
         /// @brief If true the solver will not throw an error if the maximum number of iterations is reached
         bool allow_out_of_iterations = false;
 
@@ -175,6 +180,8 @@ namespace polysolve::nonlinear
         std::vector<int> m_iter_per_strategy;
 
         std::function<bool(const Criteria &)> m_iteration_callback = nullptr;
+
+        std::function<void(const TVector &, TVector &)> m_direction_filter = nullptr;
 
         // ====================================================================
         //                            Solver info

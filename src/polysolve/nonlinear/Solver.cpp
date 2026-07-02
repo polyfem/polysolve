@@ -392,7 +392,19 @@ namespace polysolve::nonlinear
                 continue;
             }
 
-            m_current.xDeltaDotGrad = delta_x.dot(grad);
+            // With a direction filter installed, descent must be measured on
+            // the constrained manifold: project the steepest-descent
+            // direction through the same filter and test against that.
+            // Otherwise a correctly filtered direction is rejected against
+            // gradient components that live in the removed subspace.
+            if (m_direction_filter)
+            {
+                TVector neg_grad = -grad;
+                m_direction_filter(x, neg_grad);
+                m_current.xDeltaDotGrad = -delta_x.dot(neg_grad);
+            }
+            else
+                m_current.xDeltaDotGrad = delta_x.dot(grad);
 
             if (m_stop_rescaled.newtonDecrement > 0)
             {

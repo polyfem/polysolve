@@ -543,7 +543,7 @@ namespace polysolve::nonlinear
 
         double tot_time = stop_watch.getElapsedTimeInSec();
         const bool succeeded = m_status == Status::GradNormTolerance || m_status == Status::RelGradNormTolerance
-                                || (allow_non_grad_convergence && is_converged_status(m_status));
+                               || (allow_non_grad_convergence && is_converged_status(m_status));
         m_logger.log(
             succeeded ? spdlog::level::info : spdlog::level::err,
             "[{}][{}] Finished: {} took {:g}s ({}) (stopping criteria: {})",
@@ -678,6 +678,7 @@ namespace polysolve::nonlinear
         break;
         default:
             log_and_throw_error(m_logger, "Unrecognized gradient verification strategy: {}", static_cast<int>(gradient_fd_strategy));
+        }
 
         objFunc.solution_changed(x);
     }

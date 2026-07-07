@@ -7,7 +7,7 @@ else()
 endif()
 
 # Check required CMake version
-set(REQUIRED_CMAKE_VERSION "3.18.0")
+set(REQUIRED_CMAKE_VERSION "3.24.0")
 if(POLYSOLVE_TOPLEVEL_PROJECT)
     cmake_minimum_required(VERSION ${REQUIRED_CMAKE_VERSION})
     SET(CMAKE_POLICY_VERSION_MINIMUM ${REQUIRED_CMAKE_VERSION})
@@ -85,6 +85,7 @@ endif()
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
+option(POLYSOLVE_WITH_CUDA          "Enable cuda support"                               OFF)
 
 # Polysolve options for enabling/disabling optional libraries
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
@@ -160,18 +161,79 @@ if(MSVC AND POLYSOLVE_WITH_MKL)
 endif()
 
 ################################################################################
+# CUDA
+################################################################################
+
+if (POLYSOLVE_WITH_CUDA)
+  # If CMAKE_CUDA_ARCHITECTURES was not specified, set it to native.
+  if(DEFINED CMAKE_CUDA_ARCHITECTURES)
+    message(STATUS "CMAKE_CUDA_ARCHITECTURES was specified, skipping auto-detection")
+  else()
+    message(STATUS "CMAKE_CUDA_ARCHITECTURES was not specified, set it to native")
+    set(CMAKE_CUDA_ARCHITECTURES "native")
+  endif()
+  message(STATUS "Targeting CUDA_ARCHITECTURES \"${CMAKE_CUDA_ARCHITECTURES}\"")
+
+  # Enable CUDA support
+  enable_language(CUDA)
+  set(CMAKE_CUDA_STANDARD 17)
+  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
+
+################################################################################
 # PolySolve Library
 ################################################################################
 
-# Add an empty library and fill in the list of sources in `src/CMakeLists.txt`.
+# Add empty library target. Setup later.
+add_library(polysolve)
+add_library(polysolve::polysolve ALIAS polysolve)
 add_library(polysolve_linear)
 add_library(polysolve::linear ALIAS polysolve_linear)
+
+if (POLYSOLVE_WITH_CUDA)
+  set_target_properties(polysolve PROPERTIES
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON
+  )
+  set_target_properties(polysolve_linear PROPERTIES
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON
+  )
+
+  # Enable __device__ lambda
+  target_compile_options(polysolve PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
+  )
+  target_compile_options(polysolve_linear PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
+  )
+  # Relax device constexpr usage
+  target_compile_options(polysolve PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+  )
+  target_compile_options(polysolve_linear PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+  )
+
+  if(APPLE)
+      # We need to add the path to the driver (libcuda.dylib) as an rpath,
+      # so that the static cuda runtime can find it at runtime.
+      set_property(TARGET polysolve
+                  PROPERTY
+                  BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+  endif()
+endif()
+
 add_subdirectory(src/polysolve)
 add_subdirectory(src/polysolve/linear)
 
-add_library(polysolve)
-add_library(polysolve::polysolve ALIAS polysolve)
 add_subdirectory(src/polysolve/nonlinear)
+
+# Ensure that changes in the CUDA linear library
+# trigger relinking of the aggregate polysolve
+# static library (and its CUDA device-link step).
+set_property(TARGET polysolve APPEND PROPERTY LINK_DEPENDS
+    "$<TARGET_FILE:polysolve_linear>")
 
 target_link_libraries(polysolve_linear PUBLIC polysolve_coverage_config)
 target_link_libraries(polysolve PUBLIC polysolve_coverage_config)
@@ -191,14 +253,34 @@ if(POLYSOLVE_LARGE_INDEX)
     target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_LARGE_INDEX)
 endif()
 
-target_compile_definitions(polysolve_linear PRIVATE POLYSOLVE_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/linear-solver-spec.json")
-target_compile_definitions(polysolve PRIVATE POLYSOLVE_NON_LINEAR_SPEC="${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json")
-target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_JSON_SPEC_DIR="${PROJECT_SOURCE_DIR}")
+if(POLYSOLVE_WITH_CUDA)
+  target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_CUDA)
+  target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDA)
+endif()
 
+# Graph partition library Kaminpar does not support windows.
+if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
+  target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_MAS)
+  target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_MAS)
+endif()
 
 ################################################################################
 # Dependencies
 ################################################################################
+
+# CCCL
+if(POLYSOLVE_WITH_CUDA)
+  include(cccl)
+  target_link_libraries(polysolve_linear PUBLIC CCCL::CCCL)
+  target_link_libraries(polysolve PUBLIC CCCL::CCCL)
+endif()
+
+# Cuda runtime and cuSparse
+if (POLYSOLVE_WITH_CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    target_link_libraries(polysolve PUBLIC CUDA::cudart CUDA::cusparse)
+    target_link_libraries(polysolve_linear PUBLIC CUDA::cudart CUDA::cusparse)
+endif()
 
 # ------
 # Linear
@@ -342,6 +424,10 @@ endif()
 
 # cuSolver solvers
 if(POLYSOLVE_WITH_CUSOLVER)
+    if (NOT POLYSOLVE_WITH_CUDA)
+      message(FATAL_ERROR "Expect POLYSOLVE_WITH_CUDA set to ON when CUSOLVER is enabled")
+    endif()
+
     include(cusolverdn)
     if(TARGET CUDA::cusolver)
         target_link_libraries(polysolve_linear PUBLIC CUDA::cusolver)
@@ -367,6 +453,13 @@ if(POLYSOLVE_WITH_UNICODE)
     if(MSVC)
         target_compile_options(polysolve_linear PUBLIC /utf-8)
     endif()
+endif()
+
+# KaMinPar
+# KaMinPar requires onetbb
+if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
+  include(kaminpar)
+  target_link_libraries(polysolve_linear PRIVATE KaMinPar::KaMinPar)
 endif()
 
 # ---------
@@ -396,9 +489,28 @@ target_link_libraries(polysolve PRIVATE polysolve::warnings)
 
 
 ################################################################################
-# Compiler options
+# Specs
 ################################################################################
 
+
+set(POLYSOLVE_GENERATED_SPEC_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/polysolve")
+
+jse_add_spec(linear_spec
+	ALIAS polysolve::linear::spec
+    INPUT "${PROJECT_SOURCE_DIR}/linear-solver-spec.json"
+    OUTPUT "${POLYSOLVE_GENERATED_SPEC_DIR}/linear-solver-spec.hpp"
+    NAMESPACE "jse::embed::linear_spec::solver_spec"
+)
+
+jse_add_spec(non_linear_spec
+	ALIAS polysolve::polysolve::spec
+    INPUT "${PROJECT_SOURCE_DIR}/nonlinear-solver-spec.json"
+    OUTPUT "${POLYSOLVE_GENERATED_SPEC_DIR}/nonlinear-solver-spec.hpp"
+    NAMESPACE "jse::embed::non_linear_spec::solver_spec"
+)
+
+target_link_libraries(polysolve_linear PUBLIC polysolve::linear::spec)
+target_link_libraries(polysolve PUBLIC polysolve::polysolve::spec)
 
 ################################################################################
 # Tests

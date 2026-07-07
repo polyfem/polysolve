@@ -206,7 +206,7 @@ namespace polysolve::linear
 
 } // namespace polysolve::linear
 
-template polysolve::CuSolverDN<double>::CuSolverDN();
-template polysolve::CuSolverDN<float>::CuSolverDN();
+template polysolve::linear::CuSolverDN<double>::CuSolverDN();
+template polysolve::linear::CuSolverDN<float>::CuSolverDN();
 
 #endif

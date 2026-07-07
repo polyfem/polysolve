@@ -677,8 +677,7 @@ namespace polysolve::nonlinear
         }
         break;
         default:
-            log_and_throw_error(m_logger, "Unrecognized gradient verification strategy: {}", gradient_fd_strategy);
-        }
+            log_and_throw_error(m_logger, "Unrecognized gradient verification strategy: {}", static_cast<int>(gradient_fd_strategy));
 
         objFunc.solution_changed(x);
     }

@@ -12,7 +12,7 @@ if(POLYSOLVE_TOPLEVEL_PROJECT)
     cmake_minimum_required(VERSION ${REQUIRED_CMAKE_VERSION})
     SET(CMAKE_POLICY_VERSION_MINIMUM ${REQUIRED_CMAKE_VERSION})
     if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0.0")
-        message(WARNING "CMake version is ${CMAKE_VERSION}, setting stuff for dependencies.")
+        message(WARNING "CMake version ${CMAKE_VERSION} >= 4.0.0, setting CMAKE_POLICY_VERSION_MINIMUM to ${REQUIRED_CMAKE_VERSION} and disabling AMGCL.")
         SET(CMAKE_POLICY_VERSION_MINIMUM ${REQUIRED_CMAKE_VERSION})
         set(POLYSOLVE_WITH_AMGCL OFF CACHE BOOL "Use AMGCL for solving linear systems")
     endif()
@@ -277,13 +277,6 @@ endif()
 
 # Accelerate solver (Include before Eigen)
 if(POLYSOLVE_WITH_ACCELERATE)
-    include(CPM)
-    CPMAddPackage(
-        NAME eigen
-        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-        GIT_TAG 969c31eefcdfaab11da763bea3f7502086673ab0
-        DOWNLOAD_ONLY ON
-    )
     set(BLA_VENDOR Apple)
     find_package(BLAS REQUIRED)
     find_package(LAPACK REQUIRED)

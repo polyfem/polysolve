@@ -15,6 +15,7 @@
             "iterations_per_strategy",
             "line_search",
             "allow_out_of_iterations",
+            "allow_non_grad_convergence",
             "L-BFGS",
             "L-BFGS-B",
             "Newton",
@@ -124,6 +125,12 @@
         "default": false,
         "type": "bool",
         "doc": "If false (default), an exception will be thrown when the nonlinear solver reaches the maximum number of iterations."
+    },
+    {
+        "pointer": "/allow_non_grad_convergence",
+        "default": false,
+        "type": "bool",
+        "doc": "If false (default), only convergence via the gradient norm tolerance is logged as a success; convergence via any other tolerance (e.g., x delta, f delta) is logged as an error. If true, convergence via any tolerance is logged as a success."
     },
     {
         "pointer": "/L-BFGS",

@@ -215,6 +215,7 @@ namespace polysolve::nonlinear
 
         m_stop.iterations = solver_params["max_iterations"];
         allow_out_of_iterations = solver_params["allow_out_of_iterations"];
+        allow_non_grad_convergence = solver_params["allow_non_grad_convergence"];
 
         m_stop.fDeltaCount = solver_params["advanced"]["f_delta_step_tol"];
 
@@ -541,7 +542,8 @@ namespace polysolve::nonlinear
             log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", descent_strategy_name(), m_line_search->name());
 
         double tot_time = stop_watch.getElapsedTimeInSec();
-        const bool succeeded = m_status == Status::GradNormTolerance || m_status == Status::RelGradNormTolerance;
+        const bool succeeded = m_status == Status::GradNormTolerance || m_status == Status::RelGradNormTolerance
+                                || (allow_non_grad_convergence && is_converged_status(m_status));
         m_logger.log(
             succeeded ? spdlog::level::info : spdlog::level::err,
             "[{}][{}] Finished: {} took {:g}s ({}) (stopping criteria: {})",
@@ -674,6 +676,8 @@ namespace polysolve::nonlinear
                 m_logger.error("step size: {}, all gradient components do not match finite difference", gradient_fd_eps);
         }
         break;
+        default:
+            log_and_throw_error(m_logger, "Unrecognized gradient verification strategy: {}", gradient_fd_strategy);
         }
 
         objFunc.solution_changed(x);

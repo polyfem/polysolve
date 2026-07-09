@@ -111,7 +111,7 @@ namespace polysolve::linear
         {
             for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
             {
-                HYPRE_Int row[1]; 
+                HYPRE_Int row[1];
                 int counter = 0;
                 std::vector<HYPRE_Int> cols;
                 std::vector<double> vals;
@@ -163,7 +163,7 @@ namespace polysolve::linear
             // AMG coarsening options:
             int coarsen_type = 10; // 10 = HMIS, 8 = PMIS, 6 = Falgout, 0 = CLJP
             int agg_levels = 1;    // number of aggressive coarsening levels
-            double theta = 0.5;   // strength threshold: 0.25, 0.5, 0.8
+            double theta = 0.5;    // strength threshold: 0.25, 0.5, 0.8
 
             // AMG interpolation options:
             int interp_type = 6; // 6 = extended+i, 0 = classical
@@ -216,7 +216,7 @@ namespace polysolve::linear
             // refinement (this is generally applicable for any system)
             int interp_refine = 1;
 
-            if (nodal_coarsening) 
+            if (nodal_coarsening)
             {
                 HYPRE_BoomerAMGSetNodal(amg_precond, nodal);
                 HYPRE_BoomerAMGSetNodalDiag(amg_precond, nodal_diag);
@@ -251,16 +251,16 @@ namespace polysolve::linear
 
                 for (int i = 0; i < positions.rows(); ++i)
                 {
-                    rbm_xy(0 + i*dim) = positions(i, 1);
-                    rbm_xy(1 + i*dim) = -1 * positions(i, 0);
+                    rbm_xy(0 + i * dim) = positions(i, 1);
+                    rbm_xy(1 + i * dim) = -1 * positions(i, 0);
 
                     if (dim == 3)
                     {
-                        rbm_zx(1 + i*dim) = positions(i, 2);
-                        rbm_zx(2 + i*dim) = -1 * positions(i, 1);
+                        rbm_zx(1 + i * dim) = positions(i, 2);
+                        rbm_zx(2 + i * dim) = -1 * positions(i, 1);
 
-                        rbm_yz(2 + i*dim) = positions(i, 0);
-                        rbm_yz(0 + i*dim) = -1 * positions(i, 2);
+                        rbm_yz(2 + i * dim) = positions(i, 0);
+                        rbm_yz(0 + i * dim) = -1 * positions(i, 2);
                     }
                 }
 

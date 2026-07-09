@@ -17,7 +17,8 @@
 
 #include <set>
 
-extern "C" {
+extern "C"
+{
     HYPRE_Int hypre_ParVectorAxpy(HYPRE_Complex alpha, HYPRE_ParVector x, HYPRE_ParVector y);
 }
 
@@ -54,8 +55,9 @@ namespace polysolve::linear
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
 
         // Name of the solver type (for debugging purposes)
-        virtual std::string name() const override { 
-            return "GPUHybrid"; 
+        virtual std::string name() const override
+        {
+            return "GPUHybrid";
         }
 
     protected:
@@ -106,7 +108,7 @@ namespace polysolve::linear
         cudssHandle_t cudss_handle = nullptr;
         cudssConfig_t cudss_config = nullptr;
         cudssData_t cudss_solver_data = nullptr;
-        
+
         cudssMatrix_t batch_A = nullptr;
         cudssMatrix_t batch_x = nullptr;
         cudssMatrix_t batch_b = nullptr;
@@ -121,8 +123,8 @@ namespace polysolve::linear
         thrust::device_vector<int> d_sparse_inner_indices, d_sparse_outer_indices;
         thrust::device_vector<double> d_sparse_values;
         thrust::device_vector<double> d_sparse_x, d_sparse_b;
-        thrust::device_vector<void*> d_sparse_inner_void, d_sparse_outer_void, d_sparse_values_void;
-        thrust::device_vector<void*> d_sparse_x_void, d_sparse_b_void;
+        thrust::device_vector<void *> d_sparse_inner_void, d_sparse_outer_void, d_sparse_values_void;
+        thrust::device_vector<void *> d_sparse_x_void, d_sparse_b_void;
 
     public:
         void free_device_memory();
@@ -134,23 +136,23 @@ namespace polysolve::linear
         void init_hypre_vectors(const int size);
 
         // hybrid preconditioner helpers
-        void decompose_subdomains_to_disjoint_subsets(const Eigen::SparseMatrix<double>& sparse_A);
-        void filter_subdomains(const Eigen::SparseMatrix<double>& sparse_A);
-        void expand_subdomains_to_strongly_connected(const Eigen::SparseMatrix<double>& sparse_A);
+        void decompose_subdomains_to_disjoint_subsets(const Eigen::SparseMatrix<double> &sparse_A);
+        void filter_subdomains(const Eigen::SparseMatrix<double> &sparse_A);
+        void expand_subdomains_to_strongly_connected(const Eigen::SparseMatrix<double> &sparse_A);
         void select_bad_dofs();
         void factorize_submatrix();
 
         // linear algebra
-        void set_hypre_vec(HYPRE_IJVector &ij_x, HYPRE_ParVector &par_x, const thrust::device_vector<double>& x);
-        void matmul(const thrust::device_vector<double>& x, thrust::device_vector<double>& result);
-        double dot(const thrust::device_vector<double>& x, const thrust::device_vector<double>& y);
-        void vector_copy(const thrust::device_vector<double>& x, thrust::device_vector<double>& y);
-        void vector_add(double alpha, const thrust::device_vector<double>& x, thrust::device_vector<double>& y);
-        void vector_scale(double alpha, thrust::device_vector<double>& x);
+        void set_hypre_vec(HYPRE_IJVector &ij_x, HYPRE_ParVector &par_x, const thrust::device_vector<double> &x);
+        void matmul(const thrust::device_vector<double> &x, thrust::device_vector<double> &result);
+        double dot(const thrust::device_vector<double> &x, const thrust::device_vector<double> &y);
+        void vector_copy(const thrust::device_vector<double> &x, thrust::device_vector<double> &y);
+        void vector_add(double alpha, const thrust::device_vector<double> &x, thrust::device_vector<double> &y);
+        void vector_scale(double alpha, thrust::device_vector<double> &x);
 
         // preconditioning functions
         void custom_mixed_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double> &r, thrust::device_vector<double> &z, thrust::device_vector<double> &buffer, thrust::device_vector<double> &z2);
-        void amg_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double>& b, thrust::device_vector<double> &x);
+        void amg_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double> &b, thrust::device_vector<double> &x);
         void dss_precond_iter(thrust::device_vector<double> &z, thrust::device_vector<double> &r, thrust::device_vector<double> &next_z);
 
         // Krylov solve methods

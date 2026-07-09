@@ -133,7 +133,8 @@ TEST_CASE("all", "[solver]")
             params[s]["absolute_tolerance"] = 1e-8;
             params[s]["use_preconditioned_residual_norm"] = false;
             solver->set_parameters(params);
-        } else if (s == "GPUHybrid" || s == "CPUHybrid")
+        }
+        else if (s == "GPUHybrid" || s == "CPUHybrid")
         {
             params[s]["relative_tolerance"] = 0.0;
             params[s]["absolute_tolerance"] = 1e-8;

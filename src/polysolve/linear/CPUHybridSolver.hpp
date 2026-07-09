@@ -20,23 +20,28 @@
 
 namespace polysolve::linear
 {
-    class AbstractSolver {
+    class AbstractSolver
+    {
 
     public:
-        virtual void compute(const Eigen::SparseMatrix<double>& A) = 0;
-        virtual Eigen::VectorXd solve(const Eigen::VectorXd& b) = 0;
+        virtual void compute(const Eigen::SparseMatrix<double> &A) = 0;
+        virtual Eigen::VectorXd solve(const Eigen::VectorXd &b) = 0;
         virtual ~AbstractSolver() = default;
     };
 
     template <typename EigenSolverT>
-    class EigenWrapper : public AbstractSolver {
+    class EigenWrapper : public AbstractSolver
+    {
         EigenSolverT solver;
+
     public:
-        void compute(const Eigen::SparseMatrix<double>& A) override {
+        void compute(const Eigen::SparseMatrix<double> &A) override
+        {
             solver.compute(A);
         }
 
-        Eigen::VectorXd solve(const Eigen::VectorXd& b) override {
+        Eigen::VectorXd solve(const Eigen::VectorXd &b) override
+        {
             return solver.solve(b);
         }
     };
@@ -74,8 +79,9 @@ namespace polysolve::linear
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
 
         // Name of the solver type (for debugging purposes)
-        virtual std::string name() const override {
-            return "CPUHybrid"; 
+        virtual std::string name() const override
+        {
+            return "CPUHybrid";
         }
 
     protected:
@@ -106,7 +112,7 @@ namespace polysolve::linear
     private:
         bool has_matrix_ = false;
 
-        // MPI rank distribution 
+        // MPI rank distribution
         int myid = 0;
         int num_procs = 1;
         std::vector<int> starts;
@@ -142,7 +148,7 @@ namespace polysolve::linear
         void init_hypre_vectors();
 
         // hybrid preconditioner helpers
-        void assemble_D(int bad_i, int i, Eigen::SparseMatrix<double>& D, SharedSparseMatrix &sparse_A);
+        void assemble_D(int bad_i, int i, Eigen::SparseMatrix<double> &D, SharedSparseMatrix &sparse_A);
         void build_index_mappings();
         void decompose_subdomains_to_disjoint_subsets(SharedSparseMatrix &sparse_A);
         void filter_subdomains(SharedSparseMatrix &sparse_A);
@@ -158,12 +164,12 @@ namespace polysolve::linear
 
         // preconditioning functions
         void custom_mixed_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &r, Eigen::VectorXd &z, SharedVector &vec, MPI_Win &vec_win);
-        void amg_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd& b, Eigen::VectorXd &x);
+        void amg_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &b, Eigen::VectorXd &x);
         void dss_precond_iter(Eigen::VectorXd &z, Eigen::VectorXd &r, Eigen::VectorXd &next_z, SharedVector &vec, MPI_Win &vec_win);
 
         // MPI helpers
-        void create_shared_vec(MPI_Win &win, void* &base_ptr, int size);
-        int my_size() {return ends[myid] - starts[myid] + 1;};
+        void create_shared_vec(MPI_Win &win, void *&base_ptr, int size);
+        int my_size() { return ends[myid] - starts[myid] + 1; };
 
         // Krylov solve methods
         void pcg_solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result, HYPRE_ParVector &par_b, HYPRE_ParVector &par_x, HYPRE_Solver &precond, SharedVector &vec, MPI_Win &vec_win);

@@ -4,7 +4,7 @@
 
 namespace polysolve::linear::hybrid
 {
-    class DisjointSet 
+    class DisjointSet
     {
     public:
         // Initializes a disjoint set of size n

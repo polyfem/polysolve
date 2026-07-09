@@ -2,7 +2,7 @@
 
 namespace polysolve::linear::hybrid
 {
-    DisjointSet::DisjointSet(int n) 
+    DisjointSet::DisjointSet(int n)
     {
         rank.assign(n, 0);
         parent.reserve(n);
@@ -12,7 +12,7 @@ namespace polysolve::linear::hybrid
         }
     }
 
-    int DisjointSet::find_set(int v) 
+    int DisjointSet::find_set(int v)
     {
         if (parent[v] != v)
         {
@@ -21,7 +21,7 @@ namespace polysolve::linear::hybrid
         return parent[v];
     }
 
-    void DisjointSet::union_set(int x, int y) 
+    void DisjointSet::union_set(int x, int y)
     {
         // Find the absolute root representatives first
         int root_x = find_set(x);
@@ -38,7 +38,7 @@ namespace polysolve::linear::hybrid
         {
             parent[root_y] = root_x;
         }
-        else 
+        else
         {
             parent[root_x] = root_y;
             if (rank[root_x] == rank[root_y])

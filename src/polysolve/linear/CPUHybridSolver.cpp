@@ -34,7 +34,7 @@ namespace polysolve::linear
         {
             return std::chrono::duration<double>(clock::now() - begin).count();
         }
-    }
+    } // namespace
 
     CPUHybridSolver::CPUHybridSolver()
     {
@@ -44,7 +44,7 @@ namespace polysolve::linear
 
         if (!done_already)
         {
-            // Initialize MPI 
+            // Initialize MPI
             int argc = 1;
             char name[] = "";
             char *argv[] = {name};
@@ -73,7 +73,6 @@ namespace polysolve::linear
         {
             spdlog::flush_on(spdlog::level::info);
         }
-        
     }
 
     // Set solver parameters
@@ -132,11 +131,11 @@ namespace polysolve::linear
             if (params["Hybrid"].contains("conditioning_threshold"))
             {
                 conditioning_threshold = params["Hybrid"]["conditioning_threshold"];
-            } 
+            }
             if (params["Hybrid"].contains("additive_mode"))
             {
                 additive_mode = params["Hybrid"]["additive_mode"];
-            }   
+            }
         }
     }
 
@@ -176,9 +175,9 @@ namespace polysolve::linear
         partition_ranks(rows);
 
         MPI_Win A_win;
-        double* values;
-        int* inner_indices;
-        int* outer_pointers;
+        double *values;
+        int *inner_indices;
+        int *outer_pointers;
 
         {
             auto phase_begin = clock::now();
@@ -188,19 +187,19 @@ namespace polysolve::linear
             uint64_t outer_bytes = (cols + 1) * sizeof(int);
             uint64_t total_bytes = myid == 0 ? val_bytes + inner_bytes + outer_bytes : 0;
 
-            void* A_ptr;
+            void *A_ptr;
             MPI_Win_allocate_shared(total_bytes, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &A_ptr, &A_win);
 
             if (myid != 0)
             {
                 int disp_unit;
                 MPI_Aint sz;
-                MPI_Win_shared_query(A_win, 0, &sz, &disp_unit, &A_ptr); 
+                MPI_Win_shared_query(A_win, 0, &sz, &disp_unit, &A_ptr);
             }
 
-            values = (double*) A_ptr;
-            inner_indices = (int*) ((char*) A_ptr + val_bytes);
-            outer_pointers = (int*) ((char*) A_ptr + inner_bytes + val_bytes);
+            values = (double *)A_ptr;
+            inner_indices = (int *)((char *)A_ptr + val_bytes);
+            outer_pointers = (int *)((char *)A_ptr + inner_bytes + val_bytes);
 
             MPI_Win_fence(0, A_win);
 
@@ -212,14 +211,14 @@ namespace polysolve::linear
             }
 
             MPI_Win_fence(0, A_win);
-        
+
             SPDLOG_TRACE("[{}] [create_shared_matrix_window] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         SharedSparseMatrix shared_A(rows, cols, nnz, outer_pointers, inner_indices, values);
 
         auto phase_begin = clock::now();
-        
+
         bad_indices_sets.clear();
         bad_indices_arrays.clear();
         select_bad_dofs(shared_A);
@@ -230,7 +229,7 @@ namespace polysolve::linear
             {
                 filter_subdomains(shared_A);
             }
-            
+
             if (expand_subdomains)
             {
                 expand_subdomains_to_strongly_connected(shared_A);
@@ -240,7 +239,7 @@ namespace polysolve::linear
             {
                 decompose_subdomains_to_disjoint_subsets(shared_A);
             }
-            else 
+            else
             {
                 bad_indices_sets.emplace_back(all_bad_dofs.begin(), all_bad_dofs.end());
             }
@@ -286,7 +285,7 @@ namespace polysolve::linear
         {
             x.setZero();
             HYPRE_IJVectorGetValues(ij_x, end_i - start_i + 1, nullptr, x.data() + start_i);
-            
+
             std::vector<int> recv_counts(num_procs);
             std::vector<int> displs(num_procs);
 
@@ -294,13 +293,14 @@ namespace polysolve::linear
             MPI_Allgather(&local_size, 1, MPI_INT, recv_counts.data(), 1, MPI_INT, MPI_COMM_WORLD);
 
             displs[0] = 0;
-            for (int i = 1; i < num_procs; ++i) {
+            for (int i = 1; i < num_procs; ++i)
+            {
                 displs[i] = displs[i - 1] + recv_counts[i - 1];
             }
 
             MPI_Allgatherv(x.data() + start_i, local_size, MPI_DOUBLE,
-                        x.data(), recv_counts.data(), displs.data(), 
-                        MPI_DOUBLE, MPI_COMM_WORLD);          
+                           x.data(), recv_counts.data(), displs.data(),
+                           MPI_DOUBLE, MPI_COMM_WORLD);
         }
 
         void HypreBoomerAMG_SetDefaultOptions(HYPRE_Solver &amg_precond)
@@ -327,20 +327,20 @@ namespace polysolve::linear
             HYPRE_BoomerAMGSetCoarsenType(amg_precond, coarsen_type);
             HYPRE_BoomerAMGSetAggNumLevels(amg_precond, agg_levels);
             HYPRE_BoomerAMGSetRelaxType(amg_precond, relax_type);
-            
-            //relax_type = 88;
+
+            // relax_type = 88;
             HYPRE_BoomerAMGSetMinCoarseSize(amg_precond, min_coarse_size);
-            //HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_type, 1);
-            //HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_type, 2);
+            // HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_type, 1);
+            // HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_type, 2);
             HYPRE_BoomerAMGSetCycleRelaxType(amg_precond, relax_type, 3);
-            //HYPRE_BoomerAMGSetDebugFlag(amg_precond, 1);
-            //HYPRE_BoomerAMGSetNodal(amg_precond, 0);
-            //HYPRE_BoomerAMGSetNodalDiag(amg_precond, 0);
+            // HYPRE_BoomerAMGSetDebugFlag(amg_precond, 1);
+            // HYPRE_BoomerAMGSetNodal(amg_precond, 0);
+            // HYPRE_BoomerAMGSetNodalDiag(amg_precond, 0);
             HYPRE_BoomerAMGSetNumSweeps(amg_precond, relax_sweeps);
             HYPRE_BoomerAMGSetStrongThreshold(amg_precond, theta);
             HYPRE_BoomerAMGSetInterpType(amg_precond, interp_type);
             HYPRE_BoomerAMGSetPMaxElmts(amg_precond, Pmax);
-            //print_level = 3;
+            // print_level = 3;
             HYPRE_BoomerAMGSetPrintLevel(amg_precond, print_level);
             HYPRE_BoomerAMGSetMaxLevels(amg_precond, max_levels);
 
@@ -361,7 +361,6 @@ namespace polysolve::linear
 
     } // anonymous namespace
 
-
     ////////////////////////////////////////////////////////////////////////////////
 
     void CPUHybridSolver::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
@@ -370,9 +369,9 @@ namespace polysolve::linear
         MPI_Bcast(&problem_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
         MPI_Win vec_win;
-        void* vec_ptr;
+        void *vec_ptr;
         create_shared_vec(vec_win, vec_ptr, 3 * problem_size);
-        SharedVector shared_vec((double*) vec_ptr, 3 * problem_size);
+        SharedVector shared_vec((double *)vec_ptr, 3 * problem_size);
 
         shared_rhs.resize(my_size());
         shared_result.resize(my_size());
@@ -395,28 +394,26 @@ namespace polysolve::linear
 
         int local_size = my_size();
         MPI_Scatterv(
-            rhs.data(), 
-            recv_counts.data(), 
-            displs.data(), 
-            MPI_DOUBLE, 
-            shared_rhs.data(), 
-            local_size, 
-            MPI_DOUBLE, 
-            0, 
-            MPI_COMM_WORLD
-        );
+            rhs.data(),
+            recv_counts.data(),
+            displs.data(),
+            MPI_DOUBLE,
+            shared_rhs.data(),
+            local_size,
+            MPI_DOUBLE,
+            0,
+            MPI_COMM_WORLD);
 
         MPI_Scatterv(
-            result.data(), 
-            recv_counts.data(), 
-            displs.data(), 
-            MPI_DOUBLE, 
-            shared_result.data(), 
-            local_size, 
-            MPI_DOUBLE, 
-            0, 
-            MPI_COMM_WORLD
-        );
+            result.data(),
+            recv_counts.data(),
+            displs.data(),
+            MPI_DOUBLE,
+            shared_result.data(),
+            local_size,
+            MPI_DOUBLE,
+            0,
+            MPI_COMM_WORLD);
 
         HYPRE_ParVector par_b;
         HYPRE_ParVector par_x;
@@ -429,15 +426,14 @@ namespace polysolve::linear
         {
             auto phase_begin = clock::now();
             HYPRE_BoomerAMGCreate(&precond);
-        
+
             HypreBoomerAMG_SetDefaultOptions(precond);
             if (dimension_ > 1)
             {
                 HypreBoomerAMG_SetElasticityOptions(
-                    precond, 
-                    dimension_, 
-                    theta
-                );
+                    precond,
+                    dimension_,
+                    theta);
             }
 
             MPI_Barrier(MPI_COMM_WORLD);
@@ -459,19 +455,17 @@ namespace polysolve::linear
             auto phase_begin = clock::now();
 
             pcg_solve(shared_rhs, shared_result, par_b, par_x, precond, shared_vec, vec_win);
-            
+
             MPI_Gatherv(
-                shared_result.data(), 
+                shared_result.data(),
                 local_size,
                 MPI_DOUBLE,
                 result.data(),
-                recv_counts.data(), 
-                displs.data(), 
-                MPI_DOUBLE, 
-                0, 
-                MPI_COMM_WORLD
-            );
-
+                recv_counts.data(),
+                displs.data(),
+                MPI_DOUBLE,
+                0,
+                MPI_COMM_WORLD);
 
             Eigen::VectorXd A_times_result;
             matmul(shared_result, buffer);
@@ -499,14 +493,14 @@ namespace polysolve::linear
         r.setZero();
         {
             auto phase_begin = clock::now();
-        
+
             bi_prod = dot(rhs, rhs);
             if (bi_prod > 0.0)
             {
                 rel_eps = rel_conv_tol_ * rel_conv_tol_;
                 abs_eps = abs_conv_tol_ * abs_conv_tol_;
             }
-            else 
+            else
             {
                 result.setZero();
                 MPI_Barrier(MPI_COMM_WORLD);
@@ -522,7 +516,7 @@ namespace polysolve::linear
             {
                 custom_mixed_precond_iter(precond, r, z1, vec, vec_win);
             }
-            
+
             p = z1;
 
             gamma = dot(r, z1);
@@ -531,7 +525,7 @@ namespace polysolve::linear
         }
 
         for (int k = 0; k < max_iter_; ++k)
-        {   
+        {
             auto phase_begin = clock::now();
             num_iterations = k + 1;
 
@@ -550,7 +544,7 @@ namespace polysolve::linear
             {
                 SPDLOG_TRACE("[{}] [err_negative_alpha] [0.000000]", name());
                 break;
-            } 
+            }
             else if (alpha < __DBL_MIN__)
             {
                 SPDLOG_TRACE("[{}] [err_subnormal_alpha] [0.000000]", name());
@@ -573,7 +567,7 @@ namespace polysolve::linear
                 break;
             }
 
-            z1.setZero(); 
+            z1.setZero();
 
             custom_mixed_precond_iter(precond, r, z1, vec, vec_win);
 
@@ -581,7 +575,7 @@ namespace polysolve::linear
             double beta = gamma / old_gamma;
             old_gamma = gamma;
 
-            p = z1 + beta*p;
+            p = z1 + beta * p;
             SPDLOG_TRACE("[{}] [pcg_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), k, sqrt(i_prod));
         }
         MPI_Barrier(MPI_COMM_WORLD);
@@ -617,7 +611,7 @@ namespace polysolve::linear
         }
     }
 
-    void CPUHybridSolver::amg_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd& eigen_b, Eigen::VectorXd &eigen_x)
+    void CPUHybridSolver::amg_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &eigen_b, Eigen::VectorXd &eigen_x)
     {
         auto phase_begin = clock::now();
         HYPRE_ParVector par_x;
@@ -631,7 +625,7 @@ namespace polysolve::linear
         HYPRE_IJVectorGetObject(ij_x, (void **)&par_x);
         HYPRE_IJVectorAssemble(ij_b);
         HYPRE_IJVectorGetObject(ij_b, (void **)&par_b);
-        
+
         HYPRE_BoomerAMGSolve(precond, parcsr_A, par_b, par_x);
         MPI_Barrier(MPI_COMM_WORLD);
         SPDLOG_TRACE("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
@@ -663,7 +657,7 @@ namespace polysolve::linear
                 sub_rhs(index_mappings[index_counter][subdomain[i]]) = vec(problem_size + subdomain[i]) - global_to_row[subdomain[i]].dot(vec.segment(0, problem_size));
             }
 
-            { 
+            {
                 sub_result = D_solvers[index_counter]->solve(sub_rhs);
             }
 
@@ -681,7 +675,7 @@ namespace polysolve::linear
             next_z(i) = vec(starts[myid] + i) + vec(2 * problem_size + starts[myid] + i);
         }
         MPI_Win_fence(0, vec_win);
-        
+
         SPDLOG_TRACE("[{}] [subdomain_solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
@@ -691,17 +685,17 @@ namespace polysolve::linear
 
         MPI_Win row_norm_win;
         int local_alloc_size = (myid == 0) ? (sparse_A.rows() * sizeof(double)) : 0;
-        void* row_norm_ptr;
-        
+        void *row_norm_ptr;
+
         MPI_Win_allocate_shared(local_alloc_size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &row_norm_ptr, &row_norm_win);
         if (myid != 0)
         {
             int disp_unit;
             MPI_Aint sz;
-            MPI_Win_shared_query(row_norm_win, 0, &sz, &disp_unit, &row_norm_ptr); 
+            MPI_Win_shared_query(row_norm_win, 0, &sz, &disp_unit, &row_norm_ptr);
         }
-        
-        SharedVector row_norms((double*) row_norm_ptr, sparse_A.rows());
+
+        SharedVector row_norms((double *)row_norm_ptr, sparse_A.rows());
 
         MPI_Win_fence(0, row_norm_win);
         for (int i = starts[myid]; i <= ends[myid]; ++i)
@@ -721,28 +715,28 @@ namespace polysolve::linear
         double global_var = (row_norms.segment(starts[myid], my_size()).array() - global_mean).square().sum() / row_norms.size();
         MPI_Allreduce(MPI_IN_PLACE, &global_var, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        all_bad_dofs.clear();        
+        all_bad_dofs.clear();
 
         double mean_0 = 0.0, mean_1 = 0.0;
         double var_0 = 0.0, var_1 = 0.0;
         int gmm_iter = 0;
-        
+
         double max_dist = -1.0;
         double max_jump = -1.0;
-        double min_cost = -1.0; 
+        double min_cost = -1.0;
         int split_idx = 0;
 
         MPI_Win gamma_win;
-        void* gamma_ptr;
+        void *gamma_ptr;
         MPI_Win_allocate_shared(2 * local_alloc_size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &gamma_ptr, &gamma_win);
         if (myid != 0)
         {
             int disp_unit;
             MPI_Aint sz;
-            MPI_Win_shared_query(gamma_win, 0, &sz, &disp_unit, &gamma_ptr); 
+            MPI_Win_shared_query(gamma_win, 0, &sz, &disp_unit, &gamma_ptr);
         }
 
-        SharedVector gamma((double*) gamma_ptr, 2 * sparse_A.rows());
+        SharedVector gamma((double *)gamma_ptr, 2 * sparse_A.rows());
 
         mean_0 = row_norms.minCoeff();
         var_0 = global_var;
@@ -797,10 +791,7 @@ namespace polysolve::linear
             var_0 += var_reg;
             var_1 += var_reg;
 
-            if (std::abs(mean_0 - old_mean_0) / std::abs(old_mean_0) < gmm_tol &&
-                std::abs(mean_1 - old_mean_1) / std::abs(old_mean_1) < gmm_tol && 
-                std::abs(var_0 - old_var_0) / std::abs(old_var_0) < gmm_tol &&
-                std::abs(var_1 - old_var_1) / std::abs(old_var_1) < gmm_tol)
+            if (std::abs(mean_0 - old_mean_0) / std::abs(old_mean_0) < gmm_tol && std::abs(mean_1 - old_mean_1) / std::abs(old_mean_1) < gmm_tol && std::abs(var_0 - old_var_0) / std::abs(old_var_0) < gmm_tol && std::abs(var_1 - old_var_1) / std::abs(old_var_1) < gmm_tol)
             {
                 break;
             }
@@ -815,17 +806,16 @@ namespace polysolve::linear
                     if (gamma(i) < gamma(i + row_norms.size()))
                     {
                         all_bad_dofs.insert(i);
-                    }                
+                    }
                 }
             }
         }
-        
+
         MPI_Win_free(&gamma_win);
         MPI_Win_free(&row_norm_win);
 
-        SPDLOG_TRACE("[{}] [bad_dof_selection] [{}] [strategy=GMM] [global_mean={}] [global_var={}] [mean_0={}] [mean_1={}] [var_0={}] [var_1={}] [gmm_iters={}] [num_bad_dofs={}]", 
-            name(), elapsed_seconds(phase_begin), global_mean, global_var, mean_0, mean_1, var_0, var_1, gmm_iter, all_bad_dofs.size());
-
+        SPDLOG_TRACE("[{}] [bad_dof_selection] [{}] [strategy=GMM] [global_mean={}] [global_var={}] [mean_0={}] [mean_1={}] [var_0={}] [var_1={}] [gmm_iters={}] [num_bad_dofs={}]",
+                     name(), elapsed_seconds(phase_begin), global_mean, global_var, mean_0, mean_1, var_0, var_1, gmm_iter, all_bad_dofs.size());
     }
 
     void CPUHybridSolver::factorize_submatrix(SharedSparseMatrix &sparse_A)
@@ -834,20 +824,20 @@ namespace polysolve::linear
         D_solvers.clear();
 
         for (int i : bad_subdomain_assignments[myid])
-        {   
+        {
             if (bad_indices_sets[i].size() > 1000)
             {
-        #if POLYSOLVE_WITH_MKL
+#if POLYSOLVE_WITH_MKL
                 D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::PardisoLDLT<Eigen::SparseMatrix<double>>>>());
-        #elif POLYSOLVE_WITH_ACCELERATE
+#elif POLYSOLVE_WITH_ACCELERATE
                 // Uses Apple's Accelerate framework wrapper in Eigen
                 D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::AccelerateLDLT<Eigen::SparseMatrix<double>>>>());
-        #else
+#else
                 // Fallback if neither high-performance solver is compiled
                 D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>>>());
-        #endif
+#endif
             }
-            else 
+            else
             {
                 // Stick to the lightweight solver for smaller subdomains
                 D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>>>());
@@ -860,17 +850,17 @@ namespace polysolve::linear
         for (int i : bad_subdomain_assignments[myid])
         {
             Eigen::SparseMatrix<double> D;
-            assemble_D(i_counter, i, D, sparse_A);            
+            assemble_D(i_counter, i, D, sparse_A);
             D_solvers[i_counter]->compute(D);
             ++i_counter;
         }
-        
+
         MPI_Barrier(MPI_COMM_WORLD);
         SPDLOG_TRACE("[{}] [factorize_submatrix] [{}]", name(), elapsed_seconds(phase_begin));
     }
 
     void CPUHybridSolver::matmul(Eigen::VectorXd &x, Eigen::VectorXd &result)
-    {  
+    {
         auto phase_begin = clock::now();
         result.resize(x.size());
         result.setZero();
@@ -910,7 +900,7 @@ namespace polysolve::linear
         {
             starts.push_back(i == 0 ? 0 : local_size * i + i);
             ends.push_back(i == (num_procs - 1) ? rows - 1 : starts.back() + local_size);
-        }   
+        }
     }
 
     void CPUHybridSolver::copy_matrix_to_hypre(SharedSparseMatrix &sparse_A)
@@ -921,7 +911,7 @@ namespace polysolve::linear
 
         for (HYPRE_Int k = starts[myid]; k <= ends[myid]; ++k)
         {
-            HYPRE_Int row[1]; 
+            HYPRE_Int row[1];
             row[0] = k;
             int counter = 0;
             std::vector<HYPRE_Int> cols;
@@ -951,7 +941,7 @@ namespace polysolve::linear
 
         for (HYPRE_Int k = starts[myid]; k <= ends[myid]; ++k)
         {
-            HYPRE_Int row[1]; 
+            HYPRE_Int row[1];
             row[0] = k;
             int counter = 0;
             std::vector<HYPRE_Int> cols;
@@ -980,8 +970,8 @@ namespace polysolve::linear
         HYPRE_IJVectorSetObjectType(ij_b, HYPRE_PARCSR);
         HYPRE_IJVectorInitializeShell(ij_b);
     }
-    
-    void CPUHybridSolver::create_shared_vec(MPI_Win &win, void* &base_ptr, int size)
+
+    void CPUHybridSolver::create_shared_vec(MPI_Win &win, void *&base_ptr, int size)
     {
         int local_alloc_size = myid == 0 ? size * sizeof(double) : 0;
         MPI_Win_allocate_shared(local_alloc_size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &base_ptr, &win);
@@ -989,11 +979,11 @@ namespace polysolve::linear
         {
             int disp_unit;
             MPI_Aint sz;
-            MPI_Win_shared_query(win, 0, &sz, &disp_unit, &base_ptr); 
+            MPI_Win_shared_query(win, 0, &sz, &disp_unit, &base_ptr);
         }
     }
 
-    void CPUHybridSolver::assemble_D(int bad_i, int i, Eigen::SparseMatrix<double>& D, SharedSparseMatrix &sparse_A)
+    void CPUHybridSolver::assemble_D(int bad_i, int i, Eigen::SparseMatrix<double> &D, SharedSparseMatrix &sparse_A)
     {
         D.resize(bad_indices_sets[i].size(), bad_indices_sets[i].size());
         std::vector<Eigen::Triplet<double>> triplets;
@@ -1011,9 +1001,8 @@ namespace polysolve::linear
         }
 
         D.setFromTriplets(triplets.begin(), triplets.end());
-        
     }
-    
+
     void CPUHybridSolver::build_index_mappings()
     {
         index_mappings.clear();
@@ -1115,8 +1104,8 @@ namespace polysolve::linear
             ++num_not_poorly_conditioned;
         }
 
-        SPDLOG_TRACE("[{}] [subdomain_filtering] [{}] [total_dofs_before={}] [total_dofs_after={}] [num_too_small={}] [num_too_large={}] [num_not_poorly_conditioned={}]", \
-            name(), elapsed_seconds(phase_begin), original_num_bad_dofs, all_bad_dofs.size(), num_too_small, num_too_large, num_not_poorly_conditioned);
+        SPDLOG_TRACE("[{}] [subdomain_filtering] [{}] [total_dofs_before={}] [total_dofs_after={}] [num_too_small={}] [num_too_large={}] [num_not_poorly_conditioned={}]",
+                     name(), elapsed_seconds(phase_begin), original_num_bad_dofs, all_bad_dofs.size(), num_too_small, num_too_large, num_not_poorly_conditioned);
     }
 
     void CPUHybridSolver::expand_subdomains_to_strongly_connected(SharedSparseMatrix &sparse_A)
@@ -1124,7 +1113,8 @@ namespace polysolve::linear
         auto phase_begin = clock::now();
         int num_bad_dofs_before = all_bad_dofs.size();
 
-        std::set<int> new_bad_dofs;;
+        std::set<int> new_bad_dofs;
+        ;
 
         for (int k : all_bad_dofs)
         {
@@ -1135,8 +1125,8 @@ namespace polysolve::linear
         }
         all_bad_dofs = std::move(new_bad_dofs);
 
-        SPDLOG_TRACE("[{}] [subdomain_expansion] [{}] [num_dofs_before={}] [num_dofs_after={}]", \
-            name(), elapsed_seconds(phase_begin), num_bad_dofs_before, all_bad_dofs.size());
+        SPDLOG_TRACE("[{}] [subdomain_expansion] [{}] [num_dofs_before={}] [num_dofs_after={}]",
+                     name(), elapsed_seconds(phase_begin), num_bad_dofs_before, all_bad_dofs.size());
     }
 
     void CPUHybridSolver::decompose_subdomains_to_disjoint_subsets(SharedSparseMatrix &sparse_A)
@@ -1179,8 +1169,8 @@ namespace polysolve::linear
             }
             bad_indices_sets.emplace_back(kv.second.begin(), kv.second.end());
         }
-        SPDLOG_TRACE("[{}] [subdomain_decomposition] [{}] [num_subdomains={}] ", \
-            name(), elapsed_seconds(phase_begin), bad_indices_sets.size());
+        SPDLOG_TRACE("[{}] [subdomain_decomposition] [{}] [num_subdomains={}] ",
+                     name(), elapsed_seconds(phase_begin), bad_indices_sets.size());
     }
 
     void CPUHybridSolver::share_bad_subdomains()
@@ -1212,7 +1202,7 @@ namespace polysolve::linear
                 MPI_Bcast(&local_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
                 MPI_Bcast(bad_subdomain_assignments[i].data(), local_size, MPI_INT, 0, MPI_COMM_WORLD);
             }
-        } 
+        }
         else
         {
             MPI_Bcast(&num_subdomains, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -1251,8 +1241,8 @@ namespace polysolve::linear
                 bad_indices_arrays[i].push_back(index);
             }
         }
-        SPDLOG_TRACE("[{}] [share_bad_subdomains] [{}] ", \
-            name(), elapsed_seconds(phase_begin));
+        SPDLOG_TRACE("[{}] [share_bad_subdomains] [{}] ",
+                     name(), elapsed_seconds(phase_begin));
     }
 
     void CPUHybridSolver::load_balance_subdomains()
@@ -1263,13 +1253,13 @@ namespace polysolve::linear
 
         std::vector<std::pair<int, int>> subdomain_sizes;
         subdomain_sizes.reserve(bad_indices_sets.size());
-        
+
         for (auto &subdomain : bad_indices_sets)
         {
             subdomain_sizes.push_back(std::make_pair(subdomain_sizes.size(), subdomain.size()));
         }
 
-        std::sort(subdomain_sizes.begin(), subdomain_sizes.end(), [](const std::pair<int, int>& l, const std::pair<int, int>& r) {return l.second > r.second;});
+        std::sort(subdomain_sizes.begin(), subdomain_sizes.end(), [](const std::pair<int, int> &l, const std::pair<int, int> &r) { return l.second > r.second; });
         std::vector<int> assigned_sizes(num_procs, 0);
 
         int total_bad_dofs = 0;
@@ -1293,10 +1283,10 @@ namespace polysolve::linear
         const int max_size = subdomain_sizes.size() > 0 ? subdomain_sizes.front().second : 0;
         const int min_size = subdomain_sizes.size() > 0 ? subdomain_sizes.back().second : 0;
 
-        SPDLOG_TRACE("[{}] [subdomain_load_balance] [{}] [max_size={}] [min_size={}] [total_dofs={}]", \
-            name(), elapsed_seconds(phase_begin), max_size, min_size, total_bad_dofs);
+        SPDLOG_TRACE("[{}] [subdomain_load_balance] [{}] [max_size={}] [min_size={}] [total_dofs={}]",
+                     name(), elapsed_seconds(phase_begin), max_size, min_size, total_bad_dofs);
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////
 
     CPUHybridSolver::~CPUHybridSolver()

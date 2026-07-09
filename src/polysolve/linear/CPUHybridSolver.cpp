@@ -22,6 +22,9 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
+#include "_hypre_IJ_mv.h"
+#include "_hypre_parcsr_mv.h"
+
 namespace polysolve::linear
 {
 
@@ -962,14 +965,15 @@ namespace polysolve::linear
         HYPRE_IJVectorInitializeShell(ij_x);
 
         hypre_ParVector *par_x = (hypre_ParVector *)hypre_IJVectorObject((hypre_IJVector *)ij_x);
-        if (par_x && hypre_ParVectorLocalVector(par_x)) {
+        if (par_x && hypre_ParVectorLocalVector(par_x))
+        {
             hypre_Vector *vec_x = hypre_ParVectorLocalVector(par_x);
-            
+
             hypre_VectorNumVectors(vec_x) = 1;
             hypre_VectorMultiVecStorageMethod(vec_x) = 0;
-            
+
             hypre_VectorVectorStride(vec_x) = hypre_VectorSize(vec_x);
-            hypre_VectorIndexStride(vec_x)  = 1;
+            hypre_VectorIndexStride(vec_x) = 1;
         }
 
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, starts[myid], ends[myid], &ij_b);
@@ -977,14 +981,15 @@ namespace polysolve::linear
         HYPRE_IJVectorInitializeShell(ij_b);
 
         hypre_ParVector *par_b = (hypre_ParVector *)hypre_IJVectorObject((hypre_IJVector *)ij_b);
-        if (par_b && hypre_ParVectorLocalVector(par_b)) {
+        if (par_b && hypre_ParVectorLocalVector(par_b))
+        {
             hypre_Vector *vec_b = hypre_ParVectorLocalVector(par_b);
-            
+
             hypre_VectorNumVectors(vec_b) = 1;
             hypre_VectorMultiVecStorageMethod(vec_b) = 0;
-            
+
             hypre_VectorVectorStride(vec_b) = hypre_VectorSize(vec_b);
-            hypre_VectorIndexStride(vec_b)  = 1;
+            hypre_VectorIndexStride(vec_b) = 1;
         }
     }
 

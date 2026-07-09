@@ -44,12 +44,7 @@ namespace polysolve::linear
 
         if (!done_already)
         {
-            // Initialize MPI
-            int argc = 1;
-            char name[] = "";
-            char *argv[] = {name};
-            char **argvv = &argv[0];
-            MPI_Init(&argc, &argvv);
+            MPI_Init(nullptr, nullptr);
         }
 
         if (!HYPRE_Initialized())

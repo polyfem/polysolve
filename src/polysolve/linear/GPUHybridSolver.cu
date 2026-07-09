@@ -80,12 +80,7 @@ namespace polysolve::linear
         MPI_Initialized(&done_already);
         if (!done_already)
         {
-            /* Initialize MPI */
-            int argc = 1;
-            char name[] = "";
-            char *argv[] = {name};
-            char **argvv = &argv[0];
-            MPI_Init(&argc, &argvv);
+            MPI_Init(nullptr, nullptr);
         }
 #endif
         if (!HYPRE_Initialized())

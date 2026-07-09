@@ -108,7 +108,6 @@ namespace polysolve::linear
         cudssHandle_t cudss_handle = nullptr;
         cudssConfig_t cudss_config = nullptr;
         cudssData_t cudss_solver_data = nullptr;
-
         cudssMatrix_t batch_A = nullptr;
         cudssMatrix_t batch_x = nullptr;
         cudssMatrix_t batch_b = nullptr;

@@ -28,14 +28,14 @@ namespace polysolve::linear
             char **argvv = &argv[0];
             int myid, num_procs;
             MPI_Init(&argc, &argvv);
-            MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-            MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
         }
 #endif
         if (!HYPRE_Initialized())
         {
             HYPRE_Initialize();
         }
+        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
     }
 
     // Set solver parameters
@@ -139,7 +139,11 @@ namespace polysolve::linear
 
         void eigen_to_hypre_par_vec(HYPRE_ParVector &par_x, HYPRE_IJVector &ij_x, const Eigen::VectorXd &x)
         {
+#ifdef HYPRE_ENABLE_MPI
+            HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, x.size() - 1, &ij_x);
+#else
             HYPRE_IJVectorCreate(0, 0, x.size() - 1, &ij_x);
+#endif
             HYPRE_IJVectorSetObjectType(ij_x, HYPRE_PARCSR);
             HYPRE_IJVectorInitialize(ij_x);
 

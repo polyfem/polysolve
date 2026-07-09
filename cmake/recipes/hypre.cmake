@@ -6,7 +6,6 @@ endif()
 
 message(STATUS "Third-party: creating target 'HYPRE::HYPRE'")
 
-set(HYPRE_ENABLE_MPI           OFF CACHE INTERNAL "" FORCE)
 set(HYPRE_ENABLE_PRINT_ERRORS  ON  CACHE INTERNAL "" FORCE)
 set(HYPRE_ENABLE_BIGINT        OFF CACHE INTERNAL "" FORCE)
 set(HYPRE_ENABLE_MIXEDINT      OFF CACHE BOOL     "" FORCE)
@@ -20,6 +19,12 @@ if (POLYSOLVE_WITH_CUDA)
 else()
     set(HYPRE_USING_GPU            OFF CACHE INTERNAL "" FORCE)
     set(HYPRE_ENABLE_CUDA          OFF CACHE INTERNAL "" FORCE)
+endif()
+
+if (POLYSOLVE_WITH_MPI)
+    set(HYPRE_ENABLE_MPI           ON  CACHE INTERNAL "" FORCE)
+else()
+    set(HYPRE_ENABLE_MPI           OFF CACHE INTERNAL "" FORCE)
 endif()
 
 # HYPRE unconditionally defines an "uninstall" target, which conflicts with other buggy libraries

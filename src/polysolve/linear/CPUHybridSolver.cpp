@@ -961,9 +961,31 @@ namespace polysolve::linear
         HYPRE_IJVectorSetObjectType(ij_x, HYPRE_PARCSR);
         HYPRE_IJVectorInitializeShell(ij_x);
 
+        hypre_ParVector *par_x = (hypre_ParVector *)hypre_IJVectorObject((hypre_IJVector *)ij_x);
+        if (par_x && hypre_ParVectorLocalVector(par_x)) {
+            hypre_Vector *vec_x = hypre_ParVectorLocalVector(par_x);
+            
+            hypre_VectorNumVectors(vec_x) = 1;
+            hypre_VectorMultiVecStorageMethod(vec_x) = 0;
+            
+            hypre_VectorVectorStride(vec_x) = hypre_VectorSize(vec_x);
+            hypre_VectorIndexStride(vec_x)  = 1;
+        }
+
         HYPRE_IJVectorCreate(MPI_COMM_WORLD, starts[myid], ends[myid], &ij_b);
         HYPRE_IJVectorSetObjectType(ij_b, HYPRE_PARCSR);
         HYPRE_IJVectorInitializeShell(ij_b);
+
+        hypre_ParVector *par_b = (hypre_ParVector *)hypre_IJVectorObject((hypre_IJVector *)ij_b);
+        if (par_b && hypre_ParVectorLocalVector(par_b)) {
+            hypre_Vector *vec_b = hypre_ParVectorLocalVector(par_b);
+            
+            hypre_VectorNumVectors(vec_b) = 1;
+            hypre_VectorMultiVecStorageMethod(vec_b) = 0;
+            
+            hypre_VectorVectorStride(vec_b) = hypre_VectorSize(vec_b);
+            hypre_VectorIndexStride(vec_b)  = 1;
+        }
     }
 
     void CPUHybridSolver::create_shared_vec(MPI_Win &win, void *&base_ptr, int size)

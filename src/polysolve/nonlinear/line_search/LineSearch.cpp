@@ -2,6 +2,7 @@
 
 #include "Armijo.hpp"
 #include "Backtracking.hpp"
+#include "ResidualBacktracking.hpp"
 #include "RobustArmijo.hpp"
 #include "NoLineSearch.hpp"
 
@@ -36,6 +37,10 @@ namespace polysolve::nonlinear::line_search
         {
             return std::make_shared<Backtracking>(params, logger);
         }
+        else if (name == "ResidualBacktracking")
+        {
+            return std::make_shared<ResidualBacktracking>(params, logger);
+        }
         else if (name == "None")
         {
             return std::make_shared<NoLineSearch>(params, logger);
@@ -49,7 +54,7 @@ namespace polysolve::nonlinear::line_search
 
     std::vector<std::string> LineSearch::available_methods()
     {
-        return {{"Armijo", "RobustArmijo", "Backtracking", "None"}};
+        return {{"Armijo", "RobustArmijo", "Backtracking", "ResidualBacktracking", "None"}};
     }
 
     LineSearch::LineSearch(const json &params, spdlog::logger &logger)

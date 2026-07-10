@@ -45,7 +45,11 @@ namespace polysolve::linear
 #include <Eigen/SuperLUSupport>
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+#ifndef POLYSOLVE_LARGE_INDEX
+// Eigen's PardisoSupport only specializes for int/long long indices, not the
+// std::ptrdiff_t (long) StiffnessMatrix used with POLYSOLVE_LARGE_INDEX.
 #include <Eigen/PardisoSupport>
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
 #include "Pardiso.hpp"
@@ -368,6 +372,7 @@ namespace polysolve::linear
             RETURN_DIRECT_SOLVER_PTR(SPQR, "Eigen::SPQR");
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+#ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::PardisoLLT")
         {
@@ -380,6 +385,7 @@ namespace polysolve::linear
         else if (solver == "Eigen::PardisoLU")
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU, "Eigen::PardisoLU");
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
         }
@@ -524,9 +530,11 @@ namespace polysolve::linear
             "Eigen::SPQR",
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+#ifndef POLYSOLVE_LARGE_INDEX
             "Eigen::PardisoLLT",
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",

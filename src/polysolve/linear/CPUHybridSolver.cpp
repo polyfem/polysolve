@@ -64,6 +64,19 @@ namespace polysolve::linear
             return;
         }
 
+        Eigen::setNbThreads(1);
+        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
+
+        if (myid != 0)
+        {
+            spdlog::set_level(spdlog::level::off);
+        }
+        else
+        {
+            spdlog::flush_on(spdlog::level::info);
+        }
+
         if (myid != 0)
         {
             is_running_worker_loop = true;
@@ -88,19 +101,6 @@ namespace polysolve::linear
         SolverCmd cmd = CMD_CREATE;
         MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        Eigen::setNbThreads(1);
-        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
-        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
-
-        if (myid != 0)
-        {
-            spdlog::set_level(spdlog::level::off);
-        }
-        else
-        {
-            spdlog::flush_on(spdlog::level::info);
-        }
     }
 
     // Set solver parameters

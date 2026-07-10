@@ -59,6 +59,36 @@ namespace polysolve::linear
         MPI_Comm_rank(MPI_COMM_WORLD, &myid);
         MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
+        if (is_running_worker_loop)
+        {
+            return;
+        }
+
+        if (myid != 0)
+        {
+            is_running_worker_loop = true;
+
+            run_worker_loop();
+
+            int finalized;
+            MPI_Finalized(&finalized);
+            if (!finalized)
+            {
+                MPI_Finalize();
+            }
+            if (!HYPRE_Finalized())
+            {
+                HYPRE_Finalize();
+            }
+            std::exit(0);
+        }
+
+        solver_id = next_id++;
+
+        SolverCmd cmd = CMD_CREATE;
+        MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
         Eigen::setNbThreads(1);
         HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
         HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
@@ -76,63 +106,91 @@ namespace polysolve::linear
     // Set solver parameters
     void CPUHybridSolver::set_parameters(const json &params)
     {
-        if (params.contains("Hybrid"))
+        if (myid == 0)
         {
-            if (params["Hybrid"].contains("max_iter"))
+            SolverCmd cmd = CMD_SET_PARAMETERS;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
+        json shared_params;
+        std::string json_str;
+        int str_size = 0;
+
+        if (myid == 0)
+        {
+            shared_params = params; // Use the incoming params on root
+            json_str = shared_params.dump();
+            str_size = static_cast<int>(json_str.size());
+        }
+
+        MPI_Bcast(&str_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        if (myid != 0)
+        {
+            json_str.resize(str_size);
+        }
+
+        MPI_Bcast(json_str.data(), str_size, MPI_CHAR, 0, MPI_COMM_WORLD);
+        shared_params = json::parse(json_str);
+
+        if (shared_params.contains("CPUHybrid"))
+        {
+            if (shared_params["CPUHybrid"].contains("max_iter"))
             {
-                max_iter_ = params["Hybrid"]["max_iter"];
+                max_iter_ = shared_params["CPUHybrid"]["max_iter"];
             }
-            if (params["Hybrid"].contains("relative_tolerance"))
+            if (shared_params["CPUHybrid"].contains("relative_tolerance"))
             {
-                rel_conv_tol_ = params["Hybrid"]["relative_tolerance"];
+                rel_conv_tol_ = shared_params["CPUHybrid"]["relative_tolerance"];
             }
-            if (params["Hybrid"].contains("absolute_tolerance"))
+            if (shared_params["CPUHybrid"].contains("absolute_tolerance"))
             {
-                abs_conv_tol_ = params["Hybrid"]["absolute_tolerance"];
+                abs_conv_tol_ = shared_params["CPUHybrid"]["absolute_tolerance"];
             }
-            if (params["Hybrid"].contains("theta"))
+            if (shared_params["CPUHybrid"].contains("theta"))
             {
-                theta = params["Hybrid"]["theta"];
+                theta = shared_params["CPUHybrid"]["theta"];
             }
-            if (params["Hybrid"].contains("block_dim"))
+            if (shared_params["CPUHybrid"].contains("block_dim"))
             {
-                dimension_ = params["Hybrid"]["block_dim"];
+                dimension_ = shared_params["CPUHybrid"]["block_dim"];
             }
-            if (params["Hybrid"].contains("decompose_subdomains"))
+            if (shared_params["CPUHybrid"].contains("decompose_subdomains"))
             {
-                decompose_subdomains = params["Hybrid"]["decompose_subdomains"];
+                decompose_subdomains = shared_params["CPUHybrid"]["decompose_subdomains"];
             }
-            if (params["Hybrid"].contains("min_subdomain_size"))
+            if (shared_params["CPUHybrid"].contains("min_subdomain_size"))
             {
-                min_subdomain_size = params["Hybrid"]["min_subdomain_size"];
+                min_subdomain_size = shared_params["CPUHybrid"]["min_subdomain_size"];
             }
-            if (params["Hybrid"].contains("max_subdomain_size"))
+            if (shared_params["CPUHybrid"].contains("max_subdomain_size"))
             {
-                max_subdomain_size = params["Hybrid"]["max_subdomain_size"];
+                max_subdomain_size = shared_params["CPUHybrid"]["max_subdomain_size"];
             }
-            if (params["Hybrid"].contains("expand_subdomains"))
+            if (shared_params["CPUHybrid"].contains("expand_subdomains"))
             {
-                expand_subdomains = params["Hybrid"]["expand_subdomains"];
+                expand_subdomains = shared_params["CPUHybrid"]["expand_subdomains"];
             }
-            if (params["Hybrid"].contains("gmm_jump_threshold"))
+            if (shared_params["CPUHybrid"].contains("gmm_jump_threshold"))
             {
-                gmm_jump_threshold = params["Hybrid"]["gmm_jump_threshold"];
+                gmm_jump_threshold = shared_params["CPUHybrid"]["gmm_jump_threshold"];
             }
-            if (params["Hybrid"].contains("gmm_tol"))
+            if (shared_params["CPUHybrid"].contains("gmm_tol"))
             {
-                gmm_tol = params["Hybrid"]["gmm_tol"];
+                gmm_tol = shared_params["CPUHybrid"]["gmm_tol"];
             }
-            if (params["Hybrid"].contains("max_gmm_iterations"))
+            if (shared_params["CPUHybrid"].contains("max_gmm_iterations"))
             {
-                max_gmm_iterations = params["Hybrid"]["max_gmm_iterations"];
+                max_gmm_iterations = shared_params["CPUHybrid"]["max_gmm_iterations"];
             }
-            if (params["Hybrid"].contains("conditioning_threshold"))
+            if (shared_params["CPUHybrid"].contains("conditioning_threshold"))
             {
-                conditioning_threshold = params["Hybrid"]["conditioning_threshold"];
+                conditioning_threshold = shared_params["CPUHybrid"]["conditioning_threshold"];
             }
-            if (params["Hybrid"].contains("additive_mode"))
+            if (shared_params["CPUHybrid"].contains("additive_mode"))
             {
-                additive_mode = params["Hybrid"]["additive_mode"];
+                additive_mode = shared_params["CPUHybrid"]["additive_mode"];
             }
         }
     }
@@ -155,6 +213,13 @@ namespace polysolve::linear
 
     void CPUHybridSolver::factorize(const StiffnessMatrix &Ain)
     {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_FACTORIZE;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
         check_settings();
 
         int rows, cols, nnz;
@@ -363,6 +428,13 @@ namespace polysolve::linear
 
     void CPUHybridSolver::solve(const Eigen::Ref<const VectorXd> rhs, Eigen::Ref<VectorXd> result)
     {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_SOLVE;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
         int problem_size = rhs.size();
         MPI_Bcast(&problem_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -1311,8 +1383,67 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
+    void CPUHybridSolver::run_worker_loop()
+    {
+        bool running = true;
+        while (running)
+        {
+            SolverCmd cmd;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            if (cmd == CMD_EXIT)
+            {
+                running = false;
+                break;
+            }
+
+            int id;
+            MPI_Bcast(&id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            switch (cmd)
+            {
+            case CMD_CREATE:
+            {
+                worker_registry[id] = std::make_unique<CPUHybridSolver>();
+                worker_registry[id]->solver_id = id;
+                break;
+            }
+            case CMD_SET_PARAMETERS:
+            {
+                json dummy_params;
+                worker_registry[id]->set_parameters(dummy_params);
+                break;
+            }
+            case CMD_FACTORIZE:
+            {
+                StiffnessMatrix dummy_A;
+                worker_registry[id]->factorize(dummy_A);
+                break;
+            }
+            case CMD_SOLVE:
+            {
+                Eigen::VectorXd dummy_b, dummy_x;
+                worker_registry[id]->solve(dummy_b, dummy_x);
+                break;
+            }
+            case CMD_DESTROY:
+            {
+                worker_registry.erase(id);
+                break;
+            }
+            }
+        }
+    }
+
     CPUHybridSolver::~CPUHybridSolver()
     {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_DESTROY;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
         if (has_matrix_)
         {
             HYPRE_IJMatrixDestroy(A);

@@ -56,8 +56,25 @@ namespace polysolve::linear
         typedef Eigen::Map<StiffnessMatrix> SharedSparseMatrix;
         typedef Eigen::Map<Eigen::VectorXd> SharedVector;
 
+        enum SolverCmd
+        {
+            CMD_CREATE,
+            CMD_SET_PARAMETERS,
+            CMD_FACTORIZE,
+            CMD_SOLVE,
+            CMD_DESTROY,
+            CMD_EXIT
+        };
+
     private:
         POLYSOLVE_DELETE_MOVE_COPY(CPUHybridSolver)
+
+        int solver_id;
+        static inline int next_id = 0;
+        static inline bool is_running_worker_loop = false;
+        static inline std::unordered_map<int, std::unique_ptr<CPUHybridSolver>> worker_registry;
+
+        static void run_worker_loop();
 
     public:
         //////////////////////

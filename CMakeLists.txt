@@ -392,6 +392,10 @@ if(POLYSOLVE_WITH_CUSOLVER)
     endif()
 endif()
 
+# MeshFEMSparse
+include(meshfemsparse)
+target_link_libraries(polysolve_linear PUBLIC MeshFEMSparse)
+
 # Sanitizers
 if(POLYSOLVE_WITH_SANITIZERS)
     include(sanitizers)
@@ -416,19 +420,6 @@ if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
   include(kaminpar)
   target_link_libraries(polysolve_linear PRIVATE KaMinPar::KaMinPar)
 endif()
-
-# MeshFEM
-# Color errors/warnings.
-list(APPEND CMAKE_MODULE_PATH ${THIRD_PARTY_DIR}/MeshFEM_dev/cmake)
-# include(UseColors)
-set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
-
-if (NOT TARGET MeshFEM)
-    option(MESHFEM_ENABLE_BENCHMARKING "" ON)
-    option(MESHFEM_WITH_IPC_TOOLKIT "" OFF) # avoid conflicting IPC toolkit versions.
-    add_subdirectory(${THIRD_PARTY_DIR}/MeshFEM_dev)
-endif()
-target_link_libraries(polysolve_linear PUBLIC MeshFEM)
 
 # ---------
 # Nonlinear

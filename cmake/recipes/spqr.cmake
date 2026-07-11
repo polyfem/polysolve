@@ -1,6 +1,7 @@
-# SPQR solver
+# SuiteSparseQR
 
-if(TARGET SparseSuite::SPQR)
+include(suitesparse)
+if(TARGET SuiteSparse::SPQR)
     return()
 endif()
 

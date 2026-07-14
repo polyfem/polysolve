@@ -24,6 +24,8 @@ namespace polysolve
     struct BCSCHessianWithFixedVars {
         using BCSCHessian = MeshFEM::BlockCSCHessianBase;
         std::unique_ptr<BCSCHessian> H;
+        double reg_weight = 0.0; // Multiple of the identity to add to the Hessian during factorization (used, e.g., by `RegularizedNewton`)
+
         BCSCHessianWithFixedVars() = default;
         BCSCHessianWithFixedVars(std::unique_ptr<BCSCHessian> &&H_, const std::vector<size_t> &fixedVars_ = {})
             : H(std::move(H_)), m_fixedVars(fixedVars_) { }

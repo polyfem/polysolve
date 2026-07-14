@@ -59,7 +59,8 @@ namespace polysolve::linear
         const HessianType &A = H.as<HessianType>();
         if (!factorizer_.hasFactorization(FactorizationType::Symbolic) || factorizer_.wantsSymbolicFactorizationRecompute())
             analyze_pattern(H, 0);
-        factorizer_.factorizeNumeric(*A.H);
+        if (A.reg_weight != 0.0) factorizer_.factorizeNumericWithShift(*A.H, A.reg_weight);
+        else                     factorizer_.factorizeNumeric(*A.H);
     }
 
     void CatamariSolver::solve(const Ref<const VectorXd> rhs, Ref<VectorXd> result)

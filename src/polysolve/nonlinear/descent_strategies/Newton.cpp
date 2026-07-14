@@ -181,11 +181,12 @@ namespace polysolve::nonlinear
             compute_hessian(objFunc, x, hessian);
         }
         {
-            // TODO: get the correct size
-            if (objFunc.getSparsityPatternID() == -1)
+            int pattern_id = objFunc.getSparsityPatternID();
+            if ((pattern_id == -1) || (pattern_id != last_analyzed_pattern_id))
             {
                 POLYSOLVE_SCOPED_STOPWATCH("symbolic factorize", this->symbolic_factorizer_time, m_logger);
                 linear_solver->analyze_pattern(hessian, hessian.rows());
+                last_analyzed_pattern_id = pattern_id;
             }
 
             try
@@ -279,26 +280,11 @@ namespace polysolve::nonlinear
         objFunc.set_project_to_psd(project_to_psd);
         objFunc.hessian(x, hessian);
 
-        // std::visit([&](auto &h) {
-        //     using T = std::decay_t<decltype(h)>;
-        //     if constexpr (std::is_same_v<T, polysolve::StiffnessMatrix>) {
-        //         if (x.size() != x_cache.size() || x != x_cache) {
-        //             objFunc.hessian(x, hessian_cache);
-        //             x_cache = x;
-        //         }
-        //         h = hessian_cache;
-        //         if (reg_weight > 0)
-        //             h += reg_weight * sparse_identity(h.rows(), h.cols());
-        //     } else if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
-        //         objFunc.hessian(x, h);
-        //         if (reg_weight > 0)
-        //             for (int k = 0; k < x.size(); k++)
-        //                 h(k, k) += reg_weight;
-        //     } else if constexpr (std::is_same_v<T, NewtonHessian>) {
-        //         h = objFunc.evalHessian(x);
-        //         // TODO: add reg_weight * identity
-        //     }
-        // }, hessian);
+        if (hessian.is_native_type<polysolve::BCSCHessianWithFixedVars>())
+            hessian.get_mutable<polysolve::BCSCHessianWithFixedVars>().reg_weight = reg_weight;
+        else if (hessian.is_native_type<polysolve::StiffnessMatrix>())
+            hessian.get_mutable<polysolve::StiffnessMatrix>() += reg_weight * sparse_identity(hessian.rows(), hessian.cols());
+        else throw std::runtime_error("RegularizedNewton: unexpected Hessian type for regularization");
     }
 
     // =======================================================================

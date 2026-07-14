@@ -26,13 +26,14 @@
 namespace polysolve::linear
 {
     template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
-    {
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const Hessian &H, const int precond_num) {
+        const StiffnessMatrix &A = H.as<StiffnessMatrix>();
         m_Solver.compute(A);
     }
     template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::factorize(const StiffnessMatrix &A)
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::factorize(const Hessian &H)
     {
+        const StiffnessMatrix &A = H.as<StiffnessMatrix>();
         m_Solver.compute(A);
         if (m_Solver.info() == Eigen::NumericalIssue)
         {

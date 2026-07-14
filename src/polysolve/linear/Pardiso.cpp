@@ -202,7 +202,7 @@ namespace polysolve::linear
 
     void Pardiso::analyze_pattern(const Hessian &H, const int precond_num)
     {
-        auto &A = H.get<StiffnessMatrix>();
+        const auto &A = H.as<StiffnessMatrix>();
         if (mtype == -1)
         {
             throw std::runtime_error("[Pardiso] mtype not set.");
@@ -263,7 +263,7 @@ namespace polysolve::linear
 
     void Pardiso::factorize(const Hessian &H)
     {
-        auto &A = H.get<StiffnessMatrix>();
+        const auto &A = H.as<StiffnessMatrix>();
         if (mtype == -1)
         {
             throw std::runtime_error("[Pardiso] mtype not set.");

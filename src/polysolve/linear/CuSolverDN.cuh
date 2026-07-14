@@ -37,7 +37,7 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Factorize system matrix (sparse)
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &H) override;
 
         // Factorize system matrix (dense, preferred)
         virtual void factorize_dense(const Eigen::MatrixXd &A) override;

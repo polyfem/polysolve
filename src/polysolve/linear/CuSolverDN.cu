@@ -111,9 +111,11 @@ namespace polysolve::linear
     }
 
     template <typename T>
-    void CuSolverDN<T>::factorize(const StiffnessMatrix &A)
+    void CuSolverDN<T>::factorize(const Hessian &H)
     {
-        factorize_dense(Eigen::MatrixXd(A));
+        // Note that `factorize` vs `factorize_dense` methods can be unified
+        // now that `Hessian` is a variant type.
+        factorize_dense(H.as<Eigen::MatrixXd>());
     }
 
     template <typename T>

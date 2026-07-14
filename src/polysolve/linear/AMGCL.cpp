@@ -159,7 +159,7 @@ namespace polysolve::linear
         }
         assert(precond_num_ > 0);
 
-        auto &Ain = H.get<StiffnessMatrix>();
+        const auto &Ain = H.as<StiffnessMatrix>();
 
         int numRows = Ain.rows();
 
@@ -247,7 +247,7 @@ namespace polysolve::linear
     template <int BLOCK_SIZE>
     void AMGCL_Block<BLOCK_SIZE>::factorize(const Hessian &H)
     {
-        auto &Ain = H.get<StiffnessMatrix>();
+        const auto &Ain = H.as<StiffnessMatrix>();
         assert(precond_num_ > 0);
 
         int numRows = Ain.rows();

@@ -175,7 +175,7 @@ namespace polysolve::nonlinear
                                               const TVector &grad,
                                               TVector &direction)
     {
-        Hessian hessian(std::in_place_type<NewtonHessian>);
+        Hessian hessian;
         {
             POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
             compute_hessian(objFunc, x, hessian);
@@ -221,12 +221,12 @@ namespace polysolve::nonlinear
                                              const TVector &grad,
                                              TVector &direction)
     {
-        Hessian hessian_v(std::in_place_type<Eigen::MatrixXd>);
+        Hessian hessian_v;
         {
             POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
             compute_hessian(objFunc, x, hessian_v);
         }
-        const Eigen::MatrixXd &hessian = hessian_v.get<Eigen::MatrixXd>();
+        const Eigen::MatrixXd &hessian = hessian_v.as<Eigen::MatrixXd>();
         {
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->solve_time, m_logger);
 

@@ -53,20 +53,15 @@ namespace polysolve::nonlinear
         /// @param[out] grad Gradient of the function at x.
         virtual void gradient(const TVector &x, TVector &grad) = 0;
 
-        // /// @brief Compute the Hessian of the function at x.
-        // /// @param[in] x Degrees of freedom.
-        // /// @param[out] hessian Hessian of the function at x.
-        // virtual void hessian(const TVector &x, Hessian &hessian)
-        // {
-        //     throw std::runtime_error("Dense Hessian not implemented.");
-        // }
-
-        virtual NewtonHessian evalHessian(const TVector &x) { 
-            throw std::runtime_error("evalHessian not implemented.");
+        /// @brief Compute the Hessian of the function at x.
+        /// @param[in] x Degrees of freedom.
+        /// @param[out] hessian Hessian of the function at x.
+        virtual void hessian(const TVector &x, TMatrix &hessian)
+        {
+            throw std::runtime_error("Dense Hessian not implemented.");
         }
 
         virtual size_t getSparsityPatternID() const { return -1; }
-
 
         /// @brief Compute the Hessian of the function at x.
         /// @param[in] x Degrees of freedom.

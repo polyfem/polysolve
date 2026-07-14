@@ -16,7 +16,8 @@
             "Pardiso",
             "Hypre",
             "AMGCL",
-            "MAS"
+            "MAS",
+            "Catamari"
         ],
         "doc": "Settings for the linear solver."
     },
@@ -42,6 +43,7 @@
             "Eigen::PardisoLU",
             "Pardiso",
             "Hypre",
+            "Catamari",
             "AMGCL",
             "Eigen::LeastSquaresConjugateGradient",
             "Eigen::DGMRES",
@@ -158,6 +160,47 @@
             "precond"
         ],
         "doc": "Settings for the AMGCL solver."
+    },
+    {
+        "pointer": "/Catamari",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "ordering",
+            "use_left_looking",
+            "use_block_accel"
+        ],
+        "doc": "Settings for the Catamari solver."
+    },
+    {
+        "pointer": "/Catamari/ordering",
+        "default": "Catamari",
+        "type": "string",
+        "options": [
+            "Catamari",
+            "CholmodNesdis",
+            "Nesdis",
+            "Metis",
+            "AMD",
+            "Adaptive",
+            "Scotch",
+            "AccelerateMetis",
+            "PardisoMetis",
+            "PardisoParallelMetis"
+        ],
+        "doc": "Ordering method used by the Catamari solver."
+    },
+    {
+        "pointer": "/Catamari/use_left_looking",
+        "default": false,
+        "type": "bool",
+        "doc": "Use Catamari's left-looking supernodal algorithm."
+    },
+    {
+        "pointer": "/Catamari/use_block_accel",
+        "default": true,
+        "type": "bool",
+        "doc": "Use MeshFEMSparse's block acceleration path when available."
     },
     {
         "pointer": "/Eigen::LeastSquaresConjugateGradient/max_iter",

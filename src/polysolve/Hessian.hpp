@@ -24,25 +24,62 @@ namespace polysolve
     struct BCSCHessianWithFixedVars {
         using BCSCHessian = MeshFEM::BlockCSCHessianBase;
         std::unique_ptr<BCSCHessian> H;
-        std::vector<size_t> fixedVars;
-
         BCSCHessianWithFixedVars() = default;
         BCSCHessianWithFixedVars(std::unique_ptr<BCSCHessian> &&H_, const std::vector<size_t> &fixedVars_ = {})
-            : H(std::move(H_)), fixedVars(fixedVars_) { }
+            : H(std::move(H_)), m_fixedVars(fixedVars_) { }
 
-        static BCSCHessianWithFixedVars fromEigen(const StiffnessMatrix &H_eigen, const std::vector<size_t> &fixedVars = {}) {
-            return BCSCHessianWithFixedVars{BCSCHessian::fromEigen(H_eigen), fixedVars};
+        static BCSCHessianWithFixedVars fromEigen(const StiffnessMatrix &H_eigen) {
+            return BCSCHessianWithFixedVars{BCSCHessian::fromEigen(H_eigen)};
         }
 
-        StiffnessMatrix toEigen() const { return H->template toEigen<StiffnessMatrix::StorageIndex>(/* upperTriangleOnly = */ false, fixedVars); }
+        StiffnessMatrix toEigen() const { return H->template toEigen<StiffnessMatrix::StorageIndex>(/* upperTriangleOnly = */ false, m_fixedVars); }
+
+        size_t full_size() const { return H->numScalarCols(); }
+        // WARNING: assumes all fixedVars are unique and in-bounds!
+        // We currently don't validate this here because it is already validated within PolyFEM.
+        size_t reduced_size() const { return full_size() - m_fixedVars.size(); }
 
         // Basic "duck typing" compatibility with Eigen matrix types.
-        size_t rows() const { return H->numScalarCols(); }
-        size_t cols() const { return H->numScalarCols(); }
+        size_t rows() const { return reduced_size(); }
+        size_t cols() const { return reduced_size(); }
         Eigen::VectorXd operator*(const Eigen::VectorXd &v) const {
-            if (fixedVars.empty())  return H->apply(v);
-            throw std::runtime_error("BCSCHessianWithFixedVars::operator* not yet implemented for nonempty fixedVars");
+            if (m_fixedVars.empty()) return H->apply(v);
+
+            m_buildFixedMask();
+            if (size_t(v.size()) != reduced_size()) throw std::runtime_error("BCSCHessianWithFixedVars::operator*: incorrect reduced vector size");
+
+            Eigen::VectorXd v_full = Eigen::VectorXd::Zero(full_size());
+            for (size_t i = 0, r = 0; i < full_size(); ++i)
+                if (!m_isFixed[i]) v_full[i] = v[r++];
+
+            Eigen::VectorXd result_full = H->apply(v_full);
+            Eigen::VectorXd result(reduced_size());
+            for (size_t i = 0, r = 0; i < full_size(); ++i)
+                if (!m_isFixed[i]) result[r++] = result_full[i];
+            return result;
         }
+
+        const std::vector<size_t> &fixedVars() const { return m_fixedVars; }
+
+        template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+        void setFixedVars(const std::vector<T> &fv) {
+            m_fixedVars = std::vector<size_t>(fv.begin(), fv.end()); // Potential integer type conversion...
+            m_isFixed.clear();
+        }
+
+    private:
+        void m_buildFixedMask() const {
+            if (m_isFixed.size() == full_size()) return;
+            m_isFixed.resize(full_size(), false);
+            for (size_t i : m_fixedVars) {
+                if (i >= full_size()) throw std::runtime_error("BCSCHessianWithFixedVars::buildFixedMask: fixed variable index out of bounds");
+                if (m_isFixed[i])     throw std::runtime_error("BCSCHessianWithFixedVars::buildFixedMask: duplicate fixed variable index");
+                m_isFixed[i] = true;
+            }
+        }
+
+        std::vector<size_t> m_fixedVars;
+        mutable std::vector<bool> m_isFixed;
     };
 
     struct HessianConversion {

@@ -23,8 +23,8 @@ message(STATUS "Third-party: creating targets 'SuiteSparse::CHOLMOD'")
 include(CMakeDependentOption)
 option(BUILD_CXSPARSE "Build CXSparse" OFF)
 option(WITH_DEMOS "Build demos" OFF)
-option(WITH_METIS "Enables METIS support" OFF)
-option(WITH_OPENMP "Enable OpenMP support" ON)
+option(WITH_METIS "Enables METIS support" ON)
+option(WITH_OPENMP "Enable OpenMP support" OFF)
 option(WITH_PRINT "Print diagnostic messages" ON)
 option(WITH_TBB "Enables Intel Threading Building Blocks support" OFF)
 set(WITH_LICENSE "GPL" CACHE STRING "Software license the binary distribution should adhere")
@@ -93,6 +93,19 @@ function(suitesparse_import_target)
     set(HAVE_BLAS_NO_UNDERSCORE ON)
     set(HAVE_BLAS_UNDERSCORE OFF)
 
+    if(WITH_METIS AND NOT TARGET METIS::METIS)
+		# TODO: remove once we upgrade to a modern version of SuiteSparse that provides its own modified Metis.
+		# This version is configured to use 32-bit integers for compatibility
+		# with `wildmeshing-tookit` (see metis.cmake). This limits mesh sizes to
+		# a degree, but in theory SuiteSparse autmatically handles casting from
+		# the 64-bit integers passed to its `*_l_*` routines when calling METIS.
+        include(metis)
+        add_library(METIS::METIS INTERFACE IMPORTED)
+        target_link_libraries(METIS::METIS INTERFACE metis::metis)
+        set(METIS_INCLUDE_DIR "${POLYSOLVE_METIS_SOURCE_DIR}/include" CACHE PATH "" FORCE)
+        set(METIS_LIBRARY "metis::metis" CACHE STRING "" FORCE)
+    endif()
+
     # SuiteSparse is composed of multiple libraries. If LGPL is enabled, we need to build shared
     # libraries to comply with the license. If GPL is enabled, it is the user's responsibility to
     # comply with the license by release the parts of their code that depends on SuiteSparse under GPL.
@@ -106,6 +119,19 @@ function(suitesparse_import_target)
         GIT_TAG 0ba07264225518a487a0a9a8e675f6e36c96a68a
         EXCLUDE_FROM_ALL ON
     )
+
+    if(TARGET METIS::METIS)
+		# We need the METIS configuration (particularly `IDXTYPEWIDTH` and
+		# `REALTYPEWIDTH`) to propagate through to SuiteSparse's `cholmod_int` and `cholmod_long`
+		# targets to work around compilation errors.
+		# TODO: remove once we upgrade to a modern version of SuiteSparse that provides its own modified Metis.
+        foreach(name IN ITEMS cholmod_int cholmod_long)
+            if(TARGET ${name})
+                target_link_libraries(${name} PRIVATE METIS::METIS)
+            endif()
+        endforeach()
+    endif()
+
     if(WITH_LICENSE STREQUAL LGPL)
         pop_variable(BUILD_SHARED_LIBS)
     endif()

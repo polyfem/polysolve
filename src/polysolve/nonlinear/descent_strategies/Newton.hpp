@@ -12,7 +12,6 @@ namespace polysolve::nonlinear
     {
     public:
         using Superclass = DescentStrategy;
-        // using HessianVariant = std::variant<polysolve::StiffnessMatrix, Eigen::MatrixXd, NewtonHessian>;
 
         static std::vector<std::shared_ptr<DescentStrategy>> create_solver(
             const bool sparse,
@@ -26,7 +25,7 @@ namespace polysolve::nonlinear
         Newton(const bool sparse,
                const double residual_tolerance,
                const json &solver_params,
-               const json &linear_solver_params,
+               std::shared_ptr<polysolve::linear::Solver> linear_solver,
                const double characteristic_length,
                spdlog::logger &logger,
                const NormType norm_type);
@@ -35,6 +34,13 @@ namespace polysolve::nonlinear
         Newton(const bool sparse,
                const json &solver_params,
                const json &linear_solver_params,
+               const double characteristic_length,
+               spdlog::logger &logger,
+               const NormType norm_type);
+
+        Newton(const bool sparse,
+               const json &solver_params,
+               std::shared_ptr<polysolve::linear::Solver> linear_solver,
                const double characteristic_length,
                spdlog::logger &logger,
                const NormType norm_type);
@@ -56,9 +62,7 @@ namespace polysolve::nonlinear
         double residual_tolerance;
         const NormType norm_type;
 
-        int last_analyzed_pattern_id = -1; // Cache the last analyzed sparsity pattern ID to avoid redundant symbolic factorizations
-
-        std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
+        std::shared_ptr<polysolve::linear::Solver> linear_solver; /// Linear solver used to solve the linear system. Note that this can now be shared across compatible `DescentStrategy` instances.
 
         // Benchmarking variables
         double assembly_time;
@@ -98,6 +102,13 @@ namespace polysolve::nonlinear
                         spdlog::logger &logger,
                         const NormType norm_type);
 
+        ProjectedNewton(const bool sparse,
+                        const json &solver_params,
+                        std::shared_ptr<polysolve::linear::Solver> linear_solver,
+                        const double characteristic_length,
+                        spdlog::logger &logger,
+                        const NormType norm_type);
+
         std::string name() const override { return internal_name() + "ProjectedNewton"; }
 
     protected:
@@ -114,6 +125,13 @@ namespace polysolve::nonlinear
         RegularizedNewton(const bool sparse, const bool project_to_psd,
                           const json &solver_params,
                           const json &linear_solver_params,
+                          const double characteristic_length,
+                          spdlog::logger &logger,
+                          const NormType norm_type);
+
+        RegularizedNewton(const bool sparse, const bool project_to_psd,
+                          const json &solver_params,
+                          std::shared_ptr<polysolve::linear::Solver> linear_solver,
                           const double characteristic_length,
                           spdlog::logger &logger,
                           const NormType norm_type);

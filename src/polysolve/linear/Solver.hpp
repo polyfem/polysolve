@@ -92,6 +92,12 @@ namespace polysolve::linear
         /// Get info on the last solve step
         virtual void get_info(json &params) const {};
 
+        int last_analyzed_pattern_id() const { return last_analyzed_pattern_id_; }
+
+        void set_last_analyzed_pattern_id(const int pattern_id) { last_analyzed_pattern_id_ = pattern_id; }
+
+        void clear_last_analyzed_pattern_id() { last_analyzed_pattern_id_ = -1; }
+
         /// Analyze sparsity pattern
         virtual void analyze_pattern(const Hessian &A, const int precond_num) {}
 
@@ -100,8 +106,8 @@ namespace polysolve::linear
 
         /// The following two overloads are still needed by `SaddlePointSolver`,
         /// which operates on asymmetric matrices that are not Hessians.
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}
-        virtual void factorize(const StiffnessMatrix &A) {}
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) { analyze_pattern(Hessian(A), precond_num); }
+        virtual void factorize(const StiffnessMatrix &A) { factorize(Hessian(A)); }
 
         /// Analyze sparsity pattern of a dense matrix
         virtual void analyze_pattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}
@@ -134,6 +140,9 @@ namespace polysolve::linear
 
         /// @brief Name of the solver type (for debugging purposes)
         virtual std::string name() const { return ""; }
+
+    private:
+        int last_analyzed_pattern_id_ = -1;
     };
 
 } // namespace polysolve::linear

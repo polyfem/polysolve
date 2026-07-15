@@ -174,7 +174,7 @@
     },
     {
         "pointer": "/Catamari/ordering",
-        "default": "Catamari",
+        "default": "Adaptive",
         "type": "string",
         "options": [
             "Catamari",

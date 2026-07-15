@@ -10,6 +10,21 @@
 
 namespace polysolve::nonlinear
 {
+    namespace
+    {
+        std::shared_ptr<polysolve::linear::Solver> create_linear_solver(
+            const bool sparse,
+            const json &linear_solver_params,
+            spdlog::logger &logger)
+        {
+            auto linear_solver = std::shared_ptr<polysolve::linear::Solver>(
+                polysolve::linear::Solver::create(linear_solver_params, logger));
+            if (linear_solver->is_dense() == sparse)
+                log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
+
+            return linear_solver;
+        }
+    } // namespace
 
     std::vector<std::shared_ptr<DescentStrategy>> Newton::create_solver(
         const bool sparse,
@@ -29,26 +44,28 @@ namespace polysolve::nonlinear
         reg_solver_params["RegularizedNewton"]["reg_weight_max"] = solver_params["Newton"]["reg_weight_max"];
         reg_solver_params["RegularizedNewton"]["reg_weight_inc"] = solver_params["Newton"]["reg_weight_inc"];
 
+        auto linear_solver = create_linear_solver(sparse, linear_solver_params, logger);
+
         std::vector<std::shared_ptr<DescentStrategy>> res;
         const bool force_psd_projection = solver_params["Newton"]["force_psd_projection"];
         if (!force_psd_projection)
-            res.push_back(std::make_unique<Newton>(
+            res.push_back(std::make_shared<Newton>(
                 sparse,
-                solver_params, linear_solver_params,
+                solver_params, linear_solver,
                 characteristic_length, logger, norm_type));
 
         const bool use_psd_projection = solver_params["Newton"]["use_psd_projection"];
         if (use_psd_projection)
-            res.push_back(std::make_unique<ProjectedNewton>(
+            res.push_back(std::make_shared<ProjectedNewton>(
                 sparse,
-                proj_solver_params, linear_solver_params,
+                proj_solver_params, linear_solver,
                 characteristic_length, logger, norm_type));
 
         const double reg_weight_min = solver_params["Newton"]["reg_weight_min"];
         if (reg_weight_min > 0)
-            res.push_back(std::make_unique<RegularizedNewton>(
+            res.push_back(std::make_shared<RegularizedNewton>(
                 sparse, solver_params["Newton"]["use_psd_projection_in_regularized"],
-                reg_solver_params, linear_solver_params,
+                reg_solver_params, linear_solver,
                 characteristic_length, logger, norm_type));
 
         if (res.empty())
@@ -60,17 +77,19 @@ namespace polysolve::nonlinear
     Newton::Newton(const bool sparse,
                    const double residual_tolerance,
                    const json &solver_params,
-                   const json &linear_solver_params,
+                   std::shared_ptr<polysolve::linear::Solver> linear_solver,
                    const double characteristic_length,
                    spdlog::logger &logger,
                    const NormType norm_type)
         : Superclass(solver_params, characteristic_length, logger),
-          is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance), norm_type(norm_type)
+          is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance), norm_type(norm_type),
+          linear_solver(std::move(linear_solver))
     {
-        linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
+        if (this->linear_solver == nullptr)
+            log_and_throw_error(logger, "Newton linear solver must not be null");
 
-        if (linear_solver->is_dense() == sparse)
-            log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
+        if (this->linear_solver->is_dense() == sparse)
+            log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", this->linear_solver->name());
 
         if (residual_tolerance <= 0)
             log_and_throw_error(logger, "Newton residual_tolerance must be > 0, instead got {}", residual_tolerance);
@@ -83,7 +102,18 @@ namespace polysolve::nonlinear
         const double characteristic_length,
         spdlog::logger &logger,
         const NormType norm_type)
-        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
+        : Newton(sparse, solver_params, create_linear_solver(sparse, linear_solver_params, logger), characteristic_length, logger, norm_type)
+    {
+    }
+
+    Newton::Newton(
+        const bool sparse,
+        const json &solver_params,
+        std::shared_ptr<polysolve::linear::Solver> linear_solver,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, std::move(linear_solver), characteristic_length, logger, norm_type)
     {
     }
 
@@ -94,7 +124,18 @@ namespace polysolve::nonlinear
         const double characteristic_length,
         spdlog::logger &logger,
         const NormType norm_type)
-        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
+        : ProjectedNewton(sparse, solver_params, create_linear_solver(sparse, linear_solver_params, logger), characteristic_length, logger, norm_type)
+    {
+    }
+
+    ProjectedNewton::ProjectedNewton(
+        const bool sparse,
+        const json &solver_params,
+        std::shared_ptr<polysolve::linear::Solver> linear_solver,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, std::move(linear_solver), characteristic_length, logger, norm_type)
     {
     }
 
@@ -106,7 +147,19 @@ namespace polysolve::nonlinear
         const double characteristic_length,
         spdlog::logger &logger,
         const NormType norm_type)
-        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type),
+        : RegularizedNewton(sparse, project_to_psd, solver_params, create_linear_solver(sparse, linear_solver_params, logger), characteristic_length, logger, norm_type)
+    {
+    }
+
+    RegularizedNewton::RegularizedNewton(
+        const bool sparse,
+        const bool project_to_psd,
+        const json &solver_params,
+        std::shared_ptr<polysolve::linear::Solver> linear_solver,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, std::move(linear_solver), characteristic_length, logger, norm_type),
           project_to_psd(project_to_psd)
     {
         reg_weight_min = extract_param("RegularizedNewton", "reg_weight_min", solver_params);
@@ -182,11 +235,11 @@ namespace polysolve::nonlinear
         }
         {
             int pattern_id = objFunc.getSparsityPatternID();
-            if ((pattern_id == -1) || (pattern_id != last_analyzed_pattern_id))
+            if ((pattern_id == -1) || (pattern_id != linear_solver->last_analyzed_pattern_id()))
             {
                 POLYSOLVE_SCOPED_STOPWATCH("symbolic factorize", this->symbolic_factorizer_time, m_logger);
                 linear_solver->analyze_pattern(hessian, hessian.rows());
-                last_analyzed_pattern_id = pattern_id;
+                linear_solver->set_last_analyzed_pattern_id(pattern_id);
             }
 
             try

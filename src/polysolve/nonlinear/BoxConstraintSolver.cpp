@@ -2,7 +2,7 @@
 
 #include "descent_strategies/box_constraints/LBFGSB.hpp"
 #include "descent_strategies/box_constraints/MMA.hpp"
-#include "solver-spec.hpp"
+#include "nonlinear-solver-spec.hpp"
 
 #include <jse/jse.h>
 #include <polysolve/JSONUtils.hpp>

@@ -3,15 +3,27 @@
 ![Build](https://github.com/polyfem/polysolve/workflows/Build/badge.svg)
 [![codecov](https://codecov.io/github/polyfem/polysolve/graph/badge.svg?token=9CTTZX9A2D)](https://codecov.io/github/polyfem/polysolve)
 
-This library contains a cross-platform Eigen wrapper for many different external linear solvers including (but not limited to):
 
- - CHOLMOD
- - Hypre
- - AMGCL
- - Pardiso
+[![PyPI](https://img.shields.io/pypi/v/polyfem-polysolve.svg)](https://pypi.org/project/polyfem-polysolve/)
+[![Python versions](https://img.shields.io/pypi/pyversions/polyfem-polysolve.svg)](https://pypi.org/project/polyfem-polysolve/)
+[![CI](https://github.com/polyfem/polysolve-python/actions/workflows/continuous.yml/badge.svg)](https://github.com/polyfem/polysolve-python/actions/workflows/continuous.yml)
+[![Build & publish](https://github.com/polyfem/polysolve-python/actions/workflows/release.yml/badge.svg)](https://github.com/polyfem/polysolve-python/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 
-## Example Usage
+This library contains:
+   - a cross-platform wrapper for many different external linear solvers including (but not limited to):
+
+        - CHOLMOD
+        - Hypre
+        - AMGCL
+        - Pardiso
+
+   - robust non-linear solver
+   - Python Bindings
+
+
+## Example C++ Usage
 
 ```c++
 const std::string solver_name = "Hypre"
@@ -36,7 +48,75 @@ solver->solve(b, x);
 
 You can use `Solver::available_solvers()` to obtain the list of available solvers.
 
-## Parameters
+
+## Example Python Usage
+
+Install
+```bash
+pip install polyfem-polysolve
+```
+
+### Non-linear solver
+
+```python
+import numpy as np
+import scipy.sparse
+import polysolve
+
+
+class Quadratic(polysolve.Problem):
+    def value(self, x):
+        y = x - np.array([-2.0, 3.0, 1.0])
+        return float(y @ y)
+
+    def gradient(self, x):
+        return 2.0 * (x - np.array([-2.0, 3.0, 1.0]))
+
+    def hessian(self, x):
+        return 2.0 * scipy.sparse.eye(x.size, format="csc")
+
+
+x, log = polysolve.minimize(
+    Quadratic(),
+    np.zeros(3),
+    {
+        "solver": "Newton",
+        "line_search": {"method": "Backtracking"},
+        "max_iterations": 100,
+    },
+    {"solver": "Eigen::SimplicialLDLT"},
+)
+
+print(x)
+print(log)
+```
+
+Python subclasses must implement `value(x)`, `gradient(x)`, and `hessian(x)`. Optional PolySolve callbacks such as `solution_changed`,  `stop`, `is_step_valid`, and `max_step_size` can also be implemented on the subclass.
+
+### Linear solves
+
+For a one-off linear system:
+
+```python
+A = scipy.sparse.csc_matrix([[4.0, 1.0], [1.0, 3.0]])
+b = np.array([1.0, 2.0])
+
+x = polysolve.solve(A, b, {"solver": "Eigen::SimplicialLDLT"})
+```
+
+For repeated solves with the same matrix pattern:
+
+```python
+solver = polysolve.LinearSolver({"solver": "Eigen::SimplicialLDLT"})
+solver.analyze_pattern(A)
+solver.factorise(A)  # factorize(A) is also available
+
+x = solver.solve(b)
+print(solver.info())
+```
+
+
+# Parameters
 
 Polysolve uses a json file to provide parameters to the individual solvers. The following template can be used as a starting points, and a more detailed explanation of the parameters is below.
 

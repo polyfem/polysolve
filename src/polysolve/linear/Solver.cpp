@@ -4,22 +4,13 @@
 #include "Solver.hpp"
 #include "EigenSolver.hpp"
 #include "SaddlePointSolver.hpp"
-#include "solver-spec.hpp"
+#include "linear-solver-spec.hpp"
 
 #include <jse/jse.h>
 #include <spdlog/spdlog.h>
 
 #include <fstream>
 
-// -----------------------------------------------------------------------------
-//
-// Subsequent macros assume a single template parameter and SparseQR fails due to requiring 2 parameters. this is because the OrderingType is not filled in.
-// SparseLU has a default declaration of _OrderingType to use COLAMDOrdering but SparseQR doesn't - so this just mimics that behavior. If Eigen adds such a default in the future this line will need to be guarded to avoid multiple defaults
-namespace Eigen
-{
-    template <typename _MatrixType, typename _OrderingType = COLAMDOrdering<typename _MatrixType::StorageIndex>>
-    class SparseQR;
-}
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_ACCELERATE
 #include <Eigen/AccelerateSupport>
@@ -264,6 +255,12 @@ namespace polysolve::linear
     namespace
     {
 
+        // Eigen::SparseQR (unlike Eigen::SparseLU) has no default OrderingType, so it cannot
+        // be used directly with RETURN_DIRECT_SOLVER_PTR, which only supplies the matrix type.
+        // This alias fills in the default ordering explicitly.
+        template <typename MatrixType>
+        using SparseQRWithDefaultOrdering = Eigen::SparseQR<MatrixType, Eigen::COLAMDOrdering<typename MatrixType::StorageIndex>>;
+
         template <template <class, class> class SparseSolver, typename Precond>
         struct MakeSolver
         {
@@ -321,7 +318,7 @@ namespace polysolve::linear
         }
         else if (solver == "Eigen::SparseQR")
         {
-            RETURN_DIRECT_SOLVER_PTR(SparseQR, "Eigen::SparseQR");
+            RETURN_DIRECT_SOLVER_PTR(SparseQRWithDefaultOrdering, "Eigen::SparseQR");
 #ifdef POLYSOLVE_WITH_ACCELERATE
         }
         else if (solver == "Eigen::AccelerateLLT")

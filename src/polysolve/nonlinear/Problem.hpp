@@ -32,6 +32,8 @@ namespace polysolve::nonlinear
         Problem() {}
         virtual ~Problem() = default;
 
+        virtual bool is_residual() const { return false; }
+
         /// @brief Initialize the problem.
         /// @param x0 Initial guess.
         virtual void init(const TVector &x0) {}
@@ -111,12 +113,12 @@ namespace polysolve::nonlinear
         /// @return True if the solver should stop, false otherwise.
         virtual bool stop(const TVector &x) { return false; }
 
-        virtual double grad_norm_rescaling(const NormType norm_type) const {return 1;}
-        virtual double step_norm_rescaling(const NormType norm_type) const {return 1;}
-        virtual double energy_norm_rescaling(const NormType norm_type) const {return 1;}
+        virtual double grad_norm_rescaling(const NormType norm_type) const { return 1; }
+        virtual double step_norm_rescaling(const NormType norm_type) const { return 1; }
+        virtual double energy_norm_rescaling(const NormType norm_type) const { return 1; }
 
-        virtual double grad_norm(const TVector &grad, const NormType norm_type) const {return grad.norm();}
-        virtual double step_norm(const TVector &x, const NormType norm_type) const {return x.norm();}
+        virtual double grad_norm(const TVector &grad, const NormType norm_type) const { return grad.norm(); }
+        virtual double step_norm(const TVector &x, const NormType norm_type) const { return x.norm(); }
 
         /// --- Misc ----------------------------------------------------------
 

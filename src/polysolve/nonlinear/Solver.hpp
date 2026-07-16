@@ -88,6 +88,9 @@ namespace polysolve::nonlinear
         /// @brief If true the solver will not throw an error if the maximum number of iterations is reached
         bool allow_out_of_iterations = false;
 
+        /// @brief If true, converging via a non-gradient criterion (e.g., x/f delta tolerance) is logged as a success instead of an error
+        bool allow_non_grad_convergence = false;
+
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 

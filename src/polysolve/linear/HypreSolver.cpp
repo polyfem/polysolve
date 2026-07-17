@@ -106,26 +106,22 @@ namespace polysolve::linear
 
         // HYPRE_IJMatrixSetValues(A, 1, &nnz, &i, cols, values);
 
-        // TODO: More efficient initialization of the Hypre matrix?
+        // Build each column once and set it in a single call -> O(nnz).
+        std::vector<HYPRE_Int> col_idx;
+        std::vector<double> vals;
         for (HYPRE_Int k = 0; k < Ain.outerSize(); ++k)
         {
+            col_idx.clear();
+            vals.clear();
             for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
             {
-                HYPRE_Int row[1]; 
-                int counter = 0;
-                std::vector<HYPRE_Int> cols;
-                std::vector<double> vals;
-                for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
-                {
-                    // since A is symmetric, we swap rows and columns for more efficient initialization
-                    ++counter;
-                    row[0] = it.col();
-                    cols.push_back((HYPRE_Int)it.row());
-                    vals.push_back(it.value());
-                }
-                HYPRE_Int n_cols[1] = {counter};
-                HYPRE_IJMatrixSetValues(A, 1, n_cols, row, cols.data(), vals.data());
+                // since A is symmetric, we swap rows and columns for more efficient initialization
+                col_idx.push_back((HYPRE_Int)it.row());
+                vals.push_back(it.value());
             }
+            HYPRE_Int row[1] = {(HYPRE_Int)k};
+            HYPRE_Int n_cols[1] = {(HYPRE_Int)col_idx.size()};
+            HYPRE_IJMatrixSetValues(A, 1, n_cols, row, col_idx.data(), vals.data());
         }
 
         HYPRE_IJMatrixAssemble(A);

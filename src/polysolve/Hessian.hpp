@@ -111,13 +111,9 @@ namespace polysolve
         }
 
         // Supported Hessian conversions
-        // static Eigen::MatrixXd convert(type_tag<Eigen::MatrixXd>, const StiffnessMatrix &H) { return Eigen::MatrixXd(H); } // To dense
-
-        // TODO: this conversion can be avoided once MeshFEMSparse updates its
-        // `CatamariFactorizer` wrapper to support Eigen sparse matrices natively.
-        static BCSCHessianWithFixedVars convert(type_tag<BCSCHessianWithFixedVars>, const StiffnessMatrix &H) { return BCSCHessianWithFixedVars::fromEigen(H); }
-        static StiffnessMatrix          convert(type_tag<StiffnessMatrix>, const BCSCHessianWithFixedVars &H) { return H.toEigen(); }
-        static DenseHessian             convert(type_tag<DenseHessian>,    const BCSCHessianWithFixedVars &H) { return DenseHessian(H.toEigen()); } // TODO: Avoid double-conversion?
+        static BCSCHessianWithFixedVars convert(type_tag<BCSCHessianWithFixedVars>, const StiffnessMatrix &H) { return BCSCHessianWithFixedVars::fromEigen(H); } // TODO: this conversion can be avoided once MeshFEMSparse updates its `CatamariFactorizer` wrapper to support Eigen sparse matrices natively.
+        static StiffnessMatrix          convert(type_tag<StiffnessMatrix>, const BCSCHessianWithFixedVars &H) { StiffnessMatrix K = H.toEigen(); if (H.reg_weight != 0.0) { K.diagonal().array() += H.reg_weight; } return K; }
+        static DenseHessian             convert(type_tag<DenseHessian>,    const BCSCHessianWithFixedVars &H) { DenseHessian    D = H.toEigen(); if (H.reg_weight != 0.0) { D.diagonal().array() += H.reg_weight; } return D; } // TODO: Avoid double-conversion?
         static DenseHessian             convert(type_tag<DenseHessian>,    const          StiffnessMatrix &H) { return DenseHessian(H); }
     };
 

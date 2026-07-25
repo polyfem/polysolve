@@ -244,7 +244,7 @@ TEST_CASE("mas_block_dim", "[.][solver]")
     }
 }
 
-TEST_CASE("hybrid_convergence", "[solver]")
+TEST_CASE("hybrid_convergence", "[.][solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;
     Eigen::SparseMatrix<double> A;

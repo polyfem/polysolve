@@ -72,21 +72,13 @@ else()
     set(POLYSOLVE_ON_APPLE_SILICON OFF)
 endif()
 
-# Silently detect MPI to set the default option
-find_package(MPI QUIET)
-if(MPI_CXX_FOUND)
-    set(DEFAULT_MPI ON)
-else()
-    set(DEFAULT_MPI OFF)
-endif()
-
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
 option(POLYSOLVE_WITH_CUDA          "Enable cuda support"                               OFF)
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_MPI           "Enable MPI support" ${DEFAULT_MPI})
+option(POLYSOLVE_WITH_MPI           "Enable MPI support"                                OFF)
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
@@ -179,6 +171,19 @@ if (POLYSOLVE_WITH_CUDA)
 endif()
 
 ################################################################################
+# MPI
+################################################################################
+
+# Check that MPI exists
+if(POLYSOLVE_WITH_MPI)
+    find_package(MPI QUIET)
+    if (NOT MPI_CXX_FOUND)
+        message(WARNING "POLYSOLVE_WITH_MPI was requested but MPI was not found, proceeding without MPI dependent solvers.")
+        set(POLYSOLVE_WITH_MPI OFF)
+    endif()
+endif()
+
+################################################################################
 # PolySolve Library
 ################################################################################
 
@@ -256,17 +261,17 @@ if(POLYSOLVE_WITH_CUDA)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDA)
 endif()
 
-if(POLYSOLVE_WITH_CUDA)
+if(POLYSOLVE_WITH_CUDA AND NOT POLYSOLVE_LARGE_INDEX)
   target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_CUDSS)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDSS)
 endif()
 
-if(POLYSOLVE_WITH_CUDA)
+if(POLYSOLVE_WITH_CUDA AND NOT POLYSOLVE_LARGE_INDEX)
   target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_GPU_HYBRID)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_GPU_HYBRID)
 endif()
 
-if(POLYSOLVE_WITH_MPI)
+if(POLYSOLVE_WITH_MPI AND NOT POLYSOLVE_LARGE_INDEX)
   target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_CPU_HYBRID)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CPU_HYBRID)
 endif()
@@ -306,8 +311,6 @@ endif()
 # ------
 
 if(POLYSOLVE_WITH_MPI)
-    # If the option is ON (either via auto-detect or forced by the user), ensure it is actually found
-    find_package(MPI REQUIRED)
     message(STATUS "MPI enabled for PolySolve.")
     
     # Link to the linear sub-library

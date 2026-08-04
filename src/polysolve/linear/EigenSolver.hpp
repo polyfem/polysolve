@@ -31,10 +31,16 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const Hessian &H, const int precond_num) override;
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override { analyze_pattern(H.as<StiffnessMatrix>(), precond_num); }
 
         // Factorize system matrix
-        virtual void factorize(const Hessian &H) override;
+        virtual void factorize(const Hessian &H) override { factorize(H.as<StiffnessMatrix>()); }
+
+        // Overloads for this solver's native `StiffnessMatrix` type.
+        // Calling these raw implementation methods directly can avoid the
+        // overhead of an extra variant-induced copy.
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void factorize(const StiffnessMatrix &A) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -74,9 +80,15 @@ namespace polysolve::linear
         virtual void get_info(json &params) const override;
 
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override { analyze_pattern(H.as<StiffnessMatrix>(), precond_num); }
 
         // Factorize system matrix
+        virtual void factorize(const Hessian &H) override { factorize(H.as<StiffnessMatrix>()); }
+
+        // Overloads for this solver's native `StiffnessMatrix` type.
+        // Calling these raw implementation methods directly can avoid the
+        // overhead of an extra variant-induced copy.
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
         virtual void factorize(const StiffnessMatrix &A) override;
 
         // Solve the linear system

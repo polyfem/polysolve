@@ -180,6 +180,11 @@ namespace polysolve
             return *cache;
         }
 
+        // Support "casting" to dense Hessian for duck typing with Eigen matrix types.
+        // This should essentially never be used in practice (and hence is guarded by `explicit`),
+        // however it is currently needed to build the unit tests.
+        explicit operator const Eigen::MatrixXd &() const { return as<DenseHessian>(); }
+
         template <typename T>
         bool is_native_type() const noexcept {
             if (!m_evaluated_hessian) return false;

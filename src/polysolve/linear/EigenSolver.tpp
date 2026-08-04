@@ -35,17 +35,15 @@ namespace polysolve::linear
 
     // Analyze sparsity pattern
     template <typename SparseSolver>
-    void EigenDirect<SparseSolver>::analyze_pattern(const Hessian &H, const int precond_num)
+    void EigenDirect<SparseSolver>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
     {
-        const auto &A = H.as<StiffnessMatrix>();
         m_Solver.analyzePattern(A);
     }
 
     // Factorize system matrix
     template <typename SparseSolver>
-    void EigenDirect<SparseSolver>::factorize(const Hessian &H)
+    void EigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
     {
-        const auto &A = H.as<StiffnessMatrix>();
         m_Solver.factorize(A);
         if (m_Solver.info() == Eigen::NumericalIssue)
         {

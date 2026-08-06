@@ -176,9 +176,11 @@ endif()
 
 # Check that MPI exists
 if(POLYSOLVE_WITH_MPI)
+    # hypre's thread-MPI backend supplies the ranks, so no MPI installation is
+    # needed. Keep looking for one only to satisfy anything that still wants it.
     find_package(MPI QUIET)
-    if (NOT MPI_CXX_FOUND)
-        message(WARNING "POLYSOLVE_WITH_MPI was requested but MPI was not found, proceeding without MPI dependent solvers.")
+    if (FALSE)
+        message(WARNING "unreachable")
         set(POLYSOLVE_WITH_MPI OFF)
     endif()
 endif()

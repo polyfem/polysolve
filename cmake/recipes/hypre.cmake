@@ -21,10 +21,13 @@ else()
     set(HYPRE_ENABLE_CUDA          OFF CACHE INTERNAL "" FORCE)
 endif()
 
+# hypre's MPI ranks are threads of this process (no MPI library, no mpirun).
+# POLYSOLVE_WITH_MPI now selects that backend rather than linking OpenMPI.
+set(HYPRE_ENABLE_MPI OFF CACHE INTERNAL "" FORCE)
 if (POLYSOLVE_WITH_MPI)
-    set(HYPRE_ENABLE_MPI           ON  CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_THREAD_MPI ON  CACHE INTERNAL "" FORCE)
 else()
-    set(HYPRE_ENABLE_MPI           OFF CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_THREAD_MPI OFF CACHE INTERNAL "" FORCE)
 endif()
 
 # HYPRE unconditionally defines an "uninstall" target, which conflicts with other buggy libraries
@@ -40,7 +43,7 @@ endmacro()
 include(CPM)
 CPMAddPackage(
     NAME hypre
-    GITHUB_REPOSITORY hypre-space/hypre
-    GIT_TAG 7e247a231ebdeb44b06c7c9d3b5bee3bac21123f
+    GITHUB_REPOSITORY danielepanozzo/hypre
+    GIT_TAG thread-mpi-backend
     SOURCE_SUBDIR src
 )

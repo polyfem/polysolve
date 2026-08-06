@@ -16,7 +16,10 @@
 #include <HYPRE_parcsr_ls.h>
 #include <HYPRE_parcsr_mv.h>
 
-#include <mpi.h>
+// MPI here is hypre's thread-MPI backend: ranks are threads of this process.
+// hypre's headers already map MPI_Bcast/Allreduce/... onto hypre_MPI_*; the
+// shim adds the MPI-3 windows, MPI_IN_PLACE and the init calls it lacks.
+#include "tmpi_mpi_compat.hpp"
 
 namespace polysolve::linear
 {
@@ -71,10 +74,24 @@ namespace polysolve::linear
 
         int solver_id;
         static inline int next_id = 0;
-        static inline bool is_running_worker_loop = false;
-        static inline std::unordered_map<int, std::unique_ptr<CPUHybridSolver>> worker_registry;
+        static inline thread_local bool is_running_worker_loop = false;
+        static inline thread_local std::unordered_map<int, std::unique_ptr<CPUHybridSolver>> worker_registry;
 
+    public:
         static void run_worker_loop();
+        static inline bool &worker_loop_flag() { return is_running_worker_loop; }
+
+    private:
+
+        // rank 0 is the calling thread; ranks 1..n-1 are worker threads
+        static inline hypre_tmpi_team *tmpi_team = nullptr;
+        // The ranks exist only while a hybrid solver does. Anything else in the
+        // process that uses hypre (the plain HypreSolver, say) runs on the
+        // calling thread alone and must still see a one-rank world, so the last
+        // solver to be destroyed shuts the team down again.
+        static inline int live_solvers = 0;
+        static void ensure_ranks();
+        static void release_ranks();
 
     public:
         //////////////////////

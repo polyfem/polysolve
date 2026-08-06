@@ -41,14 +41,9 @@ namespace polysolve::linear
 
     CPUHybridSolver::CPUHybridSolver()
     {
-        // check if MPI is initialized
-        int done_already;
-        MPI_Initialized(&done_already);
-
-        if (!done_already)
-        {
-            MPI_Init(nullptr, nullptr);
-        }
+        // Ranks are threads of this process. The first solver constructed
+        // spawns them; the calling thread becomes rank 0 and drives.
+        ensure_ranks();
 
         if (!HYPRE_Initialized())
         {
@@ -77,24 +72,8 @@ namespace polysolve::linear
             spdlog::flush_on(spdlog::level::info);
         }
 
-        if (myid != 0)
-        {
-            is_running_worker_loop = true;
-
-            run_worker_loop();
-
-            int finalized;
-            MPI_Finalized(&finalized);
-            if (!finalized)
-            {
-                MPI_Finalize();
-            }
-            if (!HYPRE_Finalized())
-            {
-                HYPRE_Finalize();
-            }
-            std::exit(0);
-        }
+        // A worker rank never reaches here: it is already inside
+        // run_worker_loop() on its own thread (see ensure_ranks below).
 
         solver_id = next_id++;
 
@@ -1383,6 +1362,61 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
+    // Worker ranks: service the driver's commands until CMD_EXIT, then return
+    // so the thread can be joined. Under mpirun this was the process's whole
+    // life; here it is one thread's.
+    static int tmpi_worker_entry(void *)
+    {
+        CPUHybridSolver::worker_loop_flag() = true;
+        if (!HYPRE_Initialized())
+        {
+            HYPRE_Initialize();
+        }
+        Eigen::setNbThreads(1);
+        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
+        spdlog::set_level(spdlog::level::off);
+        CPUHybridSolver::run_worker_loop();
+        return 0;
+    }
+
+    void CPUHybridSolver::ensure_ranks()
+    {
+        if (is_running_worker_loop)
+        {
+            return;
+        }
+        if (tmpi_team)
+        {
+            ++live_solvers;
+            return;
+        }
+        // HYPRE_TMPI_NUM_THREADS, else cores online
+        if (hypre_tmpi_team_start(0, tmpi_worker_entry, nullptr, &tmpi_team) != 0)
+        {
+            throw std::runtime_error("polysolve: could not start hypre thread-MPI ranks");
+        }
+        ++live_solvers;
+    }
+
+    // Tell the workers to leave their command loop and join them, which frees
+    // the thread-MPI universe and puts COMM_WORLD back to a single rank.
+    void CPUHybridSolver::release_ranks()
+    {
+        if (is_running_worker_loop || !tmpi_team)
+        {
+            return;
+        }
+        if (--live_solvers > 0)
+        {
+            return;
+        }
+        SolverCmd cmd = CMD_EXIT;
+        MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        hypre_tmpi_team_join(tmpi_team);
+        tmpi_team = nullptr;
+    }
+
     void CPUHybridSolver::run_worker_loop()
     {
         bool running = true;
@@ -1449,6 +1483,11 @@ namespace polysolve::linear
             HYPRE_IJMatrixDestroy(A);
             has_matrix_ = false;
             A = nullptr;
+        }
+
+        if (myid == 0)
+        {
+            release_ranks();
         }
     }
 

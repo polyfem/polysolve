@@ -199,7 +199,6 @@ namespace polysolve::nonlinear
         double update_direction_time;
         double line_search_time;
         double constraint_set_update_time;
-        double post_step;
 
         // ====================================================================
         //                                 END

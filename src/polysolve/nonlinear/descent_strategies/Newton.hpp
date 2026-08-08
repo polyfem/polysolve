@@ -64,13 +64,8 @@ namespace polysolve::nonlinear
 
         std::shared_ptr<polysolve::linear::Solver> linear_solver; /// Linear solver used to solve the linear system. Note that this can now be shared across compatible `DescentStrategy` instances.
 
-        // Benchmarking variables
         double assembly_time;
         double inverting_time;
-        double linear_solve_time;
-        double symbolic_factorizer_time;
-        double numeric_factorizer_time;
-        double solve_time;
 
     protected:
         std::string internal_name() const { return is_sparse ? "Sparse" : "Dense"; }
@@ -85,7 +80,6 @@ namespace polysolve::nonlinear
 
         void reset(const int ndof) override;
         void update_solver_info(json &solver_info, const double per_iteration) override;
-        virtual void update_times(std::vector<double> &linear_times) override;
         void reset_times() override;
         void log_times() const override;
     };

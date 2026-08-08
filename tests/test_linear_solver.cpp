@@ -155,9 +155,6 @@ void run_all_tests(const HessianType &A) {
 
         solver->get_info(solver_info);
 
-        // std::cout << "Testing solver: " << s << std::endl;
-        // std::cout << "x norm: " << x.norm() << std::endl;
-        // std::cout << "b norm: " << b.norm() << std::endl;
         const double err = (A * x - b).norm();
         INFO("solver: " + s);
         REQUIRE(err < 1e-8);

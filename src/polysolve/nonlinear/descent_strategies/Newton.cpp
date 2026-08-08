@@ -234,17 +234,17 @@ namespace polysolve::nonlinear
             compute_hessian(objFunc, x, hessian);
         }
         {
+            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+
             int pattern_id = objFunc.getSparsityPatternID();
             if ((pattern_id == -1) || (pattern_id != linear_solver->last_analyzed_pattern_id()))
             {
-                POLYSOLVE_SCOPED_STOPWATCH("symbolic factorize", this->symbolic_factorizer_time, m_logger);
                 linear_solver->analyze_pattern(hessian, hessian.rows());
                 linear_solver->set_last_analyzed_pattern_id(pattern_id);
             }
 
             try
             {
-                POLYSOLVE_SCOPED_STOPWATCH("numeric factorize", this->numeric_factorizer_time, m_logger);
                 linear_solver->factorize(hessian);
             }
             catch (const std::runtime_error &err)
@@ -255,10 +255,7 @@ namespace polysolve::nonlinear
                 // Eigen::saveMarket(hessian, "problematic_hessian.mtx");
                 return std::nan("");
             }
-            {
-                POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->linear_solve_time, m_logger);
-                linear_solver->solve(-grad, direction); // H Δx = -g
-            }
+            linear_solver->solve(-grad, direction); // H Δx = -g
         }
 
         const double residual = objFunc.grad_norm(hessian * direction + grad, norm_type); // H Δx + g = 0
@@ -282,7 +279,7 @@ namespace polysolve::nonlinear
         }
         const Eigen::MatrixXd &hessian = hessian_v.as<Eigen::MatrixXd>();
         {
-            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->solve_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
 
             try
             {
@@ -362,18 +359,6 @@ namespace polysolve::nonlinear
     {
         assembly_time = 0;
         inverting_time = 0;
-        linear_solve_time = 0;
-        symbolic_factorizer_time = 0;
-        numeric_factorizer_time = 0;
-        solve_time = 0;
-    }
-
-     void Newton::update_times(std::vector<double> &linear_times)
-    {
-        linear_times[0] += assembly_time;
-        linear_times[1] += symbolic_factorizer_time;
-        linear_times[2] += numeric_factorizer_time;
-        linear_times[3] += is_sparse ? linear_solve_time : solve_time;
     }
 
     void Newton::log_times() const

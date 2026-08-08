@@ -34,7 +34,6 @@ namespace polysolve::nonlinear
         /// @param per_iteration Number of iterations (used to normalize timings)
         virtual void update_solver_info(json &solver_info, const double per_iteration) {}
         virtual void log_times() const {}
-        virtual void update_times(std::vector<double> &linear_times) {}
 
         virtual bool is_direction_descent() { return true; }
         virtual bool handle_error() { return false; }

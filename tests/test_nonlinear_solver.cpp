@@ -710,3 +710,45 @@ TEST_CASE("sample", "[solver]")
             CHECK(fs[0] <= fs[i]);
     }
 }
+
+TEST_CASE("iteration-callback", "[solver][callback]")
+{
+    Rosenbrock problem;
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "Newton";
+    solver_params["line_search"] = {};
+    solver_params["line_search"]["method"] = "Backtracking";
+    solver_params["max_iterations"] = 100;
+    solver_params["rel_grad_norm_tol"] = 0;
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    static std::shared_ptr<spdlog::logger> logger =
+        spdlog::stdout_color_mt("callback-test");
+    logger->set_level(spdlog::level::warn);
+
+    auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+
+    int n_calls = 0;
+    bool alpha_ok = true;
+    solver->set_iteration_callback([&](const Criteria &crit) -> bool {
+        ++n_calls;
+        alpha_ok = alpha_ok && std::isfinite(crit.alpha) && crit.alpha > 0;
+        return crit.iterations >= 2; // request an early stop
+    });
+
+    TestProblem::TVector x(problem.size());
+    x.setZero();
+    REQUIRE_NOTHROW(solver->minimize(problem, x));
+
+    // The callback fired each iteration with a finite line-search alpha and
+    // stopped the solver early (Status::ObjectiveCustomStop does not throw).
+    CHECK(n_calls >= 1);
+    CHECK(n_calls <= 4);
+    CHECK(alpha_ok);
+
+    // The solver must have stopped before converging.
+    TestProblem::TVector g;
+    problem.gradient(x, g);
+    CHECK(g.norm() > 1e-7);
+}

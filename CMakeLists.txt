@@ -275,13 +275,17 @@ endif()
 # Linear
 # ------
 
-# Accelerate solver (Include before Eigen)
+
 if(POLYSOLVE_WITH_ACCELERATE)
-    set(BLA_VENDOR Apple)
-    find_package(BLAS REQUIRED)
-    find_package(LAPACK REQUIRED)
-    target_link_libraries(polysolve_linear PRIVATE BLAS::BLAS LAPACK::LAPACK)
-    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_ACCELERATE)
+    if(POLYSOLVE_LARGE_INDEX)
+        message(STATUS "POLYSOLVE_LARGE_INDEX is ON: disabling Apple Accelerate (it only supports 32-bit sparse indices).")
+    else()
+        set(BLA_VENDOR Apple)
+        find_package(BLAS REQUIRED)
+        find_package(LAPACK REQUIRED)
+        target_link_libraries(polysolve_linear PRIVATE BLAS::BLAS LAPACK::LAPACK)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_ACCELERATE)
+    endif()
 endif()
 
 include(eigen)

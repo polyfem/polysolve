@@ -55,6 +55,8 @@ namespace polysolve
                 if (!m_isFixed[i]) v_full[i] = v[r++];
 
             Eigen::VectorXd result_full = H->apply(v_full);
+            if (reg_weight != 0) result_full += reg_weight * v_full;
+
             Eigen::VectorXd result(reduced_size());
             for (size_t i = 0, r = 0; i < full_size(); ++i)
                 if (!m_isFixed[i]) result[r++] = result_full[i];

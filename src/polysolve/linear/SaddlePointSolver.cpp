@@ -110,8 +110,9 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void SaddlePointSolver::factorize(const StiffnessMatrix &Ain)
+    void SaddlePointSolver::factorize(const Hessian &Ain_H)
     {
+        const StiffnessMatrix &Ain = Ain_H.as<StiffnessMatrix>();
         assert(precond_num_ > 0);
         Ain_ = Ain;
         // A = M.A(1:ablock-1, 1:ablock-1);

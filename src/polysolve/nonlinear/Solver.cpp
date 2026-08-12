@@ -411,9 +411,9 @@ namespace polysolve::nonlinear
             {
                 try
                 {
-                    THessian hessian;
+                    Hessian hessian;
                     objFunc.hessian(x, hessian);
-                    m_current.newtonDecrement = 0.5 * x.dot(hessian * x);
+                    m_current.newtonDecrement = 0.5 * x.dot(hessian.as<StiffnessMatrix>() * x);
                 }
                 catch (const std::runtime_error &e)
                 {

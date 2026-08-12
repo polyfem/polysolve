@@ -62,7 +62,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0135 NEW) # Set the timestamps of all extracted cont
 
 project(PolySolve
         DESCRIPTION "Easy-to-use wrapper for linear solver"
-        LANGUAGES CXX)
+        LANGUAGES C CXX)
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64" AND APPLE)
     set(POLYSOLVE_NOT_ON_APPLE_SILICON OFF)
@@ -352,7 +352,7 @@ if(POLYSOLVE_WITH_SUPERLU)
     endif()
 endif()
 
-# SuperLU solver
+# SuiteSparseQR
 if(POLYSOLVE_WITH_SPQR)
     include(spqr)
     if(TARGET SuiteSparse::SPQR)
@@ -391,6 +391,10 @@ if(POLYSOLVE_WITH_CUSOLVER)
         message(WARNING "cuSOLVER not found, solver will not be available.")
     endif()
 endif()
+
+# MeshFEMSparse
+include(meshfemsparse)
+target_link_libraries(polysolve_linear PUBLIC MeshFEMSparse)
 
 # Sanitizers
 if(POLYSOLVE_WITH_SANITIZERS)
@@ -441,7 +445,6 @@ endif()
 # Extra warnings (include last for highest priority)
 include(polysolve_warnings)
 target_link_libraries(polysolve PRIVATE polysolve::warnings)
-
 
 ################################################################################
 # Specs

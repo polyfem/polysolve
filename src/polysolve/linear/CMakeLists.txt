@@ -5,6 +5,8 @@ set(SOURCES
     Solver.hpp
     AMGCL.cpp
     AMGCL.hpp
+    CatamariSolver.cpp
+    CatamariSolver.hpp
     CuSolverDN.cu
     CuSolverDN.cuh
     EigenSolver.hpp

@@ -92,13 +92,28 @@ namespace polysolve::linear
         /// Get info on the last solve step
         virtual void get_info(json &params) const {};
 
+        int last_analyzed_pattern_id() const { return last_analyzed_pattern_id_; }
+
+        void set_last_analyzed_pattern_id(const int pattern_id) { last_analyzed_pattern_id_ = pattern_id; }
+
+        void clear_last_analyzed_pattern_id() { last_analyzed_pattern_id_ = -1; }
+
         /// Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}
+        virtual void analyze_pattern(const Hessian &A, const int precond_num) {}
 
         /// Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) {}
+        virtual void factorize(const Hessian &A) {}
+
+        /// The following two overloads are still needed by `SaddlePointSolver`,
+        /// which operates on asymmetric matrices that are not Hessians.
+        /// They can also be helpful in avoiding a copy in use cases where
+        /// the user generates and the solver natively accepts a `StiffnessMatrix`.
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) { analyze_pattern(Hessian::borrow(A), precond_num); }
+        virtual void factorize(const StiffnessMatrix &A) { factorize(Hessian::borrow(A)); }
 
         /// Analyze sparsity pattern of a dense matrix
+        /// Note: these `*_dense` methods are most likely obviated by the new
+        /// variant machinery...
         virtual void analyze_pattern_dense(const Eigen::MatrixXd &A, const int precond_num) {}
 
         /// Factorize system matrix of a dense matrix
@@ -129,6 +144,9 @@ namespace polysolve::linear
 
         /// @brief Name of the solver type (for debugging purposes)
         virtual std::string name() const { return ""; }
+
+    private:
+        int last_analyzed_pattern_id_ = -1;
     };
 
 } // namespace polysolve::linear

@@ -100,14 +100,9 @@ TEST_CASE("multi-solver", "[solver]")
     REQUIRE(err < 1e-8);
 }
 
-TEST_CASE("all", "[solver]")
-{
-    const std::string path = POLYFEM_DATA_DIR;
-    Eigen::SparseMatrix<double> A;
-    const bool ok = loadMarket(A, path + "/A_2.mat");
-    REQUIRE(ok);
+template<class HessianType>
+void run_all_tests(const HessianType &A) {
     json solver_info;
-    Eigen::MatrixXd A_dense(A);
 
     auto solvers = Solver::available_solvers();
     for (const auto &s : solvers)
@@ -141,8 +136,12 @@ TEST_CASE("all", "[solver]")
 
         if (solver->is_dense())
         {
-            solver->analyze_pattern_dense(A, A.rows());
-            solver->factorize_dense(A);
+            // The clunky `static_cast` below is to ensure our variant type's
+            // `explicit` cast-to-dense operator is used.
+            // Simply doing `Eigen::MatrixXd(A)` confuses the Eigen overloads.
+            const auto &A_dense = static_cast<const Eigen::MatrixXd &>(A);
+            solver->analyze_pattern_dense(A_dense, A_dense.rows());
+            solver->factorize_dense(A_dense);
         }
         else
         {
@@ -156,11 +155,26 @@ TEST_CASE("all", "[solver]")
 
         solver->get_info(solver_info);
 
-        // std::cout<<"Solver error: "<<x<<std::endl;
         const double err = (A * x - b).norm();
         INFO("solver: " + s);
         REQUIRE(err < 1e-8);
     }
+}
+
+TEST_CASE("all", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+    run_all_tests(A);
+
+    // Also test the Hessian variant type.
+    Hessian H(A);
+    run_all_tests(H);
+
+    H.switch_to_native_type<BCSCHessianWithFixedVars>();
+    run_all_tests(H);
 }
 
 TEST_CASE("eigen_params", "[solver]")

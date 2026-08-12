@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Eigen/Dense>
 #include <Eigen/Sparse>
-
 #include <nlohmann/json.hpp>
 
 namespace polysolve
@@ -15,5 +13,6 @@ namespace polysolve
 #endif
 
     using json = nlohmann::json;
-
 } // namespace polysolve
+
+#include "Hessian.hpp"

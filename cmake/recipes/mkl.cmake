@@ -34,10 +34,10 @@ set_property(CACHE MKL_LINKING PROPERTY STRINGS ${MKL_LINKINK_CHOICES})
 message(STATUS "MKL linking strategy: ${MKL_LINKING}")
 
 # MKL version
-set(MKL_VERSION "2022.2.1" CACHE STRING "MKL version to use (2022.2.1)")
+set(MKL_VERSION "2022.2.1" CACHE STRING "CPM MKL version to use (2022.2.1)")
 set(MKL_VERSION_CHOICES 2022.2.1)
 set_property(CACHE MKL_VERSION PROPERTY STRINGS ${MKL_VERSION_CHOICES})
-message(STATUS "MKL version: ${MKL_VERSION}")
+message(STATUS "CPM MKL version: ${MKL_VERSION}")
 
 ################################################################################
 
@@ -59,6 +59,13 @@ endif()
 if(MKL_LINKING STREQUAL sdl)
     message(FATAL_ERROR "MKL_LINKING=sdl is not fully supported yet.")
 endif()
+
+include(try_system_mkl)
+if(TARGET mkl::mkl)
+    return()
+endif()
+
+################################################################################
 
 # Check option for the library version
 if(NOT MKL_VERSION IN_LIST MKL_VERSION_CHOICES)

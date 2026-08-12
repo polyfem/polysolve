@@ -41,11 +41,15 @@ namespace polysolve::linear
         // Retrieve memory information from Pardiso
         virtual void get_info(json &params) const override;
 
+        // Prevent hiding
+        using Solver::analyze_pattern;
+        using Solver::factorize;
+
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override { precond_num_ = precond_num; }
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override { precond_num_ = precond_num; }
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &H) override;
 
         // Solve the linear system Ax = b
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;

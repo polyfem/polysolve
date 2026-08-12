@@ -30,11 +30,15 @@ namespace polysolve::linear
         // Get info on the last solve step
         virtual void get_info(json &params) const override;
 
+        // Prevent hiding
+        using Solver::analyze_pattern;
+        using Solver::factorize;
+
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override;
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &H) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -73,11 +77,15 @@ namespace polysolve::linear
         // Get info on the last solve step
         virtual void get_info(json &params) const override;
 
+        // Prevent hiding
+        using Solver::analyze_pattern;
+        using Solver::factorize;
+
         // Analyze sparsity pattern
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
+        virtual void analyze_pattern(const Hessian &H, const int precond_num) override;
 
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &H) override;
 
         // Solve the linear system
         virtual void solve(const Ref<const VectorXd> b, Ref<VectorXd> x) override;
@@ -110,8 +118,12 @@ namespace polysolve::linear
         // Get info on the last solve step
         virtual void get_info(json &params) const override;
 
+        // Prevent hiding
+        using Solver::analyze_pattern;
+        using Solver::factorize;
+
         // Factorize system matrix
-        virtual void factorize(const StiffnessMatrix &A) override;
+        virtual void factorize(const Hessian &A) override;
 
         // Factorize system matrix
         virtual void factorize_dense(const Eigen::MatrixXd &A) override;

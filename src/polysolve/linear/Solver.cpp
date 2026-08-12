@@ -26,13 +26,14 @@
 namespace polysolve::linear
 {
     template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
-    {
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::analyze_pattern(const Hessian &H, const int precond_num) {
+        const auto &A = H.as<StiffnessMatrix>();
         m_Solver.compute(A);
     }
     template <>
-    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::factorize(const StiffnessMatrix &A)
+    void EigenDirect<Eigen::SPQR<StiffnessMatrix>>::factorize(const Hessian &H)
     {
+        const auto &A = H.as<StiffnessMatrix>();
         m_Solver.compute(A);
         if (m_Solver.info() == Eigen::NumericalIssue)
         {
@@ -55,6 +56,9 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
 #include "AMGCL.hpp"
+#endif
+#ifdef MESHFEM_WITH_CATAMARI
+#include "CatamariSolver.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_CUSOLVER
 #include "CuSolverDN.cuh"
@@ -415,6 +419,12 @@ namespace polysolve::linear
         {
             return std::make_unique<AMGCL>();
 #endif
+#ifdef MESHFEM_WITH_CATAMARI
+        }
+        else if (solver == "Catamari")
+        {
+            return std::make_unique<CatamariSolver>();
+#endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
             // Available only with Eigen 3.3.0 and newer
 #ifndef POLYSOLVE_LARGE_INDEX
@@ -543,6 +553,9 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_AMGCL
             "AMGCL",
+#endif
+#ifdef MESHFEM_WITH_CATAMARI
+            "Catamari",
 #endif
 #if EIGEN_VERSION_AT_LEAST(3, 3, 0)
 #ifndef POLYSOLVE_LARGE_INDEX

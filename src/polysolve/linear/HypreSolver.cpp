@@ -82,8 +82,9 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void HypreSolver::factorize(const StiffnessMatrix &Ain)
+    void HypreSolver::factorize(const Hessian &H)
     {
+        const auto &Ain = H.as<StiffnessMatrix>();
         assert(precond_num_ > 0);
 
         if (has_matrix_)

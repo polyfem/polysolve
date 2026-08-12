@@ -61,10 +61,12 @@ namespace polysolve::nonlinear
             throw std::runtime_error("Dense Hessian not implemented.");
         }
 
+        virtual size_t getSparsityPatternID() const { return -1; }
+
         /// @brief Compute the Hessian of the function at x.
         /// @param[in] x Degrees of freedom.
         /// @param[out] hessian Hessian of the function at x.
-        virtual void hessian(const TVector &x, THessian &hessian) = 0;
+        virtual void hessian(const TVector &x, Hessian &hessian) = 0;
 
         /// @brief Determine if the step from x0 to x1 is valid.
         /// @param x0 Starting point.

@@ -62,9 +62,9 @@ public:
     {
         gradv = wrap(x).getGradient();
     }
-    void hessian(const TVector &x, THessian &hessian) override
+    void hessian(const TVector &x, Hessian &hessian) override
     {
-        hessian = wrap(x).getHessian().sparseView();
+        hessian.emplace<THessian>() = wrap(x).getHessian().sparseView();
     }
     void hessian(const TVector &x, Eigen::MatrixXd &hessian) override
     {
@@ -91,11 +91,11 @@ public:
         gradv(1) = 2 * (x(1) - 3);
         gradv(2) = 2 * (x(2) - 1);
     }
-    void hessian(const TVector &x, THessian &hessian) override
+    void hessian(const TVector &x, Hessian &hessian) override
     {
-        hessian.resize(3, 3);
-        hessian = sparse_identity(hessian.rows(), hessian.cols());
-        hessian *= 2;
+        auto &H = hessian.emplace<THessian>(3, 3);
+        H = sparse_identity(H.rows(), H.cols());
+        H *= 2;
     }
     void hessian(const TVector &x, Eigen::MatrixXd &hessian) override
     {
@@ -250,7 +250,10 @@ public:
         gradv.setZero(x.size());
         gradv(0) = 1;
     }
-    void hessian(const TVector &x, THessian &hessian) override {}
+    void hessian(const TVector &x, Hessian &hessian) override
+    {
+        hessian.emplace<THessian>(x.size(), x.size());
+    }
 
 private:
     const double upper_bound_;

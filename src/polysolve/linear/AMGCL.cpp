@@ -145,19 +145,21 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    void AMGCL::factorize(const StiffnessMatrix &Ain)
+    void AMGCL::factorize(const Hessian &H)
     {
         if (block_size_ == 2)
         {
-            block2_solver_.factorize(Ain);
+            block2_solver_.factorize(H);
             return;
         }
         else if (block_size_ == 3)
         {
-            block3_solver_.factorize(Ain);
+            block3_solver_.factorize(H);
             return;
         }
         assert(precond_num_ > 0);
+
+        const auto &Ain = H.as<StiffnessMatrix>();
 
         int numRows = Ain.rows();
 
@@ -243,8 +245,9 @@ namespace polysolve::linear
     ////////////////////////////////////////////////////////////////////////////////
 
     template <int BLOCK_SIZE>
-    void AMGCL_Block<BLOCK_SIZE>::factorize(const StiffnessMatrix &Ain)
+    void AMGCL_Block<BLOCK_SIZE>::factorize(const Hessian &H)
     {
+        const auto &Ain = H.as<StiffnessMatrix>();
         assert(precond_num_ > 0);
 
         int numRows = Ain.rows();

@@ -5,6 +5,7 @@
 
 #include <polysolve/linear/Solver.hpp>
 
+
 namespace polysolve::nonlinear
 {
     class Newton : public DescentStrategy
@@ -24,7 +25,7 @@ namespace polysolve::nonlinear
         Newton(const bool sparse,
                const double residual_tolerance,
                const json &solver_params,
-               const json &linear_solver_params,
+               std::shared_ptr<polysolve::linear::Solver> linear_solver,
                const double characteristic_length,
                spdlog::logger &logger,
                const NormType norm_type);
@@ -33,6 +34,13 @@ namespace polysolve::nonlinear
         Newton(const bool sparse,
                const json &solver_params,
                const json &linear_solver_params,
+               const double characteristic_length,
+               spdlog::logger &logger,
+               const NormType norm_type);
+
+        Newton(const bool sparse,
+               const json &solver_params,
+               std::shared_ptr<polysolve::linear::Solver> linear_solver,
                const double characteristic_length,
                spdlog::logger &logger,
                const NormType norm_type);
@@ -54,7 +62,7 @@ namespace polysolve::nonlinear
         double residual_tolerance;
         const NormType norm_type;
 
-        std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
+        std::shared_ptr<polysolve::linear::Solver> linear_solver; /// Linear solver used to solve the linear system. Note that this can now be shared across compatible `DescentStrategy` instances.
 
         double assembly_time;
         double inverting_time;
@@ -64,11 +72,8 @@ namespace polysolve::nonlinear
 
         virtual void compute_hessian(Problem &objFunc,
                                      const TVector &x,
-                                     polysolve::StiffnessMatrix &hessian);
+                                     Hessian &hessian);
 
-        virtual void compute_hessian(Problem &objFunc,
-                                     const TVector &x,
-                                     Eigen::MatrixXd &hessian);
 
     public:
         bool compute_update_direction(Problem &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
@@ -91,16 +96,19 @@ namespace polysolve::nonlinear
                         spdlog::logger &logger,
                         const NormType norm_type);
 
+        ProjectedNewton(const bool sparse,
+                        const json &solver_params,
+                        std::shared_ptr<polysolve::linear::Solver> linear_solver,
+                        const double characteristic_length,
+                        spdlog::logger &logger,
+                        const NormType norm_type);
+
         std::string name() const override { return internal_name() + "ProjectedNewton"; }
 
     protected:
         void compute_hessian(Problem &objFunc,
                              const TVector &x,
-                             polysolve::StiffnessMatrix &hessian) override;
-
-        void compute_hessian(Problem &objFunc,
-                             const TVector &x,
-                             Eigen::MatrixXd &hessian) override;
+                             Hessian &hessian) override;
     };
 
     class RegularizedNewton : public Newton
@@ -111,6 +119,13 @@ namespace polysolve::nonlinear
         RegularizedNewton(const bool sparse, const bool project_to_psd,
                           const json &solver_params,
                           const json &linear_solver_params,
+                          const double characteristic_length,
+                          spdlog::logger &logger,
+                          const NormType norm_type);
+
+        RegularizedNewton(const bool sparse, const bool project_to_psd,
+                          const json &solver_params,
+                          std::shared_ptr<polysolve::linear::Solver> linear_solver,
                           const double characteristic_length,
                           spdlog::logger &logger,
                           const NormType norm_type);
@@ -136,11 +151,7 @@ namespace polysolve::nonlinear
     protected:
         void compute_hessian(Problem &objFunc,
                              const TVector &x,
-                             polysolve::StiffnessMatrix &hessian) override;
-
-        void compute_hessian(Problem &objFunc,
-                             const TVector &x,
-                             Eigen::MatrixXd &hessian) override;
+                             Hessian &hessian) override;
     };
 
 } // namespace polysolve::nonlinear

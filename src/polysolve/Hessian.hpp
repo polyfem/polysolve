@@ -183,7 +183,7 @@ namespace polysolve
 
             if (const auto *H_ref = std::get_if<std::reference_wrapper<const T>>(&m_value())) {
                 if constexpr (!std::is_copy_constructible_v<T>) throw std::logic_error("Cannot switch borrowed non-copyable Hessian to owned native type");
-                m_evaluated_hessian.emplace(std::in_place_type<T>, H_ref->get());
+                else m_evaluated_hessian.emplace(std::in_place_type<T>, H_ref->get());
             }
             else m_evaluated_hessian.emplace(std::in_place_type<T>, std::move(const_cast<T &>(this->as<T>())));
 

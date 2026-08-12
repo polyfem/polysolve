@@ -41,6 +41,10 @@ namespace polysolve::linear
         // Retrieve memory information from Pardiso
         virtual void get_info(json &params) const override;
 
+        // Prevent hiding
+        using Solver::analyze_pattern;
+        using Solver::factorize;
+
         // Analyze sparsity pattern
         virtual void analyze_pattern(const Hessian &H, const int precond_num) override { precond_num_ = precond_num; }
 

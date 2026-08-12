@@ -51,6 +51,12 @@ namespace polysolve::linear
         // Retrieve information
         void get_info(json &params) const override;
 
+        // Analyze sparsity pattern
+        virtual void analyze_pattern(const Hessian &A, const int precond_num) override { analyze_pattern(A.as<StiffnessMatrix>(), precond_num); }
+
+        // Factorize system matrix
+        virtual void factorize(const Hessian &A) override { factorize(A.as<StiffnessMatrix>()); }
+
         // Analyze sparsity pattern. This is a no-op
         void analyze_pattern(const StiffnessMatrix &A, const int precond_num) override;
 

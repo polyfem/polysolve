@@ -18,6 +18,10 @@ namespace polysolve::linear
         void set_parameters(const json &params) override;
         void get_info(json &params) const override;
 
+        // Prevent hiding
+        using Solver::analyze_pattern;
+        using Solver::factorize;
+
         void analyze_pattern(const Hessian &H, const int precond_num) override;
         void factorize(const Hessian &H) override;
         void solve(const Ref<const VectorXd> rhs, Ref<VectorXd> result) override;

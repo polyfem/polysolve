@@ -352,7 +352,7 @@ if(POLYSOLVE_WITH_SUPERLU)
     endif()
 endif()
 
-# SuiteSpraseQR
+# SuiteSparseQR
 if(POLYSOLVE_WITH_SPQR)
     include(spqr)
     if(TARGET SuiteSparse::SPQR)

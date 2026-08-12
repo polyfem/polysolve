@@ -8,6 +8,7 @@
 #include <optional>
 #include <variant>
 #include <type_traits>
+#include <functional>
 
 namespace polysolve
 {
@@ -92,16 +93,6 @@ namespace polysolve
         template <typename T>
         struct type_tag { using type = T; };
 
-        template <typename Variant>
-        struct VariantTraits;
-
-        template <typename... Ts>
-        struct VariantTraits<std::variant<Ts...>> {
-            using CacheTuple = std::tuple<std::optional<Ts>...>;
-            template <typename T>
-            static constexpr bool contains = (std::is_same_v<T, Ts> || ...);
-        };
-
         // Note: a conversion function must exist for all pairwise conversions
         // in order for the std::visit` call to be well formed. Only a few
         // conversions are actually supported/used in practice and should be
@@ -127,30 +118,59 @@ namespace polysolve
     //
     // Since the `Problem` API takes the output `Hessian` by reference rather
     // than returning it, this type is forced to start out in an "empty" state.
+    template<class... HessianTypes>
+    struct VariantTypes {
+        using Variant = std::variant<HessianTypes..., std::reference_wrapper<const HessianTypes>...>;
+        using CacheTuple = std::tuple<std::optional<HessianTypes>...>;
+
+        template<typename T>
+        static constexpr bool contains = (std::is_same_v<T, HessianTypes> || ...);
+    };
+
     struct Hessian {
         using DenseHessian = HessianConversion::DenseHessian;
-        using Variant = std::variant<StiffnessMatrix, DenseHessian, BCSCHessianWithFixedVars>;
+        using Types = VariantTypes<StiffnessMatrix, DenseHessian, BCSCHessianWithFixedVars>;
+        using Variant = typename Types::Variant;
 
         Hessian() = default;
 
-        template<typename T, std::enable_if_t<std::is_constructible_v<Variant, T &&> && !std::is_same_v<std::decay_t<T>, Hessian>, int> = 0>
+        // Warning: this constructor always performs a copy/move into a new, internally owned matrix.
+        // If a const reference to an externally owned matrix is desired, use `Hessian::borrow` instead.
+        template<typename T, std::enable_if_t<Types::template contains<std::decay_t<T>> && !std::is_same_v<std::decay_t<T>, Hessian>, int> = 0>
         Hessian(T &&H) : m_evaluated_hessian(std::in_place, std::in_place_type<std::decay_t<T>>, std::forward<T>(H)) { }
+
+        template<typename T>
+        static Hessian borrow(const T &hessian) {
+            using HessianType = std::remove_cv_t<T>;
+            static_assert(Types::template contains<HessianType>, "Unsupported Hessian representation");
+            Hessian result;
+            result.m_evaluated_hessian.emplace(std::in_place_type<std::reference_wrapper<const HessianType>>, std::cref(hessian));
+            return result;
+        }
 
         template <typename T, typename... Args>
         T &emplace(Args &&...args) {
-            static_assert(Traits::template contains<T>, "Unsupported Hessian representation");
+            static_assert(Types::template contains<T>, "Unsupported Hessian representation");
             clear_caches();
             m_evaluated_hessian.emplace(std::in_place_type<T>, std::forward<Args>(args)...);
             return std::get<T>(*m_evaluated_hessian);
         }
 
+        Hessian(const Hessian &other) = delete;            // Would require all Hessian representations to be copyable...
+        Hessian(Hessian &&other) = default;
         Hessian &operator=(const Hessian &other) = delete; // Would require all Hessian representations to be copyable...
         Hessian &operator=(Hessian &&other) = default;
 
         template<typename T>
+        static const T &unwrap(const T &H) { return H; }
+
+        template<typename T>
+        static const T &unwrap(const std::reference_wrapper<const T> &H) { return H.get(); }
+
+        template<typename T>
         T &get_mutable() {
             if (!m_evaluated_hessian) throw std::logic_error("Hessian has not been evaluated");
-            if (!std::holds_alternative<T>(*m_evaluated_hessian)) throw std::logic_error("Hessian is not of the requested type");
+            if (!std::holds_alternative<T>(*m_evaluated_hessian)) throw std::logic_error("Hessian is not of the requested non-reference type");
             if (has_cached_conversions()) throw std::logic_error("Cannot mutate Hessian after conversions have been cached; call clear_caches() first if you know this is safe (no dangling references to the cached conversions exist)");
             return std::get<T>(*m_evaluated_hessian);
         }
@@ -159,23 +179,32 @@ namespace polysolve
         // cached conversions.
         template<typename T>
         void switch_to_native_type() {
-            if (is_native_type<T>()) return; // Already in the requested type
-            m_evaluated_hessian.emplace(std::in_place_type<T>, std::move(const_cast<T &>(this->as<T>())));
+            if (std::holds_alternative<T>(m_value())) return; // Already owning the requested type
+
+            if (const auto *H_ref = std::get_if<std::reference_wrapper<const T>>(&m_value())) {
+                if constexpr (!std::is_copy_constructible_v<T>) throw std::logic_error("Cannot switch borrowed non-copyable Hessian to owned native type");
+                m_evaluated_hessian.emplace(std::in_place_type<T>, H_ref->get());
+            }
+            else m_evaluated_hessian.emplace(std::in_place_type<T>, std::move(const_cast<T &>(this->as<T>())));
+
             clear_caches();
         }
 
         template<typename T>
         const T &as() const {
-            static_assert(Traits::template contains<T>, "T is not one of the supported Hessian representations");
+            static_assert(Types::template contains<T>, "T is not one of the supported Hessian representations");
 
             if (const auto *H = std::get_if<T>(&m_value()))
                 return *H;
+
+            if (const auto *H = std::get_if<std::reference_wrapper<const T>>(&m_value()))
+                return H->get();
 
             auto &cache = std::get<std::optional<T>>(m_conversion_caches);
 
             if (!cache) {
                 cache.emplace(std::visit(
-                    [](const auto &source) -> T { return HessianConversion::convert(HessianConversion::type_tag<T>{}, source); },
+                    [](const auto &source) -> T { return HessianConversion::convert(HessianConversion::type_tag<T>{}, unwrap(source)); },
                     m_value()));
             }
 
@@ -190,13 +219,13 @@ namespace polysolve
         template <typename T>
         bool is_native_type() const noexcept {
             if (!m_evaluated_hessian) return false;
-            static_assert(Traits::template contains<T>, "T is not one of the supported Hessian representations");
+            static_assert(Types::template contains<T>, "T is not one of the supported Hessian representations");
             return std::holds_alternative<T>(m_value());
         }
 
-        Eigen::VectorXd operator*(const Eigen::VectorXd &v) const { return std::visit([&v](const auto &H) -> Eigen::VectorXd { return H * v; }, m_value()); }
-        Eigen::Index rows() const { return std::visit([](const auto &H) -> Eigen::Index { return H.rows(); }, m_value()); }
-        Eigen::Index cols() const { return std::visit([](const auto &H) -> Eigen::Index { return H.cols(); }, m_value()); }
+        Eigen::VectorXd operator*(const Eigen::VectorXd &v) const { return std::visit([&v](const auto &H) -> Eigen::VectorXd { return unwrap(H) * v; }, m_value()); }
+        Eigen::Index rows() const { return std::visit([](const auto &H) -> Eigen::Index { return unwrap(H).rows(); }, m_value()); }
+        Eigen::Index cols() const { return std::visit([](const auto &H) -> Eigen::Index { return unwrap(H).cols(); }, m_value()); }
 
         // Empty state management
         bool has_value() const noexcept { return m_evaluated_hessian.has_value(); }
@@ -213,8 +242,7 @@ namespace polysolve
         void clear_caches() const { std::apply([](auto &...cache) { (cache.reset(), ...); }, m_conversion_caches); }
         bool has_cached_conversions() const { return std::apply([](const auto &...cache) { return (... || cache.has_value()); }, m_conversion_caches); }
 
-        using Traits = HessianConversion::VariantTraits<Variant>;
-        using Caches = typename Traits::CacheTuple;
+        using Caches = typename Types::CacheTuple;
 
         std::optional<Variant> m_evaluated_hessian;
         mutable Caches m_conversion_caches; // Caches of converted Hessians.

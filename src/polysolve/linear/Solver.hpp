@@ -108,8 +108,8 @@ namespace polysolve::linear
         /// which operates on asymmetric matrices that are not Hessians.
         /// They can also be helpful in avoiding a copy in use cases where
         /// the user generates and the solver natively accepts a `StiffnessMatrix`.
-        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) { analyze_pattern(Hessian(A), precond_num); }
-        virtual void factorize(const StiffnessMatrix &A) { factorize(Hessian(A)); }
+        virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) { analyze_pattern(Hessian::borrow(A), precond_num); }
+        virtual void factorize(const StiffnessMatrix &A) { factorize(Hessian::borrow(A)); }
 
         /// Analyze sparsity pattern of a dense matrix
         /// Note: these `*_dense` methods are most likely obviated by the new

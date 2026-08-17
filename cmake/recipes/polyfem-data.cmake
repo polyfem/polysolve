@@ -13,7 +13,7 @@ ExternalProject_Add(
     SOURCE_DIR ${POLYFEM_DATA_ROOT}
 
     GIT_REPOSITORY https://github.com/polyfem/polyfem-data
-    GIT_TAG 9c1bdd5bd02215e80bc1668547e5dbeb5484a527
+    GIT_TAG 8a2eff19a33ccfd395c9294342e2c5c2babf2626
 
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""

@@ -53,7 +53,7 @@ namespace polysolve::linear
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override { return "Hypre"; }
 
-        virtual void set_tolerance(const double tol) override {conv_tol_ = tol;}
+        virtual void set_tolerance(const double tol) override { conv_tol_ = tol; }
 
     protected:
         int dimension_ = 1; // 1 = scalar (Laplace), 2 or 3 = vector (Elasticity)

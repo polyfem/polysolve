@@ -31,7 +31,7 @@ include(CPM)
 CPMAddPackage(
     NAME nanompi
     GITHUB_REPOSITORY danielepanozzo/nano-mpi
-    GIT_TAG v0.1.0
+    GIT_TAG v0.1.1
 )
 
 # The header path as a plain directory, for the FindMPI shim. It cannot get it

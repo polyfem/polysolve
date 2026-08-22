@@ -1,14 +1,14 @@
 #!/bin/bash
 # Sweep the hybrid solver over rank counts on both MPI backends.
 #
-#   ./scripts/bench_hybrid.sh <openmpi-build> <thread-mpi-build> [grid] [reps]
+#   ./scripts/bench_hybrid.sh <openmpi-build> <nanompi-build> [grid] [reps]
 #
 # Ranks are processes in the first build and threads in the second; the driver
 # (tests/bench_spmd.cpp) is the same source in both, which is the only way the
 # comparison means anything.
 set -u
 MPI_BUILD=${1:?openmpi build dir}
-TMPI_BUILD=${2:?thread-mpi build dir}
+NANO_BUILD=${2:?nano-mpi build dir}
 GRID=${3:-120}
 REPS=${4:-3}
 RANKS=${RANKS:-"1 2 4 8 16 32 64"}
@@ -36,7 +36,7 @@ run() {   # backend ranks rep -> one csv row
     if [ "$backend" = openmpi ]; then
         line=$(mpirun -quiet --oversubscribe -np "$n" "$MPI_BUILD/tests/bench_spmd" "$GRID" 2>/dev/null | tail -1)
     else
-        line=$(HYPRE_TMPI_NUM_THREADS=$n "$TMPI_BUILD/tests/bench_spmd" "$GRID" 2>/dev/null | tail -1)
+        line=$(NANOMPI_NUM_RANKS=$n "$NANO_BUILD/tests/bench_spmd" "$GRID" 2>/dev/null | tail -1)
     fi
     # bench_spmd prints: n=.. N=.. setup=.. solve=.. total=.. relres=..
     echo "$line" | awk -v b="$backend" -v r="$n" -v p="$rep" -v g="$GRID" -v l="$load" '
@@ -50,7 +50,7 @@ run() {   # backend ranks rep -> one csv row
 for rep in $(seq "$REPS"); do
     for n in $RANKS; do
         run openmpi "$n" "$rep" >> "$OUT"
-        run tmpi    "$n" "$rep" >> "$OUT"
+        run nanompi "$n" "$rep" >> "$OUT"
         echo "rep $rep ranks $n done" >&2
     done
 done

@@ -24,8 +24,8 @@ def main(path: str) -> None:
         sys.exit(f"{path}: no data rows")
 
     ranks = sorted({r for _, r in runs})
-    backends = [b for b in ("openmpi", "tmpi") if any(k[0] == b for k in runs)]
-    label = {"openmpi": "OpenMPI (processes)", "tmpi": "thread-MPI (threads)"}
+    backends = [b for b in ("openmpi", "nanompi") if any(k[0] == b for k in runs)]
+    label = {"openmpi": "OpenMPI (processes)", "nanompi": "nano-mpi (threads)"}
 
     best = {k: min(v, key=lambda t: t[2]) for k, v in runs.items()}
     spread = max(
@@ -55,7 +55,7 @@ def main(path: str) -> None:
             cells.append(f"{t[2]:.2f}" if t else "—")
         row = f"| {n} | " + " | ".join(cells)
         if len(backends) == 2:
-            a, c = best.get(("openmpi", n)), best.get(("tmpi", n))
+            a, c = best.get(("openmpi", n)), best.get(("nanompi", n))
             row += f" | {a[2] / c[2]:.2f}x |" if a and c else " | — |"
         else:
             row += " |"

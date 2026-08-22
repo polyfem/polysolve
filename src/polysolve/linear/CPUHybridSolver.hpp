@@ -16,10 +16,13 @@
 #include <HYPRE_parcsr_ls.h>
 #include <HYPRE_parcsr_mv.h>
 
-// MPI here is hypre's thread-MPI backend: ranks are threads of this process.
-// hypre's headers already map MPI_Bcast/Allreduce/... onto hypre_MPI_*; the
-// shim adds the MPI-3 windows, MPI_IN_PLACE and the init calls it lacks.
-#include "tmpi_mpi_compat.hpp"
+// MPI here is nano-mpi: every rank is a thread of this process, so the solver
+// gets hypre's domain-decomposed algorithms without the caller having to
+// relaunch itself under mpirun. Everything below is ordinary MPI -- collectives,
+// MPI_IN_PLACE, shared-memory windows -- and nanompi.h adds only the three
+// entry points that create the ranks, since there is no launcher to do it.
+#include <mpi.h>
+#include <nanompi.h>
 
 namespace polysolve::linear
 {
@@ -84,7 +87,7 @@ namespace polysolve::linear
     private:
 
         // rank 0 is the calling thread; ranks 1..n-1 are worker threads
-        static inline hypre_tmpi_team *tmpi_team = nullptr;
+        static inline nanompi_team *rank_team = nullptr;
         // The ranks exist only while a hybrid solver does. Anything else in the
         // process that uses hypre (the plain HypreSolver, say) runs on the
         // calling thread alone and must still see a one-rank world, so the last

@@ -1365,7 +1365,7 @@ namespace polysolve::linear
     // Worker ranks: service the driver's commands until CMD_EXIT, then return
     // so the thread can be joined. Under mpirun this was the process's whole
     // life; here it is one thread's.
-    static int tmpi_worker_entry(void *)
+    static int rank_worker_entry(void *)
     {
         CPUHybridSolver::worker_loop_flag() = true;
         if (!HYPRE_Initialized())
@@ -1386,24 +1386,26 @@ namespace polysolve::linear
         {
             return;
         }
-        if (tmpi_team)
+        if (rank_team)
         {
             ++live_solvers;
             return;
         }
-        // HYPRE_TMPI_NUM_THREADS, else cores online
-        if (hypre_tmpi_team_start(0, tmpi_worker_entry, nullptr, &tmpi_team) != 0)
+        // 0 means the default: NANOMPI_NUM_RANKS if set, else cores online
+        if (nanompi_team_start(0, rank_worker_entry, nullptr, &rank_team) != 0)
         {
-            throw std::runtime_error("polysolve: could not start hypre thread-MPI ranks");
+            throw std::runtime_error("polysolve: could not start nano-mpi ranks");
         }
         ++live_solvers;
     }
 
-    // Tell the workers to leave their command loop and join them, which frees
-    // the thread-MPI universe and puts COMM_WORLD back to a single rank.
+    // Tell the workers to leave their command loop and join them, which tears
+    // the rank universe down and puts COMM_WORLD back to a single rank -- which
+    // matters, because a plain HypreSolver constructed afterwards is a lone
+    // thread and would otherwise be one rank of a world that expects several.
     void CPUHybridSolver::release_ranks()
     {
-        if (is_running_worker_loop || !tmpi_team)
+        if (is_running_worker_loop || !rank_team)
         {
             return;
         }
@@ -1413,8 +1415,8 @@ namespace polysolve::linear
         }
         SolverCmd cmd = CMD_EXIT;
         MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        hypre_tmpi_team_join(tmpi_team);
-        tmpi_team = nullptr;
+        nanompi_team_join(rank_team);
+        rank_team = nullptr;
     }
 
     void CPUHybridSolver::run_worker_loop()

@@ -1,7 +1,7 @@
 // Time polysolve's hybrid solver as an SPMD program: every rank enters the
 // solve, which is how the solver is meant to be driven. The same source runs
-// under mpirun -np N (ranks are processes) and under a thread-MPI build
-// (ranks are threads), so the two backends are compared on one driver.
+// under mpirun -np N (ranks are processes) and against nano-mpi (ranks are
+// threads of this process), so the two backends are compared on one driver.
 #include <polysolve/linear/Solver.hpp>
 #include <Eigen/Sparse>
 #include <chrono>

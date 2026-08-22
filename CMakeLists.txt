@@ -174,15 +174,12 @@ endif()
 # MPI
 ################################################################################
 
-# Check that MPI exists
+# MPI here is nano-mpi: ranks are threads of this process, so there is no MPI
+# installation to look for and nothing for the user to launch. The recipe brings
+# it in and puts a FindMPI shim on the module path so that dependencies calling
+# find_package(MPI) -- hypre does -- resolve to it.
 if(POLYSOLVE_WITH_MPI)
-    # hypre's thread-MPI backend supplies the ranks, so no MPI installation is
-    # needed. Keep looking for one only to satisfy anything that still wants it.
-    find_package(MPI QUIET)
-    if (FALSE)
-        message(WARNING "unreachable")
-        set(POLYSOLVE_WITH_MPI OFF)
-    endif()
+    include(nanompi)
 endif()
 
 ################################################################################
@@ -315,8 +312,9 @@ endif()
 if(POLYSOLVE_WITH_MPI)
     message(STATUS "MPI enabled for PolySolve.")
     
-    # Link to the linear sub-library
-    target_link_libraries(polysolve_linear PUBLIC MPI::MPI_CXX)
+    # nanompi::nanompi, not MPI::MPI_CXX: the shim's MPI target carries only the
+    # header path, for the try_compile reason spelled out there.
+    target_link_libraries(polysolve_linear PUBLIC nanompi::nanompi)
     
     # Define POLYSOLVE_WITH_MPI for your C++ #ifdef checks
     target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_MPI)

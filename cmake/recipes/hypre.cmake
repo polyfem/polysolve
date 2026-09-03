@@ -21,10 +21,15 @@ else()
     set(HYPRE_ENABLE_CUDA          OFF CACHE INTERNAL "" FORCE)
 endif()
 
+# hypre is built as an ordinary MPI build. What is different is the MPI: with
+# POLYSOLVE_WITH_MPI on, the nanompi recipe has already put a FindMPI shim on the
+# module path, so hypre's own find_package(MPI REQUIRED) resolves to nano-mpi --
+# whose ranks are threads of this process. hypre itself needs no special mode.
 if (POLYSOLVE_WITH_MPI)
-    set(HYPRE_ENABLE_MPI           ON  CACHE INTERNAL "" FORCE)
+    include(nanompi)
+    set(HYPRE_ENABLE_MPI ON  CACHE INTERNAL "" FORCE)
 else()
-    set(HYPRE_ENABLE_MPI           OFF CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_MPI OFF CACHE INTERNAL "" FORCE)
 endif()
 
 # HYPRE unconditionally defines an "uninstall" target, which conflicts with other buggy libraries
@@ -40,7 +45,13 @@ endmacro()
 include(CPM)
 CPMAddPackage(
     NAME hypre
-    GITHUB_REPOSITORY hypre-space/hypre
-    GIT_TAG 7e247a231ebdeb44b06c7c9d3b5bee3bac21123f
+    GITHUB_REPOSITORY danielepanozzo/hypre
+    GIT_TAG thread-mpi-backend
     SOURCE_SUBDIR src
 )
+
+# hypre links MPI::MPI_C, which here carries only the header path -- see the
+# FindMPI shim for why it cannot carry the library. Supply the library here.
+if (POLYSOLVE_WITH_MPI)
+    target_link_libraries(HYPRE PUBLIC nanompi::nanompi)
+endif()

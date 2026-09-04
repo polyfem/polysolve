@@ -72,13 +72,19 @@ else()
     set(POLYSOLVE_ON_APPLE_SILICON OFF)
 endif()
 
+if(NOT WIN32)
+    set(POLYSOLVE_WITH_MPI_DEFAULT ON)
+else()
+    set(POLYSOLVE_WITH_MPI_DEFAULT OFF)
+endif()
+
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
 option(POLYSOLVE_WITH_CUDA          "Enable cuda support"                               OFF)
 
 # Polysolve options for enabling/disabling optional libraries
-option(POLYSOLVE_WITH_MPI           "Enable MPI support"                       ${NOT WIN32})
+option(POLYSOLVE_WITH_MPI           "Enable MPI support"      ${POLYSOLVE_WITH_MPI_DEFAULT})
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)

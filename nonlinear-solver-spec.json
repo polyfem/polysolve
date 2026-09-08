@@ -23,6 +23,7 @@
             "ADAM",
             "StochasticADAM",
             "StochasticGradientDescent",
+            "NonlinearCG",
             "box_constraints",
             "advanced"
         ],
@@ -35,7 +36,9 @@
         "options": [
             "Newton",
             "DenseNewton",
+            "NewtonCG",
             "GradientDescent",
+            "NonlinearCG",
             "ADAM",
             "StochasticADAM",
             "StochasticGradientDescent",
@@ -315,6 +318,34 @@
         "doc": "Probability of erasing a component on the gradient for StochasticGradientDescent."
     },
     {
+        "pointer": "/NonlinearCG",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "formula",
+            "restart_frequency"
+        ],
+        "doc": "Options for (unpreconditioned) Nonlinear Conjugate Gradient."
+    },
+    {
+        "pointer": "/NonlinearCG/formula",
+        "default": "PolakRibiere",
+        "type": "string",
+        "options": [
+            "FletcherReeves",
+            "PolakRibiere",
+            "HestenesStiefel"
+        ],
+        "doc": "Formula used to compute the beta coefficient combining the previous and current search directions. A negative beta always triggers a restart to steepest descent."
+    },
+    {
+        "pointer": "/NonlinearCG/restart_frequency",
+        "default": 0,
+        "type": "int",
+        "min": 0,
+        "doc": "Number of iterations between forced restarts to steepest descent. A value of 0 defaults to the number of degrees of freedom of the problem."
+    },
+    {
         "pointer": "/solver",
         "type": "list",
         "doc": "List of solvers for ballback. Eg, [{'type':'Newton'}, {'type':'L-BFGS'}, {'type':'GradientDescent'}] will solve using Newton, in case of failure will fallback to L-BFGS and eventually to GradientDescent"
@@ -372,6 +403,15 @@
             "reg_weight_inc"
         ],
         "doc": "Options for regularized projected Newton."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
+        "type_name": "NewtonCG",
+        "required": [
+            "type"
+        ],
+        "doc": "Inexact Newton's method that requires the linear solver to be CPUHybrid or GPUHybrid. The linear solver's relative tolerance is set to min(0.5, sqrt(||grad||)) at each iteration and its residual tolerance is treated as infinite, so the (possibly inexact) CG direction is always accepted."
     },
     {
         "pointer": "/solver/*",
@@ -451,6 +491,19 @@
     {
         "pointer": "/solver/*",
         "type": "object",
+        "type_name": "NonlinearCG",
+        "required": [
+            "type"
+        ],
+        "optional": [
+            "formula",
+            "restart_frequency"
+        ],
+        "doc": "Options for (unpreconditioned) Nonlinear Conjugate Gradient."
+    },
+    {
+        "pointer": "/solver/*",
+        "type": "object",
         "type_name": "L-BFGS",
         "required": [
             "type"
@@ -512,8 +565,10 @@
             "DenseRegularizedNewton",
             "RegularizedProjectedNewton",
             "DenseRegularizedProjectedNewton",
+            "NewtonCG",
             "GradientDescent",
             "StochasticGradientDescent",
+            "NonlinearCG",
             "ADAM",
             "StochasticADAM",
             "L-BFGS",
@@ -550,6 +605,24 @@
         "default": 0.3,
         "type": "float",
         "doc": "Probability of erasing a component on the gradient for stochastic solvers."
+    },
+    {
+        "pointer": "/solver/*/formula",
+        "default": "PolakRibiere",
+        "type": "string",
+        "options": [
+            "FletcherReeves",
+            "PolakRibiere",
+            "HestenesStiefel"
+        ],
+        "doc": "Formula used to compute the beta coefficient combining the previous and current search directions. A negative beta always triggers a restart to steepest descent."
+    },
+    {
+        "pointer": "/solver/*/restart_frequency",
+        "default": 0,
+        "type": "int",
+        "min": 0,
+        "doc": "Number of iterations between forced restarts to steepest descent. A value of 0 defaults to the number of degrees of freedom of the problem."
     },
     {
         "pointer": "/solver/*/history_size",

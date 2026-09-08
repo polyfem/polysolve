@@ -8,6 +8,10 @@
 #include <spdlog/fmt/bundled/color.h>
 #endif
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 namespace polysolve::nonlinear
 {
 
@@ -125,6 +129,20 @@ namespace polysolve::nonlinear
             log_and_throw_error(logger, "Newton reg_weight_max must be  > {}, instead got {}", reg_weight_min, reg_weight_max);
     }
 
+    NewtonCG::NewtonCG(
+        const bool sparse,
+        const json &solver_params,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Superclass(sparse, std::numeric_limits<double>::infinity(), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
+    {
+        const std::string solver_name = linear_solver_name();
+        if (solver_name != "CPUHybrid" && solver_name != "GPUHybrid")
+            log_and_throw_error(logger, "NewtonCG requires the linear solver to be CPUHybridSolver or GPUHybridSolver, instead got {}", solver_name);
+    }
+
     // =======================================================================
 
     void Newton::reset(const int ndof)
@@ -166,6 +184,27 @@ namespace polysolve::nonlinear
         }
 
         return true;
+    }
+
+    void Newton::set_linear_solver_relative_tolerance(const double tol)
+    {
+        json params;
+        params[linear_solver->name()]["relative_tolerance"] = tol;
+        linear_solver->set_parameters(params);
+    }
+
+    // =======================================================================
+
+    bool NewtonCG::compute_update_direction(
+        Problem &objFunc,
+        const TVector &x,
+        const TVector &grad,
+        TVector &direction)
+    {
+        const double grad_norm = objFunc.grad_norm(grad, get_norm_type());
+        set_linear_solver_relative_tolerance(std::min(0.5, std::sqrt(grad_norm)));
+
+        return Superclass::compute_update_direction(objFunc, x, grad, direction);
     }
 
     // =======================================================================

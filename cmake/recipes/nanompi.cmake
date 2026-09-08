@@ -14,6 +14,17 @@
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/nanompi-as-mpi/")
 list(REMOVE_DUPLICATES CMAKE_MODULE_PATH)
 
+# Promote to CACHE so the shim is visible in every directory scope, not just
+# ones that inherit this list(APPEND) through add_subdirectory(). A dependency
+# added from a scope that never saw it (e.g. AMGCL's own optional
+# find_package(MPI) call) would otherwise fall through to CMake's real
+# FindMPI, which unconditionally overwrites MPI::MPI_C's
+# INTERFACE_INCLUDE_DIRECTORIES on every invocation (see _MPI_create_imported_target
+# in CMake's own FindMPI.cmake) -- silently re-pointing everyone's
+# #include <mpi.h>, hypre included, at a real system MPI nano-mpi cannot
+# actually run against.
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" CACHE STRING "" FORCE)
+
 if(TARGET nanompi::nanompi)
     return()
 endif()

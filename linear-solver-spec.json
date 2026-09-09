@@ -148,8 +148,7 @@
             "tolerance",
             "theta",
             "nodal_coarsening",
-            "interp_rbms",
-            "dimension"
+            "interp_rbms"
         ],
         "doc": "Settings for the Hypre solver."
     },
@@ -287,12 +286,6 @@
         "default": false,
         "type": "bool",
         "doc": "Whether or not to include nodal coarsening options."
-    },
-    {
-        "pointer": "/Hypre/dimension",
-        "default": 1,
-        "type": "int",
-        "doc": "Dimension of problem."
     },
     {
         "pointer": "/AMGCL/solver",
@@ -461,7 +454,6 @@
         "default": null,
         "type": "object",
         "optional": [
-            "block_dim",
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
@@ -469,17 +461,6 @@
             "use_preconditioned_residual_norm"
         ],
         "doc": "Settings for the MAS solver."
-    },
-    {
-        "pointer": "/MAS/block_dim",
-        "default": 1,
-        "type": "int",
-        "options": [
-            1,
-            2,
-            3
-        ],
-        "doc": "Block size of the BSR matrix PCG sovler internally use. Choose 3 for 3d problem, 2 for 2d, etc."
     },
     {
         "pointer": "/MAS/max_iter",
@@ -516,7 +497,6 @@
         "default": null,
         "type": "object",
         "optional": [
-            "block_dim",
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
@@ -532,12 +512,6 @@
             "additive_mode"
         ],
         "doc": "Settings for the CPUHybrid solver."
-    },
-    {
-        "pointer": "/CPUHybrid/block_dim",
-        "default": 1,
-        "type": "int",
-        "doc": "Block size of the system matrix. "
     },
     {
         "pointer": "/CPUHybrid/max_iter",
@@ -622,7 +596,6 @@
         "default": null,
         "type": "object",
         "optional": [
-            "block_dim",
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
@@ -638,12 +611,6 @@
             "additive_mode"
         ],
         "doc": "Settings for the GPUHybrid solver."
-    },
-    {
-        "pointer": "/GPUHybrid/block_dim",
-        "default": 1,
-        "type": "int",
-        "doc": "Block size of the system matrix. "
     },
     {
         "pointer": "/GPUHybrid/max_iter",

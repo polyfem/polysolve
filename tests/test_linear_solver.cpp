@@ -223,10 +223,10 @@ TEST_CASE("mas_block_dim", "[.][solver]")
     {
         auto solver = Solver::create("MAS", "");
         json params;
-        params["MAS"]["block_dim"] = block_dim;
         params["MAS"]["relative_tolerance"] = 0.0;
         params["MAS"]["absolute_tolerance"] = 1e-6;
         params["MAS"]["use_preconditioned_residual_norm"] = false;
+        solver->set_block_size(block_dim);
         solver->set_parameters(params);
 
         // Eigen::VectorXd b(A.rows());
@@ -264,10 +264,10 @@ TEST_CASE("hybrid_convergence", "[.][solver]")
     {
         auto solver = Solver::create(s, "");
         json params;
-        params[s]["block_size"] = 3;
         params[s]["relative_tolerance"] = 0;
         params[s]["absolute_tolerance"] = 1e-12;
 
+        solver->set_block_size(3);
         solver->set_parameters(params);
         Eigen::VectorXd b(A.rows());
         b.setRandom();
@@ -576,7 +576,7 @@ TEST_CASE("amgcl_blocksolver_small_scale", "[solver]")
         auto solver = Solver::create("AMGCL", "");
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
-        params["AMGCL"]["block_size"] = 3;
+        solver->set_block_size(3);
         solver->set_parameters(params);
         solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
@@ -634,7 +634,7 @@ TEST_CASE("amgcl_blocksolver_b2", "[solver]")
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 1000;
-        params["AMGCL"]["block_size"] = 2;
+        solver->set_block_size(2);
         solver->set_parameters(params);
         solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
@@ -676,7 +676,7 @@ TEST_CASE("amgcl_blocksolver_crystm03_CG", "[solver]")
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 1000;
-        params["AMGCL"]["block_size"] = 3;
+        solver->set_block_size(3);
         solver->set_parameters(params);
         solver->analyze_pattern(A, A.rows());
         solver->factorize(A);
@@ -740,8 +740,8 @@ TEST_CASE("amgcl_blocksolver_crystm03_Bicgstab", "[solver]")
         json params;
         params["AMGCL"]["tolerance"] = 1e-8;
         params["AMGCL"]["max_iter"] = 10000;
-        params["AMGCL"]["block_size"] = 3;
         params["AMGCL"]["solver_type"] = "bicgstab";
+        solver->set_block_size(3);
         solver->set_parameters(params);
         solver->analyze_pattern(A, A.rows());
         solver->factorize(A);

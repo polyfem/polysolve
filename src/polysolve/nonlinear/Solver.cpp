@@ -37,47 +37,48 @@ namespace polysolve::nonlinear
             const json &linear_solver_params,
             const double characteristic_length,
             spdlog::logger &logger,
-            const NormType norm_type)
+            const NormType norm_type,
+            const int dimension)
         {
             if (solver_name == "BFGS")
             {
                 return std::make_shared<BFGS>(
                     solver_params, linear_solver_params,
-                    characteristic_length, logger);
+                    characteristic_length, logger, dimension);
             }
 
             else if (solver_name == "DenseNewton" || solver_name == "dense_newton")
             {
-                return std::make_shared<Newton>(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<Newton>(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
             else if (solver_name == "DenseProjectedNewton")
             {
-                return std::make_shared<ProjectedNewton>(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<ProjectedNewton>(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
             else if (solver_name == "DenseRegularizedNewton")
             {
-                return std::make_shared<RegularizedNewton>(false, false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<RegularizedNewton>(false, false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
             else if (solver_name == "DenseRegularizedProjectedNewton")
             {
-                return std::make_shared<RegularizedNewton>(false, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<RegularizedNewton>(false, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
 
             else if (solver_name == "Newton" || solver_name == "SparseNewton" || solver_name == "sparse_newton")
             {
-                return std::make_shared<Newton>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<Newton>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
             else if (solver_name == "ProjectedNewton")
             {
-                return std::make_shared<ProjectedNewton>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<ProjectedNewton>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
             else if (solver_name == "RegularizedNewton")
             {
-                return std::make_shared<RegularizedNewton>(true, false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<RegularizedNewton>(true, false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
             else if (solver_name == "RegularizedProjectedNewton")
             {
-                return std::make_shared<RegularizedNewton>(true, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                return std::make_shared<RegularizedNewton>(true, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
 
             else if (solver_name == "LBFGS" || solver_name == "L-BFGS")
@@ -127,7 +128,8 @@ namespace polysolve::nonlinear
         const double characteristic_length,
         spdlog::logger &logger,
         const bool strict_validation,
-        const NormType norm_type)
+        const NormType norm_type,
+        const int dimension)
     {
         json solver_params = solver_params_in; // mutable copy
 
@@ -149,7 +151,7 @@ namespace polysolve::nonlinear
             for (const auto &j : solver_params["solver"])
             {
                 const std::string solver_name = j["type"];
-                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type));
+                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type, dimension));
             }
         }
         else
@@ -158,19 +160,19 @@ namespace polysolve::nonlinear
 
             if (solver_name == "DenseNewton" || solver_name == "dense_newton")
             {
-                auto n = Newton::create_solver(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                auto n = Newton::create_solver(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
                 for (auto &s : n)
                     solver->add_strategy(s);
             }
             else if (solver_name == "Newton" || solver_name == "SparseNewton" || solver_name == "sparse_newton")
             {
-                auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
                 for (auto &s : n)
                     solver->add_strategy(s);
             }
             else
             {
-                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type));
+                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension));
             }
 
             if (solver_name != "GradientDescent" && solver_name != "gradient_descent")

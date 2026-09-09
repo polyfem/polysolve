@@ -116,10 +116,6 @@ namespace polysolve::linear
             {
                 theta = params["GPUHybrid"]["theta"];
             }
-            if (params["GPUHybrid"].contains("block_dim"))
-            {
-                dimension_ = params["GPUHybrid"]["block_dim"];
-            }
             if (params["GPUHybrid"].contains("decompose_subdomains"))
             {
                 decompose_subdomains = params["GPUHybrid"]["decompose_subdomains"];
@@ -157,6 +153,11 @@ namespace polysolve::linear
                 additive_mode = params["GPUHybrid"]["additive_mode"];
             }
         }
+    }
+
+    void GPUHybridSolver::set_block_size(int block_size)
+    {
+        dimension_ = block_size;
     }
 
     void GPUHybridSolver::get_info(json &params) const

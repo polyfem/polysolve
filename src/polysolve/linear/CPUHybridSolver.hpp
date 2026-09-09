@@ -66,6 +66,7 @@ namespace polysolve::linear
         {
             CMD_CREATE,
             CMD_SET_PARAMETERS,
+            CMD_SET_BLOCK_SIZE,
             CMD_FACTORIZE,
             CMD_SOLVE,
             CMD_DESTROY,
@@ -103,6 +104,9 @@ namespace polysolve::linear
 
         // Set solver parameters
         virtual void set_parameters(const json &params) override;
+
+        // Set block size for multigrid solvers
+        virtual void set_block_size(int block_size) override;
 
         // Retrieve solve information
         virtual void get_info(json &params) const override;

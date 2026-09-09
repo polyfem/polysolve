@@ -61,11 +61,12 @@ namespace polysolve::linear
             {
                 interp_rbms = params["Hypre"]["interp_rbms"];
             }
-            if (params["Hypre"].contains("dimension"))
-            {
-                dimension_ = params["Hypre"]["dimension"];
-            }
         }
+    }
+
+    void HypreSolver::set_block_size(int block_size)
+    {
+        dimension_ = block_size;
     }
 
     void HypreSolver::get_info(json &params) const

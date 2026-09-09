@@ -146,7 +146,7 @@ namespace polysolve::linear
         }
     }
 
-    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation)
+    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation, const int dimension)
     {
         json params = params_in; // mutable copy
 
@@ -165,6 +165,7 @@ namespace polysolve::linear
         params = jse.inject_defaults(params, rules);
 
         auto res = create(params["solver"], params["precond"]);
+        res->set_block_size(dimension);
         res->set_parameters(params);
 
         return res;

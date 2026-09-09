@@ -131,10 +131,6 @@ namespace polysolve::linear
             {
                 theta = shared_params["CPUHybrid"]["theta"];
             }
-            if (shared_params["CPUHybrid"].contains("block_dim"))
-            {
-                dimension_ = shared_params["CPUHybrid"]["block_dim"];
-            }
             if (shared_params["CPUHybrid"].contains("decompose_subdomains"))
             {
                 decompose_subdomains = shared_params["CPUHybrid"]["decompose_subdomains"];
@@ -172,6 +168,22 @@ namespace polysolve::linear
                 additive_mode = shared_params["CPUHybrid"]["additive_mode"];
             }
         }
+    }
+
+    // Set block size for multigrid solvers
+    void CPUHybridSolver::set_block_size(int block_size)
+    {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_SET_BLOCK_SIZE;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
+        // Broadcast the block size itself, so worker ranks (which pass in a
+        // dummy value from run_worker_loop) end up with the root's value.
+        MPI_Bcast(&block_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        dimension_ = block_size;
     }
 
     void CPUHybridSolver::check_settings() const
@@ -1448,6 +1460,12 @@ namespace polysolve::linear
             {
                 json dummy_params;
                 worker_registry[id]->set_parameters(dummy_params);
+                break;
+            }
+            case CMD_SET_BLOCK_SIZE:
+            {
+                int dummy_block_size = 0;
+                worker_registry[id]->set_block_size(dummy_block_size);
                 break;
             }
             case CMD_FACTORIZE:

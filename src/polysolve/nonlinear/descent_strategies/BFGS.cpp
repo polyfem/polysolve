@@ -43,6 +43,10 @@ namespace polysolve::nonlinear
         }
         else
         {
+            const Eigen::VectorXi block_mapping = objFunc.block_mapping();
+            if (block_mapping.size() > 0)
+                linear_solver->set_block_mapping(block_mapping);
+
             try
             {
                 linear_solver->analyze_pattern_dense(hess, hess.rows());

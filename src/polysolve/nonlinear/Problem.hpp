@@ -39,6 +39,12 @@ namespace polysolve::nonlinear
         /// multigrid-style linear solvers.
         virtual int dimension() const { return 1; }
 
+        /// @brief Per-row function (block) assignment for multigrid-style linear
+        /// solvers, passed through to Solver::set_block_mapping. An empty vector
+        /// (the default) means the solver should fall back to its own default
+        /// mapping instead of a problem-specific one.
+        virtual Eigen::VectorXi block_mapping() const { return Eigen::VectorXi(); }
+
         /// @brief Initialize the problem.
         /// @param x0 Initial guess.
         virtual void init(const TVector &x0) {}

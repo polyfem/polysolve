@@ -57,8 +57,13 @@ namespace polysolve::linear
         conv_tol_ = 1e-8;
         max_iter_ = 50;
 
+#ifdef POLYSOLVE_LARGE_INDEX
+        asymmetric_solver_name_ = "Eigen::SparseLU";
+        symmetric_solver_name_ = "Eigen::SimplicialLDLT";
+#else
         asymmetric_solver_name_ = "Eigen::GMRES";
         symmetric_solver_name_ = "Eigen::GMRES";
+#endif
 
         asymmetric_solver_params_ = {"tolerance", 1e-4};
         symmetric_solver_params_ = {"tolerance", 1e-4};

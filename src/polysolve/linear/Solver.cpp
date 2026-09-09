@@ -548,7 +548,9 @@ namespace polysolve::linear
             "Eigen::CholmodSimplicialLDLT",
 #endif
 #ifdef POLYSOLVE_WITH_UMFPACK
+#ifndef POLYSOLVE_LARGE_INDEX
             "Eigen::UmfPackLU",
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_SUPERLU
             "Eigen::SuperLU",
@@ -594,10 +596,12 @@ namespace polysolve::linear
             "Eigen::DGMRES",
 #endif
 #endif
+#ifndef POLYSOLVE_LARGE_INDEX
             "Eigen::ConjugateGradient",
             "Eigen::BiCGSTAB",
             "Eigen::GMRES",
             "Eigen::MINRES",
+#endif
             "Eigen::PartialPivLU",
             "Eigen::FullPivLU",
             "Eigen::HouseholderQR",

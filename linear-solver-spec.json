@@ -16,7 +16,9 @@
             "Pardiso",
             "Hypre",
             "AMGCL",
-            "MAS"
+            "MAS",
+            "CPUHybrid",
+            "GPUHybrid"
         ],
         "doc": "Settings for the linear solver."
     },
@@ -49,7 +51,9 @@
             "Eigen::BiCGSTAB",
             "Eigen::GMRES",
             "Eigen::MINRES",
-            "MAS"
+            "MAS",
+            "CPUHybrid",
+            "GPUHybrid"
         ]
     },
     {
@@ -506,5 +510,217 @@
         "default": false,
         "type": "bool",
         "doc": "Use preconditioned residual norm for termination check."
+    },
+    {
+        "pointer": "/CPUHybrid",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "block_dim",
+            "max_iter",
+            "relative_tolerance",
+            "absolute_tolerance",
+            "theta",
+            "decompose_subdomains",
+            "min_subdomain_size",
+            "max_subdomain_size",
+            "expand_subdomains",
+            "gmm_jump_threshold",
+            "gmm_tol",
+            "max_gmm_iterations",
+            "conditioning_threshold",
+            "additive_mode"
+        ],
+        "doc": "Settings for the CPUHybrid solver."
+    },
+    {
+        "pointer": "/CPUHybrid/block_dim",
+        "default": 1,
+        "type": "int",
+        "doc": "Block size of the system matrix. "
+    },
+    {
+        "pointer": "/CPUHybrid/max_iter",
+        "default": 10000,
+        "type": "int",
+        "doc": "Maximum number of PCG iterations. "
+    },
+    {
+        "pointer": "/CPUHybrid/relative_tolerance",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Relative tolerance for solver convergence."
+    },
+    {
+        "pointer": "/CPUHybrid/absolute_tolerance",
+        "default": 0,
+        "type": "float",
+        "doc": "Absolute tolerance for solver convergence."
+    },
+    {
+        "pointer": "/CPUHybrid/theta",
+        "default": 0.5,
+        "type": "float",
+        "doc": "Strong threshold for AMG."
+    },
+    {
+        "pointer": "/CPUHybrid/decompose_subdomains",
+        "default": true,
+        "type": "bool",
+        "doc": "Whether to decompose the problematic subspace into independent clusters."
+    },
+    {
+        "pointer": "/CPUHybrid/min_subdomain_size",
+        "default": 3,
+        "type": "int",
+        "doc": "Minimum number of degrees of freedom or elements in a subdomain."
+    },
+    {
+        "pointer": "/CPUHybrid/max_subdomain_size",
+        "default": 1000000000,
+        "type": "int",
+        "doc": "Maximum number of degrees of freedom or elements in a subdomain."
+    },
+    {
+        "pointer": "/CPUHybrid/expand_subdomains",
+        "default": true,
+        "type": "bool",
+        "doc": "Enables one layer BFS expansion of subdomains to improve convergence."
+    },
+    {
+        "pointer": "/CPUHybrid/gmm_jump_threshold",
+        "default": 10.0,
+        "type": "float",
+        "doc": "Threshold ratio for detecting row norm jumps in GMM."
+    },
+    {
+        "pointer": "/CPUHybrid/gmm_tol",
+        "default": 1e-3,
+        "type": "float",
+        "doc": "Tolerance for the Gaussian Mixture Model. "
+    },
+    {
+        "pointer": "/CPUHybrid/max_gmm_iterations",
+        "default": 20,
+        "type": "int",
+        "doc": "Maximum number of iterations allowed for the GMM routine."
+    },
+    {
+        "pointer": "/CPUHybrid/conditioning_threshold",
+        "default": 100,
+        "type": "float",
+        "doc": "Minimal worst-case condition number to include in subspace correction. "
+    },
+    {
+        "pointer": "/CPUHybrid/additive_mode",
+        "default": false,
+        "type": "bool",
+        "doc": "Apply subspace correction additively. "
+    },
+    {
+        "pointer": "/GPUHybrid",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "block_dim",
+            "max_iter",
+            "relative_tolerance",
+            "absolute_tolerance",
+            "theta",
+            "decompose_subdomains",
+            "min_subdomain_size",
+            "max_subdomain_size",
+            "expand_subdomains",
+            "gmm_jump_threshold",
+            "gmm_tol",
+            "max_gmm_iterations",
+            "conditioning_threshold",
+            "additive_mode"
+        ],
+        "doc": "Settings for the GPUHybrid solver."
+    },
+    {
+        "pointer": "/GPUHybrid/block_dim",
+        "default": 1,
+        "type": "int",
+        "doc": "Block size of the system matrix. "
+    },
+    {
+        "pointer": "/GPUHybrid/max_iter",
+        "default": 10000,
+        "type": "int",
+        "doc": "Maximum number of PCG iterations. "
+    },
+    {
+        "pointer": "/GPUHybrid/relative_tolerance",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Relative tolerance for solver convergence."
+    },
+    {
+        "pointer": "/GPUHybrid/absolute_tolerance",
+        "default": 0,
+        "type": "float",
+        "doc": "Absolute tolerance for solver convergence."
+    },
+    {
+        "pointer": "/GPUHybrid/theta",
+        "default": 0.5,
+        "type": "float",
+        "doc": "Strong threshold for AMG."
+    },
+    {
+        "pointer": "/GPUHybrid/decompose_subdomains",
+        "default": true,
+        "type": "bool",
+        "doc": "Whether to decompose the problematic subspace into independent clusters."
+    },
+    {
+        "pointer": "/GPUHybrid/min_subdomain_size",
+        "default": 3,
+        "type": "int",
+        "doc": "Minimum number of degrees of freedom or elements in a subdomain."
+    },
+    {
+        "pointer": "/GPUHybrid/max_subdomain_size",
+        "default": 1000000000,
+        "type": "int",
+        "doc": "Maximum number of degrees of freedom or elements in a subdomain."
+    },
+    {
+        "pointer": "/GPUHybrid/expand_subdomains",
+        "default": true,
+        "type": "bool",
+        "doc": "Enables one layer BFS expansion of subdomains to improve convergence."
+    },
+    {
+        "pointer": "/GPUHybrid/gmm_jump_threshold",
+        "default": 10.0,
+        "type": "float",
+        "doc": "Threshold ratio for detecting row norm jumps in GMM."
+    },
+    {
+        "pointer": "/GPUHybrid/gmm_tol",
+        "default": 1e-3,
+        "type": "float",
+        "doc": "Tolerance for the Gaussian Mixture Model. "
+    },
+    {
+        "pointer": "/GPUHybrid/max_gmm_iterations",
+        "default": 20,
+        "type": "int",
+        "doc": "Maximum number of iterations allowed for the GMM routine."
+    },
+    {
+        "pointer": "/GPUHybrid/conditioning_threshold",
+        "default": 100,
+        "type": "float",
+        "doc": "Minimal worst-case condition number to include in subspace correction. "
+    },
+    {
+        "pointer": "/GPUHybrid/additive_mode",
+        "default": false,
+        "type": "bool",
+        "doc": "Apply subspace correction additively. "
     }
 ]

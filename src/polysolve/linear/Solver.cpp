@@ -45,7 +45,11 @@ namespace polysolve::linear
 #include <Eigen/SuperLUSupport>
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+#ifndef POLYSOLVE_LARGE_INDEX
+// Eigen's PardisoSupport only specializes for int/long long indices, not the
+// std::ptrdiff_t (long) StiffnessMatrix used with POLYSOLVE_LARGE_INDEX.
 #include <Eigen/PardisoSupport>
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
 #include "Pardiso.hpp"
@@ -61,6 +65,15 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_MAS
 #include "MASSolver.hpp"
+#endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+#include "CPUHybridSolver.hpp"
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+#include "GPUHybridSolver.hpp"
+#endif
+#ifdef POLYSOLVE_WITH_CUDSS
+#include "cuDSS.hpp"
 #endif
 
 #include <unsupported/Eigen/IterativeSolvers>
@@ -368,6 +381,7 @@ namespace polysolve::linear
             RETURN_DIRECT_SOLVER_PTR(SPQR, "Eigen::SPQR");
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+#ifndef POLYSOLVE_LARGE_INDEX
         }
         else if (solver == "Eigen::PardisoLLT")
         {
@@ -380,6 +394,7 @@ namespace polysolve::linear
         else if (solver == "Eigen::PardisoLU")
         {
             RETURN_DIRECT_SOLVER_PTR(PardisoLU, "Eigen::PardisoLU");
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
         }
@@ -402,6 +417,24 @@ namespace polysolve::linear
         else if (solver == "MAS")
         {
             return std::make_unique<MASSolver>();
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+        }
+        else if (solver == "GPUHybrid")
+        {
+            return std::make_unique<GPUHybridSolver>();
+#endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+        }
+        else if (solver == "CPUHybrid")
+        {
+            return std::make_unique<CPUHybridSolver>();
+#endif
+#ifdef POLYSOLVE_WITH_CUDSS
+        }
+        else if (solver == "cuDSS")
+        {
+            return std::make_unique<cuDSSSolver>();
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
@@ -524,9 +557,11 @@ namespace polysolve::linear
             "Eigen::SPQR",
 #endif
 #ifdef POLYSOLVE_WITH_MKL
+#ifndef POLYSOLVE_LARGE_INDEX
             "Eigen::PardisoLLT",
             "Eigen::PardisoLDLT",
             "Eigen::PardisoLU",
+#endif
 #endif
 #ifdef POLYSOLVE_WITH_PARDISO
             "Pardiso",
@@ -537,6 +572,15 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_MAS
             "MAS",
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+            "GPUHybrid",
+#endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+            "CPUHybrid",
+#endif
+#ifdef POLYSOLVE_WITH_CUDSS
+            "cuDSS",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

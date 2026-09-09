@@ -21,21 +21,15 @@ namespace polysolve::linear
         MPI_Initialized(&done_already);
         if (!done_already)
         {
-            /* Initialize MPI */
-            int argc = 1;
-            char name[] = "";
-            char *argv[] = {name};
-            char **argvv = &argv[0];
-            int myid, num_procs;
-            MPI_Init(&argc, &argvv);
-            MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-            MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+            MPI_Init(nullptr, nullptr);
         }
 #endif
         if (!HYPRE_Initialized())
         {
             HYPRE_Initialize();
         }
+        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
     }
 
     // Set solver parameters
@@ -135,7 +129,11 @@ namespace polysolve::linear
 
         void eigen_to_hypre_par_vec(HYPRE_ParVector &par_x, HYPRE_IJVector &ij_x, const Eigen::VectorXd &x)
         {
+#ifdef HYPRE_ENABLE_MPI
+            HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, x.size() - 1, &ij_x);
+#else
             HYPRE_IJVectorCreate(0, 0, x.size() - 1, &ij_x);
+#endif
             HYPRE_IJVectorSetObjectType(ij_x, HYPRE_PARCSR);
             HYPRE_IJVectorInitialize(ij_x);
 
@@ -155,7 +153,7 @@ namespace polysolve::linear
             // AMG coarsening options:
             int coarsen_type = 10; // 10 = HMIS, 8 = PMIS, 6 = Falgout, 0 = CLJP
             int agg_levels = 1;    // number of aggressive coarsening levels
-            double theta = 0.5;   // strength threshold: 0.25, 0.5, 0.8
+            double theta = 0.5;    // strength threshold: 0.25, 0.5, 0.8
 
             // AMG interpolation options:
             int interp_type = 6; // 6 = extended+i, 0 = classical
@@ -208,7 +206,7 @@ namespace polysolve::linear
             // refinement (this is generally applicable for any system)
             int interp_refine = 1;
 
-            if (nodal_coarsening) 
+            if (nodal_coarsening)
             {
                 HYPRE_BoomerAMGSetNodal(amg_precond, nodal);
                 HYPRE_BoomerAMGSetNodalDiag(amg_precond, nodal_diag);
@@ -243,16 +241,16 @@ namespace polysolve::linear
 
                 for (int i = 0; i < positions.rows(); ++i)
                 {
-                    rbm_xy(0 + i*dim) = positions(i, 1);
-                    rbm_xy(1 + i*dim) = -1 * positions(i, 0);
+                    rbm_xy(0 + i * dim) = positions(i, 1);
+                    rbm_xy(1 + i * dim) = -1 * positions(i, 0);
 
                     if (dim == 3)
                     {
-                        rbm_zx(1 + i*dim) = positions(i, 2);
-                        rbm_zx(2 + i*dim) = -1 * positions(i, 1);
+                        rbm_zx(1 + i * dim) = positions(i, 2);
+                        rbm_zx(2 + i * dim) = -1 * positions(i, 1);
 
-                        rbm_yz(2 + i*dim) = positions(i, 0);
-                        rbm_yz(0 + i*dim) = -1 * positions(i, 2);
+                        rbm_yz(2 + i * dim) = positions(i, 0);
+                        rbm_yz(0 + i * dim) = -1 * positions(i, 2);
                     }
                 }
 

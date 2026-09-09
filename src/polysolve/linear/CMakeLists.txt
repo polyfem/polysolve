@@ -15,7 +15,25 @@ set(SOURCES
     Pardiso.hpp
     SaddlePointSolver.cpp
     SaddlePointSolver.hpp
+    hybrid_utils/DisjointSet.cpp
+    hybrid_utils/DisjointSet.hpp
 )
+
+if(POLYSOLVE_WITH_CUDA)
+    list(APPEND SOURCES
+        GPUHybridSolver.cu
+        GPUHybridSolver.hpp
+        cuDSS.hpp
+        cuDSS.cpp
+    )
+endif()
+
+if(POLYSOLVE_WITH_MPI)
+    list(APPEND SOURCES
+        CPUHybridSolver.cpp
+        CPUHybridSolver.hpp
+    )
+endif()
 
 if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
     list(APPEND SOURCES

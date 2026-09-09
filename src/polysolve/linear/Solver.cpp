@@ -62,6 +62,15 @@ namespace polysolve::linear
 #ifdef POLYSOLVE_WITH_MAS
 #include "MASSolver.hpp"
 #endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+#include "CPUHybridSolver.hpp"
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+#include "GPUHybridSolver.hpp"
+#endif
+#ifdef POLYSOLVE_WITH_CUDSS
+#include "cuDSS.hpp"
+#endif
 
 #include <unsupported/Eigen/IterativeSolvers>
 
@@ -403,6 +412,24 @@ namespace polysolve::linear
         {
             return std::make_unique<MASSolver>();
 #endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+        }
+        else if (solver == "GPUHybrid")
+        {
+            return std::make_unique<GPUHybridSolver>();
+#endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+        }
+        else if (solver == "CPUHybrid")
+        {
+            return std::make_unique<CPUHybridSolver>();
+#endif
+#ifdef POLYSOLVE_WITH_CUDSS
+        }
+        else if (solver == "cuDSS")
+        {
+            return std::make_unique<cuDSSSolver>();
+#endif
 #ifdef POLYSOLVE_WITH_HYPRE
         }
         else if (solver == "Hypre")
@@ -537,6 +564,15 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_MAS
             "MAS",
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+            "GPUHybrid",
+#endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+            "CPUHybrid",
+#endif
+#ifdef POLYSOLVE_WITH_CUDSS
+            "cuDSS",
 #endif
 #ifdef POLYSOLVE_WITH_HYPRE
             "Hypre",

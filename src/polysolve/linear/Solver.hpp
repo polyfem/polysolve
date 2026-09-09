@@ -113,7 +113,7 @@ namespace polysolve::linear
         /// If the problem is nullspace for multigrid solvers
         virtual void set_is_nullspace(const VectorXd &x) {}
 
-        /// Set solver tolerance 
+        /// Set solver tolerance
         virtual void set_tolerance(const double tol) {}
 
         ///

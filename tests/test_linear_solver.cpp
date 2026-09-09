@@ -134,6 +134,12 @@ TEST_CASE("all", "[solver]")
             params[s]["use_preconditioned_residual_norm"] = false;
             solver->set_parameters(params);
         }
+        else if (s == "GPUHybrid" || s == "CPUHybrid")
+        {
+            params[s]["relative_tolerance"] = 0.0;
+            params[s]["absolute_tolerance"] = 1e-8;
+            solver->set_parameters(params);
+        }
         Eigen::VectorXd b(A.rows());
         b.setRandom();
         Eigen::VectorXd x(b.size());
@@ -235,6 +241,51 @@ TEST_CASE("mas_block_dim", "[.][solver]")
         const double err = (A * x - b).norm();
         INFO("block_dim: " + std::to_string(block_dim));
         REQUIRE(err < 1e-6);
+    }
+}
+
+TEST_CASE("hybrid_convergence", "[.][solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_contact.mtx");
+    REQUIRE(ok);
+    json solver_info;
+
+    std::vector<std::string> solvers;
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+    solvers.push_back("CPUHybrid");
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+    solvers.push_back("GPUHybrid");
+#endif
+
+    for (const auto &s : solvers)
+    {
+        auto solver = Solver::create(s, "");
+        json params;
+        params[s]["block_size"] = 3;
+        params[s]["relative_tolerance"] = 0;
+        params[s]["absolute_tolerance"] = 1e-12;
+
+        solver->set_parameters(params);
+        Eigen::VectorXd b(A.rows());
+        b.setRandom();
+        Eigen::VectorXd x(b.size());
+        x.setZero();
+
+        solver->analyze_pattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+
+        REQUIRE(solver->name() == s);
+
+        solver->get_info(solver_info);
+
+        const double err = (A * x - b).norm();
+        INFO("solver: " + s);
+        REQUIRE(err < 1e-4);
+        REQUIRE(solver_info["num_iterations"] < 500);
     }
 }
 

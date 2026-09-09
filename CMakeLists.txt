@@ -72,12 +72,19 @@ else()
     set(POLYSOLVE_ON_APPLE_SILICON OFF)
 endif()
 
+if(NOT WIN32)
+    set(POLYSOLVE_WITH_MPI_DEFAULT ON)
+else()
+    set(POLYSOLVE_WITH_MPI_DEFAULT OFF)
+endif()
+
 # Polysolve options
 option(POLYSOLVE_WITH_SANITIZERS    "Enable sanitizers in compilation targets"          OFF)
 option(POLYSOLVE_WITH_UNICODE       "Use Unicode in logging messages"                    ON)
 option(POLYSOLVE_WITH_CUDA          "Enable cuda support"                               OFF)
 
 # Polysolve options for enabling/disabling optional libraries
+option(POLYSOLVE_WITH_MPI           "Enable MPI support"      ${POLYSOLVE_WITH_MPI_DEFAULT})
 option(POLYSOLVE_WITH_ACCELERATE    "Enable Apple Accelerate" ${POLYSOLVE_ON_APPLE_SILICON})
 option(POLYSOLVE_WITH_CHOLMOD       "Enable Cholmod library"                             ON)
 option(POLYSOLVE_WITH_UMFPACK       "Enable UmfPack library"                             ON)
@@ -170,6 +177,18 @@ if (POLYSOLVE_WITH_CUDA)
 endif()
 
 ################################################################################
+# MPI
+################################################################################
+
+# MPI here is nano-mpi: ranks are threads of this process, so there is no MPI
+# installation to look for and nothing for the user to launch. The recipe brings
+# it in and puts a FindMPI shim on the module path so that dependencies calling
+# find_package(MPI) -- hypre does -- resolve to it.
+if(POLYSOLVE_WITH_MPI)
+    include(nanompi)
+endif()
+
+################################################################################
 # PolySolve Library
 ################################################################################
 
@@ -247,6 +266,21 @@ if(POLYSOLVE_WITH_CUDA)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDA)
 endif()
 
+if(POLYSOLVE_WITH_CUDA AND NOT POLYSOLVE_LARGE_INDEX)
+  target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_CUDSS)
+  target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDSS)
+endif()
+
+if(POLYSOLVE_WITH_CUDA AND NOT POLYSOLVE_LARGE_INDEX)
+  target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_GPU_HYBRID)
+  target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_GPU_HYBRID)
+endif()
+
+if(POLYSOLVE_WITH_MPI AND NOT POLYSOLVE_LARGE_INDEX)
+  target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_CPU_HYBRID)
+  target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CPU_HYBRID)
+endif()
+
 # Graph partition library Kaminpar does not support windows.
 if(POLYSOLVE_WITH_CUDA AND NOT WIN32)
   target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_MAS)
@@ -256,6 +290,12 @@ endif()
 ################################################################################
 # Dependencies
 ################################################################################
+
+# cuDSS
+if (POLYSOLVE_WITH_CUDA)
+  include(cudss)
+  target_link_libraries(polysolve_linear PRIVATE cudss)
+endif()
 
 # CCCL
 if(POLYSOLVE_WITH_CUDA)
@@ -274,6 +314,17 @@ endif()
 # ------
 # Linear
 # ------
+
+if(POLYSOLVE_WITH_MPI)
+    message(STATUS "MPI enabled for PolySolve.")
+    
+    # nanompi::nanompi, not MPI::MPI_CXX: the shim's MPI target carries only the
+    # header path, for the try_compile reason spelled out there.
+    target_link_libraries(polysolve_linear PUBLIC nanompi::nanompi)
+    
+    # Define POLYSOLVE_WITH_MPI for your C++ #ifdef checks
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_MPI)
+endif()
 
 # Accelerate solver (Include before Eigen)
 if(POLYSOLVE_WITH_ACCELERATE)

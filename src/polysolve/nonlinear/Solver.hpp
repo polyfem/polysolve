@@ -78,12 +78,18 @@ namespace polysolve::nonlinear
         void set_line_search(const json &params);
         const json &info() const { return solver_info; }
 
+        void set_iteration_callback(std::function<bool(const Criteria &)> callback) { m_iteration_callback = callback; }
+
+        /// @brief Set a filter applied to every computed update direction
+        ///        before it is vetted and line-searched (e.g. one-sided
+        ///        projection of constraint-violating components).
+        void set_direction_filter(std::function<void(const TVector &, TVector &)> filter) { m_direction_filter = filter; }
+
         /// @brief If true the solver will not throw an error if the maximum number of iterations is reached
         bool allow_out_of_iterations = false;
 
         /// @brief If true, converging via a non-gradient criterion (e.g., x/f delta tolerance) is logged as a success instead of an error
         bool allow_non_grad_convergence = false;
-
 
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
@@ -94,7 +100,7 @@ namespace polysolve::nonlinear
         }
 
     protected:
-        /// @brief Compute direction in which the argument should be updated 
+        /// @brief Compute direction in which the argument should be updated
         /// @param objFunc Problem to be minimized
         /// @param x Current input (n x 1)
         /// @param grad Gradient at current step (n x 1)
@@ -129,8 +135,8 @@ namespace polysolve::nonlinear
         Criteria m_stop_rescaled;
 
         /// @brief Current criteria
-        Criteria m_current;
 
+        Criteria m_current;
         /// @brief Current status
         Status m_status = Status::NotStarted;
 
@@ -164,7 +170,7 @@ namespace polysolve::nonlinear
         // ====================================================================
         //                           Solver state
         // ====================================================================
-        
+
         /// @brief Reset the solver at the start of a minimization
         /// @param ndof number of degrees of freedom
         void reset(const int ndof);
@@ -176,12 +182,16 @@ namespace polysolve::nonlinear
 
         std::vector<int> m_iter_per_strategy;
 
+        std::function<bool(const Criteria &)> m_iteration_callback = nullptr;
+
+        std::function<void(const TVector &, TVector &)> m_direction_filter = nullptr;
+
         // ====================================================================
         //                            Solver info
         // ====================================================================
 
         /// @brief Update solver info JSON object
-        /// @param energy 
+        /// @param energy
         void update_solver_info(const double energy);
 
         /// @brief Reset timing members to 0

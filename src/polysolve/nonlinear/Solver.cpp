@@ -299,6 +299,7 @@ namespace polysolve::nonlinear
                 POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
                 energy = objFunc(x);
             }
+            m_current.energy = energy;
 
             if (!std::isfinite(energy))
             {
@@ -354,6 +355,12 @@ namespace polysolve::nonlinear
                 update_direction_successful = compute_update_direction(objFunc, x, grad, delta_x);
             }
 
+            // Optional caller-installed filter (e.g. projecting out the
+            // closing components of contact pairs pinned at a numerical
+            // floor) applied before the direction is vetted and searched.
+            if (m_direction_filter && update_direction_successful)
+                m_direction_filter(x, delta_x);
+
             m_current.xDelta = objFunc.step_norm(delta_x, m_norm_type);
             if (m_current.iterations == 0)
             {
@@ -386,7 +393,19 @@ namespace polysolve::nonlinear
                 continue;
             }
 
-            m_current.xDeltaDotGrad = delta_x.dot(grad);
+            // With a direction filter installed, descent must be measured on
+            // the constrained manifold: project the steepest-descent
+            // direction through the same filter and test against that.
+            // Otherwise a correctly filtered direction is rejected against
+            // gradient components that live in the removed subspace.
+            if (m_direction_filter)
+            {
+                TVector neg_grad = -grad;
+                m_direction_filter(x, neg_grad);
+                m_current.xDeltaDotGrad = -delta_x.dot(neg_grad);
+            }
+            else
+                m_current.xDeltaDotGrad = delta_x.dot(grad);
 
             if (m_stop_rescaled.newtonDecrement > 0)
             {
@@ -454,6 +473,7 @@ namespace polysolve::nonlinear
                 POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
                 rate = m_line_search->line_search(x, delta_x, objFunc);
             }
+            m_current.alpha = rate;
 
             if (std::isnan(rate))
             {
@@ -507,6 +527,7 @@ namespace polysolve::nonlinear
             // Post update
             // -----------
             const double step = (rate * delta_x).norm();
+            m_current.step = step;
 
             // m_logger.debug("[{}][{}] rate={:g} ‖step‖={:g}",
             //                descent_strategy_name(), m_line_search->name(), rate, step);
@@ -521,6 +542,12 @@ namespace polysolve::nonlinear
             }
 
             m_current.fDeltaCount = (m_current.fDelta < m_stop_rescaled.fDelta) ? (m_current.fDeltaCount + 1) : 0;
+
+            if (m_iteration_callback && m_iteration_callback(m_current))
+            {
+                m_status = Status::ObjectiveCustomStop;
+                m_logger.debug("[{}][{}] Iteration callback decided to stop", descent_strategy_name(), m_line_search->name());
+            }
 
             m_logger.debug(
                 "[{}][{}] {} (stopping criteria: {})",

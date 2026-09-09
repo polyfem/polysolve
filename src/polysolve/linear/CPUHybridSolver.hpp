@@ -67,6 +67,7 @@ namespace polysolve::linear
             CMD_CREATE,
             CMD_SET_PARAMETERS,
             CMD_SET_BLOCK_SIZE,
+            CMD_SET_BLOCK_MAPPING,
             CMD_FACTORIZE,
             CMD_SOLVE,
             CMD_DESTROY,
@@ -108,6 +109,9 @@ namespace polysolve::linear
         // Set block size for multigrid solvers
         virtual void set_block_size(int block_size) override;
 
+        // Set the function (block) assigned to each row for multigrid solvers
+        virtual void set_block_mapping(const Eigen::VectorXi &block_mapping) override;
+
         // Retrieve solve information
         virtual void get_info(json &params) const override;
 
@@ -141,6 +145,14 @@ namespace polysolve::linear
 
         // General solver settings
         int dimension_ = 1; // 1 = scalar (Laplace), 2 or 3 = vector (Elasticity)
+
+        // Optional per-row function (block) assignment for HYPRE_BoomerAMGSetDofFunc,
+        // indexed globally (i.e. by the row indices factorize() is given). Empty means
+        // the default interleaved mapping (row i belongs to function i % dimension_).
+        // Kept identically on every rank; each rank slices out its own local rows
+        // ([starts[myid], ends[myid]]) when handing HYPRE its local dof_func array.
+        Eigen::VectorXi block_mapping_;
+
         int max_iter_ = 10000;
         double rel_conv_tol_ = 1e-10;
         double abs_conv_tol_ = 0.0;

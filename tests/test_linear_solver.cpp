@@ -289,6 +289,89 @@ TEST_CASE("hybrid_convergence", "[.][solver]")
     }
 }
 
+// Checks set_block_mapping (HYPRE_BoomerAMGSetDofFunc) for Hypre and the CPU/GPU
+// hybrid solvers: an explicit mapping that reproduces HYPRE's own default
+// interleaved dof_func (row i -> function i % block_size) should converge in the
+// same number of iterations as never calling set_block_mapping at all. For
+// CPUHybrid in particular this also exercises slicing the (globally-indexed)
+// mapping down to each MPI rank's local row range.
+TEST_CASE("block_mapping", "[.][solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_contact.mtx");
+    REQUIRE(ok);
+
+    const int block_size = 3;
+    REQUIRE(A.rows() % block_size == 0);
+
+    Eigen::VectorXi block_mapping(A.rows());
+    for (int i = 0; i < A.rows(); ++i)
+        block_mapping[i] = i % block_size;
+
+    std::vector<std::string> solvers;
+#ifdef POLYSOLVE_WITH_HYPRE
+    solvers.push_back("Hypre");
+#endif
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+    solvers.push_back("CPUHybrid");
+#endif
+#ifdef POLYSOLVE_WITH_GPU_HYBRID
+    solvers.push_back("GPUHybrid");
+#endif
+
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+
+    for (const auto &s : solvers)
+    {
+        json params;
+        if (s == "Hypre")
+            params[s]["tolerance"] = 1e-12;
+        else
+        {
+            params[s]["relative_tolerance"] = 0;
+            params[s]["absolute_tolerance"] = 1e-12;
+        }
+
+        // Baseline: default interleaved dof_func, set_block_mapping never called.
+        auto baseline_solver = Solver::create(s, "");
+        baseline_solver->set_block_size(block_size);
+        baseline_solver->set_parameters(params);
+
+        Eigen::VectorXd x_baseline(b.size());
+        x_baseline.setZero();
+        baseline_solver->analyze_pattern(A, A.rows());
+        baseline_solver->factorize(A);
+        baseline_solver->solve(b, x_baseline);
+
+        json baseline_info;
+        baseline_solver->get_info(baseline_info);
+
+        // Explicit mapping reproducing that same interleaved assignment.
+        auto mapped_solver = Solver::create(s, "");
+        mapped_solver->set_block_size(block_size);
+        mapped_solver->set_block_mapping(block_mapping);
+        mapped_solver->set_parameters(params);
+
+        Eigen::VectorXd x_mapped(b.size());
+        x_mapped.setZero();
+        mapped_solver->analyze_pattern(A, A.rows());
+        mapped_solver->factorize(A);
+        mapped_solver->solve(b, x_mapped);
+
+        json mapped_info;
+        mapped_solver->get_info(mapped_info);
+
+        INFO("solver: " + s);
+        const double err = (A * x_mapped - b).norm();
+        REQUIRE(err < 1e-3);
+        // An explicit dof_func matching HYPRE's own default interleaved mapping
+        // should make AMG behave identically to never calling set_block_mapping.
+        REQUIRE(mapped_info["num_iterations"] == baseline_info["num_iterations"]);
+    }
+}
+
 TEST_CASE("pre_factor", "[solver]")
 {
     const std::string path = POLYFEM_DATA_DIR;

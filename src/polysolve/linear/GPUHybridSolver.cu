@@ -30,6 +30,11 @@
 
 #include <spdlog/spdlog.h>
 
+// Internal header, needed for hypre_CTAlloc/hypre_TFree/hypre_TMemcpy so the
+// dof_func array handed to HYPRE_BoomerAMGSetDofFunc uses the allocator HYPRE
+// itself frees it with (and lives in the device memory HYPRE expects here).
+#include "_hypre_utilities.h"
+
 #ifdef HYPRE_ENABLE_MPI
 #include <mpi.h>
 #endif
@@ -158,6 +163,11 @@ namespace polysolve::linear
     void GPUHybridSolver::set_block_size(int block_size)
     {
         dimension_ = block_size;
+    }
+
+    void GPUHybridSolver::set_block_mapping(const Eigen::VectorXi &block_mapping)
+    {
+        block_mapping_ = block_mapping;
     }
 
     void GPUHybridSolver::get_info(json &params) const
@@ -297,8 +307,6 @@ namespace polysolve::linear
             // Make sure the systems AMG options are set
             HYPRE_BoomerAMGSetNumFunctions(amg_precond, dim);
 
-            // HYPRE_BoomerAMGSetDofFunc(amg_precond, (HYPRE_Int*) dof_to_function.data());
-
             // More robust options with respect to convergence
             HYPRE_BoomerAMGSetAggNumLevels(amg_precond, 0);
             HYPRE_BoomerAMGSetStrongThreshold(amg_precond, theta);
@@ -333,6 +341,24 @@ namespace polysolve::linear
                     precond,
                     dimension_,
                     theta);
+
+                if (block_mapping_.size() > 0)
+                {
+                    assert(block_mapping_.size() == b.size());
+
+                    // HYPRE_MEMORY_DEVICE is the active memory location here (see the
+                    // constructor), so the array must live on the GPU. Build it on the
+                    // host first, then copy it over with HYPRE's own allocator/copy so
+                    // HYPRE can free it (via hypre_TFree) when the AMG precond is destroyed.
+                    std::vector<HYPRE_Int> dof_func_host(b.size());
+                    for (int i = 0; i < b.size(); ++i)
+                        dof_func_host[i] = block_mapping_[i];
+
+                    HYPRE_Int *dof_func = hypre_CTAlloc(HYPRE_Int, b.size(), HYPRE_MEMORY_DEVICE);
+                    hypre_TMemcpy(dof_func, dof_func_host.data(), HYPRE_Int, b.size(),
+                                  HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                    HYPRE_BoomerAMGSetDofFunc(precond, dof_func);
+                }
             }
 
             HYPRE_BoomerAMGSetup(precond, parcsr_A, par_b, par_x);

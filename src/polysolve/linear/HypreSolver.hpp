@@ -41,6 +41,9 @@ namespace polysolve::linear
         // Set block size for multigrid solvers
         virtual void set_block_size(int block_size) override;
 
+        // Set the function (block) assigned to each row for multigrid solvers
+        virtual void set_block_mapping(const Eigen::VectorXi &block_mapping) override;
+
         // Retrieve memory information from Pardiso
         virtual void get_info(json &params) const override;
 
@@ -75,6 +78,10 @@ namespace polysolve::linear
     private:
         bool has_matrix_ = false;
         int precond_num_;
+
+        // Optional per-row function (block) assignment for HYPRE_BoomerAMGSetDofFunc.
+        // Empty means the default interleaved mapping (row i belongs to function i % dimension_).
+        Eigen::VectorXi block_mapping_;
 
         HYPRE_IJMatrix A;
         HYPRE_ParCSRMatrix parcsr_A;

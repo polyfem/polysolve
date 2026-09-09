@@ -46,6 +46,9 @@ namespace polysolve::linear
         // Set block size for multigrid solvers
         virtual void set_block_size(int block_size) override;
 
+        // Set the function (block) assigned to each row for multigrid solvers
+        virtual void set_block_mapping(const Eigen::VectorXi &block_mapping) override;
+
         // Retrieve solve information
         virtual void get_info(json &params) const override;
 
@@ -79,6 +82,10 @@ namespace polysolve::linear
 
         // General solver settings
         int dimension_ = 1; // 1 = scalar (Laplace), 2 or 3 = vector (Elasticity)
+
+        // Optional per-row function (block) assignment for HYPRE_BoomerAMGSetDofFunc.
+        // Empty means the default interleaved mapping (row i belongs to function i % dimension_).
+        Eigen::VectorXi block_mapping_;
         int max_iter_ = 10000;
         double rel_conv_tol_ = 1e-10;
         double abs_conv_tol_ = 0.0;

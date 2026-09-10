@@ -28,7 +28,7 @@ if(POLYSOLVE_WITH_CUDA)
     )
 endif()
 
-if(POLYSOLVE_WITH_MPI)
+if(POLYSOLVE_WITH_MPI AND NOT POLYSOLVE_LARGE_INDEX)
     list(APPEND SOURCES
         CPUHybridSolver.cpp
         CPUHybridSolver.hpp

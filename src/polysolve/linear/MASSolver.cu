@@ -197,8 +197,6 @@ namespace polysolve::linear
 
         void set_parameters(const json &params)
         {
-            if (params.contains("block_dim"))
-                block_dim_ = params["block_dim"];
             if (params.contains("max_iter"))
                 max_iter_ = params["max_iter"];
             if (params.contains("relative_tolerance"))
@@ -209,6 +207,11 @@ namespace polysolve::linear
                 lazy_partitioning_ = params["lazy_partitioning"];
             if (params.contains("use_preconditioned_residual_norm"))
                 use_preconditioned_residual_norm_ = params["use_preconditioned_residual_norm"];
+        }
+
+        void set_block_size(int block_size)
+        {
+            block_dim_ = block_size;
         }
 
         void get_info(json &params) const
@@ -611,6 +614,11 @@ namespace polysolve::linear
         }
 
         impl_->set_parameters(params[solver_name]);
+    }
+
+    void MASSolver::set_block_size(int block_size)
+    {
+        impl_->set_block_size(block_size);
     }
 
     void MASSolver::get_info(json &params) const

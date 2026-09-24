@@ -102,6 +102,27 @@ namespace polysolve::nonlinear
 
         virtual bool after_line_search_custom_operation(const TVector &x0, const TVector &x1) { return false; }
 
+        /// @brief Last word on a step the line search is about to accept.
+        ///
+        /// Called once a trial step has passed the line search's descent
+        /// criteria, before it is accepted. Returning false rejects it and the
+        /// line search keeps backtracking. Unlike is_step_valid(), which runs on
+        /// every trial point, this runs only on steps that would otherwise be
+        /// taken, so it suits checks too expensive to run per trial.
+        ///
+        /// Before returning false the problem may change its own
+        /// discretization (e.g. refine a quadrature where the step was found
+        /// invalid, so that the energy there is no longer finite). The line
+        /// search therefore re-evaluates the energy and gradient at x0 after a
+        /// rejection, so its descent criteria keep comparing like with like.
+        ///
+        /// Line searches that never backtrack (NoLineSearch) cannot honor a
+        /// rejection and do not call this.
+        /// @param x0 Current solution.
+        /// @param x1 Step the line search is about to accept.
+        /// @return True to accept the step, false to reject it.
+        virtual bool is_step_acceptable(const TVector &x0, const TVector &x1) { return true; }
+
         /// @brief Callback function used to determine if the solver should stop.
         /// @param state Current state of the solver.
         /// @param x Current solution.

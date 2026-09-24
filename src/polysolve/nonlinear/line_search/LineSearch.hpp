@@ -99,6 +99,11 @@ namespace polysolve::nonlinear::line_search
         double step_ratio;
         int cur_iter;
 
+        /// Set when a step rejected by Problem::is_step_acceptable() forced a
+        /// re-evaluation of the problem during this line search: its energy at
+        /// x may then differ from the one the line search started from.
+        bool problem_changed = false;
+
     private:
         /// @brief Compute step size that avoids nan/infinite energy
         /// @param x Current input (n x 1)

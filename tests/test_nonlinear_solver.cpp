@@ -3,6 +3,7 @@
 #include <polysolve/nonlinear/Solver.hpp>
 #include <polysolve/nonlinear/BoxConstraintSolver.hpp>
 #include <polysolve/nonlinear/Problem.hpp>
+#include <polysolve/nonlinear/line_search/LineSearch.hpp>
 #include <polysolve/Utils.hpp>
 #include <polysolve/Types.hpp>
 #include <polysolve/linear/Solver.hpp>
@@ -10,6 +11,12 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <polysolve/JSONUtils.hpp>
 #include <catch2/catch.hpp>
+
+#include <jse/jse.h>
+#include "nonlinear-solver-spec.hpp"
+
+#include <functional>
+#include <limits>
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -751,4 +758,112 @@ TEST_CASE("iteration-callback", "[solver][callback]")
     TestProblem::TVector g;
     problem.gradient(x, g);
     CHECK(g.norm() > 1e-7);
+}
+
+namespace
+{
+    // f(x) = |x - c|^2, minimised at c. From x = 0 the Newton step is c
+    // itself, so a line search along it accepts the full step unless the
+    // problem objects. The hook and an optional "wall" (infinite energy past
+    // x(0) > wall) let each case below object in a different way.
+    class AcceptanceProblem : public Problem
+    {
+    public:
+        TVector c = (TVector(2) << 2., 1.).finished();
+        double wall = std::numeric_limits<double>::infinity();
+        std::function<bool(const TVector &, const TVector &)> acceptable = [](const TVector &, const TVector &) { return true; };
+        int n_acceptable_calls = 0;
+
+        double value(const TVector &x) override
+        {
+            if (x(0) > wall)
+                return std::numeric_limits<double>::infinity();
+            return (x - c).squaredNorm();
+        }
+        void gradient(const TVector &x, TVector &grad) override { grad = 2 * (x - c); }
+        void hessian(const TVector &x, THessian &hessian) override
+        {
+            hessian = sparse_identity(x.size(), x.size());
+            hessian *= 2;
+        }
+        bool is_step_acceptable(const TVector &x0, const TVector &x1) override
+        {
+            ++n_acceptable_calls;
+            return acceptable(x0, x1);
+        }
+    };
+
+    json line_search_params(const std::string &method)
+    {
+        json params;
+        params["line_search"]["method"] = method;
+        jse::JSE jse;
+        const json rules = jse::embed::non_linear_spec::solver_spec::spec();
+        REQUIRE(jse.verify_json(params, rules));
+        return jse.inject_defaults(params, rules);
+    }
+} // namespace
+
+TEST_CASE("line-search-step-acceptable", "[solver][line_search]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test-logger-acceptable");
+    logger->set_level(spdlog::level::warn);
+
+    // Every line search that backtracks; NoLineSearch never backtracks and so
+    // cannot honor a rejection.
+    for (const std::string method : {"Backtracking", "Armijo", "RobustArmijo"})
+    {
+        DYNAMIC_SECTION(method)
+        {
+            const auto ls = line_search::LineSearch::create(line_search_params(method), *logger);
+            AcceptanceProblem problem;
+            const Problem::TVector x = Problem::TVector::Zero(2);
+            const Problem::TVector dx = problem.c - x;
+
+            SECTION("default accepts the full step and is asked once")
+            {
+                CHECK(ls->line_search(x, dx, problem) == 1.0);
+                CHECK(problem.n_acceptable_calls == 1);
+            }
+
+            SECTION("a rejection makes the line search keep backtracking")
+            {
+                problem.acceptable = [](const Problem::TVector &, const Problem::TVector &x1) { return x1(0) <= 1.2; };
+                const double step = ls->line_search(x, dx, problem);
+                CHECK(step > 0);
+                CHECK(step * dx(0) <= 1.2);
+                CHECK(problem.n_acceptable_calls >= 2);
+            }
+
+            SECTION("a rejection may change the problem")
+            {
+                // As polyfem does when it refines a quadrature: the first
+                // rejected step makes the energy beyond it infinite. The next
+                // trial (x(0) = 1) lies past the wall, so it has to be turned
+                // down by the line search's own finiteness check -- only the
+                // step it finally accepts reaches the hook again.
+                problem.acceptable = [&](const Problem::TVector &, const Problem::TVector &x1) {
+                    if (x1(0) <= 0.8)
+                        return true;
+                    problem.wall = 0.8;
+                    return false;
+                };
+                const double step = ls->line_search(x, dx, problem);
+                CHECK(step > 0);
+                CHECK(step * dx(0) <= 0.8);
+                CHECK(std::isfinite(problem.value(x + step * dx)));
+                CHECK(problem.n_acceptable_calls == 2);
+            }
+
+            SECTION("a change that leaves no descent direction fails the line search")
+            {
+                problem.acceptable = [&](const Problem::TVector &, const Problem::TVector &) {
+                    problem.c = -problem.c; // dx now points uphill
+                    return false;
+                };
+                CHECK(std::isnan(ls->line_search(x, dx, problem)));
+                CHECK(problem.n_acceptable_calls == 1);
+            }
+        }
+    }
 }

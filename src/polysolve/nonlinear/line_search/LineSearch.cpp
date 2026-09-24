@@ -84,6 +84,7 @@ namespace polysolve::nonlinear::line_search
             POLYSOLVE_SCOPED_STOPWATCH("LS begin", m_logger);
 
             cur_iter = 0;
+            problem_changed = false;
 
             initial_energy = objFunc(x);
             if (std::isnan(initial_energy))
@@ -167,8 +168,9 @@ namespace polysolve::nonlinear::line_search
                          step_size, objFunc.step_norm(delta_x, norm_type), use_grad_norm, cur_iter);
             objFunc.solution_changed(x);
 
-            // tolerance for rounding error due to multithreading
-            assert(abs(initial_energy - objFunc(x)) < 1e-15);
+            // tolerance for rounding error due to multithreading; the energy at
+            // x only has to match if the problem did not change underneath us
+            assert(problem_changed || abs(initial_energy - objFunc(x)) < 1e-15);
 
             objFunc.line_search_end();
             return NaN;

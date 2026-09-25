@@ -867,3 +867,44 @@ TEST_CASE("line-search-step-acceptable", "[solver][line_search]")
         }
     }
 }
+
+TEST_CASE("step-along-single-rounding", "[solver][line_search]")
+{
+    // Matches the fused multiply-add coefficient by coefficient...
+    Eigen::VectorXd x = Eigen::VectorXd::Random(50), dx = Eigen::VectorXd::Random(50);
+    const double s = 0.3712;
+    const Eigen::VectorXd y = step_along(x, s, dx);
+    for (Eigen::Index i = 0; i < x.size(); ++i)
+        CHECK(y[i] == std::fma(s, dx[i], x[i]));
+
+    // ...which is not what multiply-then-add gives: here the product rounds,
+    // and cancelling against x exposes the lost bits.
+    const double e = std::ldexp(1., -52);
+    Eigen::VectorXd x1(1), dx1(1);
+    x1 << -(1 + 2 * e);
+    dx1 << 1 + e;
+    // volatile keeps the compiler from contracting this into an FMA itself
+    // (clang does so by default within an expression).
+    volatile const double product = (1 + e) * dx1[0];
+    const double sep = x1[0] + product;
+    CHECK(sep == 0.);
+    CHECK(step_along(x1, 1 + e, dx1)[0] == std::ldexp(1., -104));
+}
+
+TEST_CASE("product-rounded-down", "[solver][line_search]")
+{
+    srand(0);
+    for (int i = 0; i < 10000; ++i)
+    {
+        const double a = std::abs(Eigen::VectorXd::Random(1)[0]);
+        const double b = std::abs(Eigen::VectorXd::Random(1)[0]);
+        const double p = product_rounded_down(a, b);
+        // Never above the exact product...
+        CHECK(std::fma(a, b, -p) >= 0);
+        // ...and the next double up is.
+        CHECK(std::fma(a, b, -std::nextafter(p, 2.)) < 0);
+    }
+    // Exact products are left alone, e.g. the power-of-two steps
+    // backtracking produces with the default ratio.
+    CHECK(product_rounded_down(0.25, 0.8125) == 0.203125);
+}

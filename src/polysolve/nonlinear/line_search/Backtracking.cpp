@@ -34,7 +34,7 @@ namespace polysolve::nonlinear::line_search
 
         for (; step_size > current_min_step_size() && cur_iter < current_max_step_size_iter(); step_size *= step_ratio, ++cur_iter)
         {
-            const TVector new_x = x + step_size * delta_x;
+            const TVector new_x = step_along(x, step_size, delta_x);
 
             try
             {

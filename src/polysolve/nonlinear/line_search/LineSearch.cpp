@@ -16,8 +16,6 @@
 #include <spdlog/fmt/bundled/color.h>
 #endif
 
-#include <cfenv>
-
 namespace polysolve::nonlinear::line_search
 {
     static constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
@@ -122,7 +120,7 @@ namespace polysolve::nonlinear::line_search
         // -----------------------------
         {
             POLYSOLVE_SCOPED_STOPWATCH("Line Search Begin - CCD broad-phase", broad_phase_ccd_time, m_logger);
-            TVector new_x = x + step_size * delta_x;
+            TVector new_x = step_along(x, step_size, delta_x);
             objFunc.line_search_begin(x, new_x);
         }
 
@@ -156,7 +154,7 @@ namespace polysolve::nonlinear::line_search
             }
         }
 
-        const double cur_energy = objFunc(x + step_size * delta_x);
+        const double cur_energy = objFunc(step_along(x, step_size, delta_x));
 
         const double descent_step_size = step_size;
 
@@ -196,7 +194,7 @@ namespace polysolve::nonlinear::line_search
         const double rate)
     {
         double step_size = starting_step_size;
-        TVector new_x = x + step_size * delta_x;
+        TVector new_x = step_along(x, step_size, delta_x);
 
         // Find step that does not result in nan or infinite energy
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
@@ -204,7 +202,7 @@ namespace polysolve::nonlinear::line_search
             if (!objFunc.is_step_valid(x, new_x) || !std::isfinite(objFunc(new_x)))
             {
                 step_size *= rate;
-                new_x = x + step_size * delta_x;
+                new_x = step_along(x, step_size, delta_x);
             }
             else
             {
@@ -232,7 +230,7 @@ namespace polysolve::nonlinear::line_search
         const double starting_step_size)
     {
         double step_size = starting_step_size;
-        TVector new_x = x + step_size * delta_x;
+        TVector new_x = step_along(x, step_size, delta_x);
 
         // Find step that is collision free
         double max_step_size = objFunc.max_step_size(x, new_x);
@@ -244,13 +242,11 @@ namespace polysolve::nonlinear::line_search
             return NaN;
         }
 
-        {
-            // #pragma STDC FENV_ACCESS ON
-            const int current_round = std::fegetround();
-            std::fesetround(FE_DOWNWARD);
-            step_size *= max_step_size; // TODO: check me if correct
-            std::fesetround(current_round);
-        }
+        // Round the capped step down, so it never exceeds the certified
+        // fraction of the segment. Unlike switching the FPU to FE_DOWNWARD
+        // around the multiply, this does not depend on the compiler honoring
+        // the rounding mode (no FENV_ACCESS or -frounding-math needed).
+        step_size = product_rounded_down(step_size, max_step_size);
 
         return step_size;
     }

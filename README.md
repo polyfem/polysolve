@@ -1,6 +1,6 @@
 # PolySolve
 
-![Build](https://github.com/polyfem/polysolve/workflows/Build/badge.svg)
+[![Build](https://github.com/polyfem/polysolve/workflows/Build/badge.svg)](https://github.com/polyfem/polysolve/actions/workflows/continuous.yml)
 [![codecov](https://codecov.io/github/polyfem/polysolve/graph/badge.svg?token=9CTTZX9A2D)](https://codecov.io/github/polyfem/polysolve)
 
 

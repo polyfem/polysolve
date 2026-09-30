@@ -66,6 +66,8 @@ namespace polysolve::linear
         {
             CMD_CREATE,
             CMD_SET_PARAMETERS,
+            CMD_SET_BLOCK_SIZE,
+            CMD_SET_BLOCK_MAPPING,
             CMD_FACTORIZE,
             CMD_SOLVE,
             CMD_DESTROY,
@@ -104,6 +106,12 @@ namespace polysolve::linear
         // Set solver parameters
         virtual void set_parameters(const json &params) override;
 
+        // Set block size for multigrid solvers
+        virtual void set_block_size(int block_size) override;
+
+        // Set the function (block) assigned to each row for multigrid solvers
+        virtual void set_block_mapping(const Eigen::VectorXi &block_mapping) override;
+
         // Retrieve solve information
         virtual void get_info(json &params) const override;
 
@@ -118,14 +126,41 @@ namespace polysolve::linear
         // Name of the solver type (for debugging purposes)
         virtual std::string name() const override
         {
-            return "CPUHybrid";
+            return select_bad_dofs_from_l1_row_norm ? "CPUHybrid" : "CPUAMGF";
         }
+
+        virtual void set_problematic_dofs(const std::set<int> &bad_dofs) override { all_bad_dofs = bad_dofs; }
+
+        // Alternative strategies for picking which DOFs get the dense/direct
+        // subdomain treatment, in place of the default GMM row-norm clustering.
+        enum class SubdomainSelectionStrategy
+        {
+            KNEE,
+            GMM,
+            FD,
+            COST,
+            APOSTERIORI
+        };
+
+        // Low-rank compression of STRUMPACK's frontal matrices, under
+        // use_strumpack. NONE is an exact LU factorization.
+        enum class StrumpackCompression
+        {
+            NONE,
+            BLR,
+            HSS
+        };
 
     protected:
         // AMG settings
         double theta = 0.5;
 
         // Hybrid preconditioner settings
+        // When false, bad DOFs are taken only from whatever set_problematic_dofs
+        // (and, if enabled, contact_patch_schwarz) supplies instead of being
+        // inferred from the row-norm heuristic below (AMGF mode).
+        bool select_bad_dofs_from_l1_row_norm = true;
+        SubdomainSelectionStrategy subdomain_selection_strategy = SubdomainSelectionStrategy::GMM;
         bool decompose_subdomains = true;
         int min_subdomain_size = 3;
         int max_subdomain_size = 1e9;
@@ -134,17 +169,52 @@ namespace polysolve::linear
         int max_gmm_iterations = 20;
         bool expand_subdomains = true;
         bool additive_mode = false;
+        // Give each contact patch its own (possibly overlapping) subdomain,
+        // solved additively -- an additive Schwarz treatment of contact DOFs.
+        bool contact_patch_schwarz = false;
+        // Under contact_patch_schwarz, drop any patch that is fully contained
+        // in another patch before factorizing -- it would only ever be
+        // redundant additive correction, since the larger patch already
+        // covers every one of its dofs.
+        bool contact_patch_remove_covered = false;
+        // Restricted Additive Schwarz: build one subdomain per bad dof (every
+        // dof with a nonzero entry in that dof's row/column, since the matrix
+        // is assumed structurally symmetric -- see assemble_D), but only let
+        // that subdomain correct the single dof it was built around. Uses the
+        // same bad-dof set as AMGF/select_bad_dofs. Mutually exclusive with
+        // contact_patch_schwarz.
+        bool ras_correction = false;
+        // Experimental: factorize the large subdomains -- the ones that would
+        // otherwise go to Pardiso/Accelerate -- with STRUMPACK's multifrontal
+        // LU instead, optionally with low-rank compression of its fronts.
+        // Needs polysolve built with POLYSOLVE_WITH_STRUMPACK.
+        bool use_strumpack = false;
+        StrumpackCompression strumpack_compression = StrumpackCompression::NONE;
+        double strumpack_compression_rel_tol = 1e-4;
 
         // General solver settings
         int dimension_ = 1; // 1 = scalar (Laplace), 2 or 3 = vector (Elasticity)
+
+        // Optional per-row function (block) assignment for HYPRE_BoomerAMGSetDofFunc,
+        // indexed globally (i.e. by the row indices factorize() is given). Empty means
+        // the default interleaved mapping (row i belongs to function i % dimension_).
+        // Kept identically on every rank; each rank slices out its own local rows
+        // ([starts[myid], ends[myid]]) when handing HYPRE its local dof_func array.
+        Eigen::VectorXi block_mapping_;
+
         int max_iter_ = 10000;
         double rel_conv_tol_ = 1e-10;
         double abs_conv_tol_ = 0.0;
         double conditioning_threshold = 100.0;
 
+        // When false, skips the per-PCG-iteration timing logs (matmul,
+        // amg_v_cycle, subdomain_solve, pcg_iter) so a long solve doesn't
+        // flood the log; every other log line is unaffected.
+        bool detailed_log = true;
+
         // solve information
-        HYPRE_Int num_iterations;
-        HYPRE_Complex final_res_norm;
+        HYPRE_Int num_iterations = 0;
+        HYPRE_Complex final_res_norm = 0;
 
     private:
         bool has_matrix_ = false;
@@ -172,6 +242,21 @@ namespace polysolve::linear
         std::vector<std::vector<int>> bad_subdomain_assignments;
         std::vector<std::unordered_map<int, int>> index_mappings;
 
+        // Under ras_correction, bad_indices_sets/bad_indices_arrays[i] holds
+        // the RAS subdomain built around a single dof; ras_target_dofs[i] is
+        // that dof -- the only one whose correction the subdomain is allowed
+        // to write back. Shared to every rank in share_bad_subdomains, same
+        // as bad_indices_sets.
+        std::vector<int> ras_target_dofs;
+
+        // Under contact_patch_schwarz, contact patches (bad_indices_sets) may
+        // overlap, so a dof's additive-Schwarz correction is the sum of every
+        // patch that covers it. That sum is damped by this single global
+        // factor -- 1 / (average number of patches covering a covered dof) --
+        // rather than dividing each dof by its own multiplicity, so overlap
+        // is corrected for on average without per-dof bookkeeping.
+        double overlap_scale_ = 1.0;
+
         Eigen::VectorXd shared_rhs, shared_result;
         Eigen::VectorXd z1, z2, z3;
         Eigen::VectorXd r, p, buffer;
@@ -190,10 +275,13 @@ namespace polysolve::linear
         void decompose_subdomains_to_disjoint_subsets(SharedSparseMatrix &sparse_A);
         void filter_subdomains(SharedSparseMatrix &sparse_A);
         void expand_subdomains_to_strongly_connected(SharedSparseMatrix &sparse_A);
+        void remove_covered_contact_patches();
+        void build_ras_subdomains(SharedSparseMatrix &sparse_A);
         void share_bad_subdomains();
         void load_balance_subdomains();
         void select_bad_dofs(SharedSparseMatrix &sparse_A);
         void factorize_submatrix(SharedSparseMatrix &sparse_A);
+        void compute_overlap_scale();
 
         // matrix multiplication
         void matmul(Eigen::VectorXd &x, Eigen::VectorXd &result);

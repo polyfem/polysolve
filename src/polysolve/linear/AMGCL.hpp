@@ -115,6 +115,9 @@ namespace polysolve::linear
         // Set solver parameters
         virtual void set_parameters(const json &params) override;
 
+        // Set block size for multigrid solvers
+        virtual void set_block_size(int block_size) override;
+
         // Retrieve information
         virtual void get_info(json &params) const override;
 

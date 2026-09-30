@@ -6,6 +6,7 @@
 #include "PostStepData.hpp"
 
 #include <memory>
+#include <set>
 #include <vector>
 
 namespace polysolve::nonlinear
@@ -17,6 +18,21 @@ namespace polysolve::nonlinear
         L2 = 1,
         Linf = 2
     };
+
+    // Defined here (rather than in Solver.cpp, where it previously lived) so
+    // that every translation unit that converts a JSON "norm_type" string to
+    // a NormType sees this mapping via ADL. NLOHMANN_JSON_SERIALIZE_ENUM
+    // expands to template<> to_json/from_json overloads, so defining it in a
+    // header is safe (no ODR/duplicate-symbol issues); previously, code
+    // outside Solver.cpp's own translation unit silently fell back to
+    // nlohmann's generic enum-as-integer conversion, which rejects the
+    // string values ("L2", etc.) that json-specs actually declares for this
+    // field.
+    NLOHMANN_JSON_SERIALIZE_ENUM(
+        NormType,
+        {{NormType::EUCLIDEAN, "Euclidean"},
+         {NormType::L2, "L2"},
+         {NormType::Linf, "Linf"}})
 
     /// @brief Class defining optimization problem to be solved. To be defined by user code
     class Problem
@@ -33,6 +49,28 @@ namespace polysolve::nonlinear
         virtual ~Problem() = default;
 
         virtual bool is_residual() const { return false; }
+
+        /// @brief Number of scalar components per node (e.g., 1 for scalar problems,
+        /// 2 or 3 for vector-valued problems). Used as the block size for
+        /// multigrid-style linear solvers.
+        virtual int dimension() const { return 1; }
+
+        /// @brief Per-row function (block) assignment for multigrid-style linear
+        /// solvers, passed through to Solver::set_block_mapping. An empty vector
+        /// (the default) means the solver should fall back to its own default
+        /// mapping instead of a problem-specific one.
+        virtual Eigen::VectorXi block_mapping() const { return Eigen::VectorXi(); }
+
+        /// @brief Report DOFs the linear solver should treat as problematic
+        /// (e.g. poorly conditioned or in contact), letting solvers that support
+        /// externally-driven subdomain selection (e.g. AMGF) use them instead of
+        /// their own row-norm heuristics. Default reports none.
+        virtual void get_problematic_dofs(std::set<int> &bad_dofs) {}
+
+        /// @brief Contact patches (one set of DOFs per patch), passed through to
+        /// Solver::contact_patches for solvers supporting Schwarz-style handling
+        /// of contact DOFs.
+        std::vector<std::set<int>> contact_patches;
 
         /// @brief Initialize the problem.
         /// @param x0 Initial guess.

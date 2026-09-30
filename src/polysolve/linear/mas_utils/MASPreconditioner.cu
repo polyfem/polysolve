@@ -1049,7 +1049,7 @@ namespace polysolve::linear::mas
             *(padded_topology_.cols));
 
         rt.stream.sync();
-        SPDLOG_TRACE("[MAS] [factorize_build_padded_topology_device] [{:.6f}]", elapsed_seconds(phase_begin));
+        SPDLOG_INFO("[MAS] [factorize_build_padded_topology_device] [{:.6f}]", elapsed_seconds(phase_begin));
 
         // Build coarse space hierarchy.
         phase_begin = clock::now();
@@ -1060,7 +1060,7 @@ namespace polysolve::linear::mas
             *(padded_topology_.padded_to_real),
             rt);
         rt.stream.sync();
-        SPDLOG_TRACE("[MAS] [factorize_build_coarse_space] [{:.6f}]", elapsed_seconds(phase_begin));
+        SPDLOG_INFO("[MAS] [factorize_build_coarse_space] [{:.6f}]", elapsed_seconds(phase_begin));
 
         // Build coarse space matrices by 1. gather coarse space hessian from fine nodes 2. invert
         phase_begin = clock::now();
@@ -1071,7 +1071,7 @@ namespace polysolve::linear::mas
             padded_topology_.padded_node_num,
             rt);
         rt.stream.sync();
-        SPDLOG_TRACE("[MAS] [factorize_build_coarse_matrices] [{:.6f}]", elapsed_seconds(phase_begin));
+        SPDLOG_INFO("[MAS] [factorize_build_coarse_matrices] [{:.6f}]", elapsed_seconds(phase_begin));
 
         // Allocate memory for coarse space residual (r) and preconditioned residual (z).
         phase_begin = clock::now();
@@ -1090,8 +1090,8 @@ namespace polysolve::linear::mas
         coarse_vectors_.multi_level_z =
             safe_alloc<double>(total_level_scalars, 0.0, rt, "MAS coarse_vectors z");
         rt.stream.sync();
-        SPDLOG_TRACE("[MAS] [factorize_allocate_coarse_vectors] [{:.6f}]", elapsed_seconds(phase_begin));
-        SPDLOG_TRACE("[MAS] [factorize_total] [{:.6f}]", elapsed_seconds(total_begin));
+        SPDLOG_INFO("[MAS] [factorize_allocate_coarse_vectors] [{:.6f}]", elapsed_seconds(phase_begin));
+        SPDLOG_INFO("[MAS] [factorize_total] [{:.6f}]", elapsed_seconds(total_begin));
 
         initialized_ = true;
     }

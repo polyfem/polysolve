@@ -71,6 +71,7 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_GPU_HYBRID
 #include "GPUHybridSolver.hpp"
+#include "RestartedAMGPCG.hpp"
 #endif
 #ifdef POLYSOLVE_WITH_CUDSS
 #include "cuDSS.hpp"
@@ -146,7 +147,7 @@ namespace polysolve::linear
         }
     }
 
-    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation)
+    std::unique_ptr<Solver> Solver::create(const json &params_in, spdlog::logger &logger, const bool strict_validation, const int dimension)
     {
         json params = params_in; // mutable copy
 
@@ -165,6 +166,7 @@ namespace polysolve::linear
         params = jse.inject_defaults(params, rules);
 
         auto res = create(params["solver"], params["precond"]);
+        res->set_block_size(dimension);
         res->set_parameters(params);
 
         return res;
@@ -423,6 +425,10 @@ namespace polysolve::linear
         else if (solver == "GPUHybrid")
         {
             return std::make_unique<GPUHybridSolver>();
+        }
+        else if (solver == "RestartedAMGPCG")
+        {
+            return std::make_unique<RestartedAMGPCG>();
 #endif
 #ifdef POLYSOLVE_WITH_CPU_HYBRID
         }
@@ -577,6 +583,7 @@ namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_GPU_HYBRID
             "GPUHybrid",
+            "RestartedAMGPCG",
 #endif
 #ifdef POLYSOLVE_WITH_CPU_HYBRID
             "CPUHybrid",

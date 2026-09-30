@@ -18,7 +18,8 @@
             "AMGCL",
             "MAS",
             "CPUHybrid",
-            "GPUHybrid"
+            "GPUHybrid",
+            "RestartedAMGPCG"
         ],
         "doc": "Settings for the linear solver."
     },
@@ -53,7 +54,8 @@
             "Eigen::MINRES",
             "MAS",
             "CPUHybrid",
-            "GPUHybrid"
+            "GPUHybrid",
+            "RestartedAMGPCG"
         ]
     },
     {
@@ -148,8 +150,7 @@
             "tolerance",
             "theta",
             "nodal_coarsening",
-            "interp_rbms",
-            "dimension"
+            "interp_rbms"
         ],
         "doc": "Settings for the Hypre solver."
     },
@@ -287,12 +288,6 @@
         "default": false,
         "type": "bool",
         "doc": "Whether or not to include nodal coarsening options."
-    },
-    {
-        "pointer": "/Hypre/dimension",
-        "default": 1,
-        "type": "int",
-        "doc": "Dimension of problem."
     },
     {
         "pointer": "/AMGCL/solver",
@@ -461,7 +456,6 @@
         "default": null,
         "type": "object",
         "optional": [
-            "block_dim",
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
@@ -469,17 +463,6 @@
             "use_preconditioned_residual_norm"
         ],
         "doc": "Settings for the MAS solver."
-    },
-    {
-        "pointer": "/MAS/block_dim",
-        "default": 1,
-        "type": "int",
-        "options": [
-            1,
-            2,
-            3
-        ],
-        "doc": "Block size of the BSR matrix PCG sovler internally use. Choose 3 for 3d problem, 2 for 2d, etc."
     },
     {
         "pointer": "/MAS/max_iter",
@@ -516,7 +499,6 @@
         "default": null,
         "type": "object",
         "optional": [
-            "block_dim",
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
@@ -529,15 +511,18 @@
             "gmm_tol",
             "max_gmm_iterations",
             "conditioning_threshold",
-            "additive_mode"
+            "additive_mode",
+            "select_bad_dofs_from_l1_norm",
+            "subdomain_selection_strategy",
+            "contact_patch_schwarz",
+            "contact_patch_remove_covered",
+            "ras_correction",
+            "use_strumpack",
+            "strumpack_compression",
+            "strumpack_compression_rel_tol",
+            "detailed_log"
         ],
         "doc": "Settings for the CPUHybrid solver."
-    },
-    {
-        "pointer": "/CPUHybrid/block_dim",
-        "default": 1,
-        "type": "int",
-        "doc": "Block size of the system matrix. "
     },
     {
         "pointer": "/CPUHybrid/max_iter",
@@ -618,11 +603,76 @@
         "doc": "Apply subspace correction additively. "
     },
     {
+        "pointer": "/CPUHybrid/select_bad_dofs_from_l1_norm",
+        "default": true,
+        "type": "bool",
+        "doc": "Select the problematic subspace from the L1 row norm heuristic. If false (AMGF mode), the problematic subspace is taken only from set_problematic_dofs (and, if enabled, contact_patch_schwarz) instead."
+    },
+    {
+        "pointer": "/CPUHybrid/subdomain_selection_strategy",
+        "default": "gmm",
+        "type": "string",
+        "options": [
+            "knee",
+            "gmm",
+            "fd",
+            "cost",
+            "aposteriori"
+        ],
+        "doc": "Strategy used to threshold row norms into the problematic subspace: gmm (Gaussian mixture model), knee (max-distance-to-chord knee point), fd (largest finite-difference jump), cost (minimize estimated solve cost), or aposteriori (not yet implemented)."
+    },
+    {
+        "pointer": "/CPUHybrid/contact_patch_schwarz",
+        "default": false,
+        "type": "bool",
+        "doc": "Additionally give each contact patch (see Solver::contact_patches) its own overlapping subdomain, combined additively (Schwarz) with the rest of the problematic subspace."
+    },
+    {
+        "pointer": "/CPUHybrid/contact_patch_remove_covered",
+        "default": false,
+        "type": "bool",
+        "doc": "Only used when contact_patch_schwarz is enabled. Before factorizing, drop any contact patch that is fully contained in another patch, since it would only ever add redundant correction; logs the number of patches before and after."
+    },
+    {
+        "pointer": "/CPUHybrid/ras_correction",
+        "default": false,
+        "type": "bool",
+        "doc": "Restricted Additive Schwarz correction: use the same problematic dof set as AMGF/select_bad_dofs, but build one subdomain per dof (every dof with a nonzero entry in that dof's row) and let each subdomain correct only the single dof it was built around, instead of merging dofs into shared clusters. Mutually exclusive with contact_patch_schwarz."
+    },
+    {
+        "pointer": "/CPUHybrid/use_strumpack",
+        "default": false,
+        "type": "bool",
+        "doc": "Experimental: factorize every subdomain larger than 1000 dofs with STRUMPACK's sparse multifrontal LU instead of Pardiso/Accelerate (smaller subdomains keep using SimplicialLDLT). Requires polysolve to be built with POLYSOLVE_WITH_STRUMPACK."
+    },
+    {
+        "pointer": "/CPUHybrid/strumpack_compression",
+        "default": "none",
+        "type": "string",
+        "options": [
+            "none",
+            "blr",
+            "hss"
+        ],
+        "doc": "Only used when use_strumpack is enabled. Low-rank compression of STRUMPACK's frontal matrices: none (exact LU), blr (block low-rank) or hss (hierarchically semi-separable). STRUMPACK only compresses fronts whose separator has at least 512 (blr) or 1000 (hss) dofs, so small subdomains are factorized exactly either way. A compressed factorization is not exactly symmetric, so PCG's convergence guarantees no longer strictly hold."
+    },
+    {
+        "pointer": "/CPUHybrid/strumpack_compression_rel_tol",
+        "default": 1e-4,
+        "type": "float",
+        "doc": "Only used when strumpack_compression is not none. Relative tolerance of the low-rank compression."
+    },
+    {
+        "pointer": "/CPUHybrid/detailed_log",
+        "default": true,
+        "type": "bool",
+        "doc": "If false, skip the per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve, pcg_iter) so a long solve doesn't flood the log; every other log line is unaffected."
+    },
+    {
         "pointer": "/GPUHybrid",
         "default": null,
         "type": "object",
         "optional": [
-            "block_dim",
             "max_iter",
             "relative_tolerance",
             "absolute_tolerance",
@@ -635,15 +685,13 @@
             "gmm_tol",
             "max_gmm_iterations",
             "conditioning_threshold",
-            "additive_mode"
+            "additive_mode",
+            "select_bad_dofs_from_l1_norm",
+            "subdomain_selection_strategy",
+            "contact_patch_schwarz",
+            "detailed_log"
         ],
         "doc": "Settings for the GPUHybrid solver."
-    },
-    {
-        "pointer": "/GPUHybrid/block_dim",
-        "default": 1,
-        "type": "int",
-        "doc": "Block size of the system matrix. "
     },
     {
         "pointer": "/GPUHybrid/max_iter",
@@ -722,5 +770,87 @@
         "default": false,
         "type": "bool",
         "doc": "Apply subspace correction additively. "
+    },
+    {
+        "pointer": "/GPUHybrid/select_bad_dofs_from_l1_norm",
+        "default": true,
+        "type": "bool",
+        "doc": "Select the problematic subspace from the L1 row norm heuristic. If false (AMGF mode), the problematic subspace is taken only from set_problematic_dofs (and, if enabled, contact_patch_schwarz) instead."
+    },
+    {
+        "pointer": "/GPUHybrid/subdomain_selection_strategy",
+        "default": "gmm",
+        "type": "string",
+        "options": [
+            "knee",
+            "gmm",
+            "fd",
+            "cost",
+            "aposteriori"
+        ],
+        "doc": "Strategy used to threshold row norms into the problematic subspace: gmm (Gaussian mixture model), knee (max-distance-to-chord knee point), fd (largest finite-difference jump), cost (minimize estimated solve cost), or aposteriori (not yet implemented)."
+    },
+    {
+        "pointer": "/GPUHybrid/contact_patch_schwarz",
+        "default": false,
+        "type": "bool",
+        "doc": "Additionally give each contact patch (see Solver::contact_patches) its own overlapping subdomain, combined additively (Schwarz) with the rest of the problematic subspace. Unlike the generic problematic subspace, contact patches are factorized and solved with a fixed-size (64 dof) dense batched GPU solve; a contact patch with more than 64 dofs throws."
+    },
+    {
+        "pointer": "/GPUHybrid/detailed_log",
+        "default": true,
+        "type": "bool",
+        "doc": "If false, skip the per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve, contact_patch_dense_subdomain_solve, pcg_iter) so a long solve doesn't flood the log; every other log line is unaffected."
+    },
+    {
+        "pointer": "/RestartedAMGPCG",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "max_iter",
+            "relative_tolerance",
+            "absolute_tolerance",
+            "theta",
+            "restart_interval",
+            "detailed_log"
+        ],
+        "doc": "Settings for the RestartedAMGPCG solver: GPU BoomerAMG-preconditioned CG (AMG set up as in GPUHybrid, without its subspace correction), periodically restarted from the true residual recomputed in double-double precision."
+    },
+    {
+        "pointer": "/RestartedAMGPCG/max_iter",
+        "default": 10000,
+        "type": "int",
+        "doc": "Maximum number of PCG iterations, summed over all restarts."
+    },
+    {
+        "pointer": "/RestartedAMGPCG/relative_tolerance",
+        "default": 1e-10,
+        "type": "float",
+        "doc": "Relative tolerance for solver convergence, checked against the double-double precision residual."
+    },
+    {
+        "pointer": "/RestartedAMGPCG/absolute_tolerance",
+        "default": 0,
+        "type": "float",
+        "doc": "Absolute tolerance for solver convergence, checked against the double-double precision residual."
+    },
+    {
+        "pointer": "/RestartedAMGPCG/theta",
+        "default": 0.5,
+        "type": "float",
+        "doc": "Strong threshold for AMG."
+    },
+    {
+        "pointer": "/RestartedAMGPCG/restart_interval",
+        "default": 50,
+        "type": "int",
+        "min": 1,
+        "doc": "Every restart_interval PCG iterations (or sooner, whenever the recursively-updated residual reaches the tolerance), recompute the true residual b - Ax in double-double precision and restart PCG from it. Convergence is only declared on this recomputed residual."
+    },
+    {
+        "pointer": "/RestartedAMGPCG/detailed_log",
+        "default": true,
+        "type": "bool",
+        "doc": "If false, skip the per-PCG-iteration timing logs (matmul, amg_v_cycle, pcg_iter) so a long solve doesn't flood the log; every other log line, including the per-restart residual log, is unaffected."
     }
 ]

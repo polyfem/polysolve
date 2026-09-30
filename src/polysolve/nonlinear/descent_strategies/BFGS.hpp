@@ -19,7 +19,8 @@ namespace polysolve::nonlinear
         BFGS(const json &solver_params,
              const json &linear_solver_params,
              const double characteristic_length,
-             spdlog::logger &logger);
+             spdlog::logger &logger,
+             const int dimension = 1);
 
         std::string name() const override { return "BFGS"; }
 

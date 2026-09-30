@@ -96,6 +96,7 @@ option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                    
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
 option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                             ON)
+option(POLYSOLVE_WITH_STRUMPACK     "Enable STRUMPACK (experimental CPUHybrid subdomain factorization)" OFF)
 
 # Sanitizer options
 option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                                  OFF)
@@ -304,11 +305,12 @@ if(POLYSOLVE_WITH_CUDA)
   target_link_libraries(polysolve PUBLIC CCCL::CCCL)
 endif()
 
-# Cuda runtime and cuSparse
+# Cuda runtime, cuSparse and cuBLAS (cuBLAS is used by GPUHybridSolver's
+# contact_patch_schwarz dense batched subdomain solve)
 if (POLYSOLVE_WITH_CUDA)
     find_package(CUDAToolkit REQUIRED)
-    target_link_libraries(polysolve PUBLIC CUDA::cudart CUDA::cusparse)
-    target_link_libraries(polysolve_linear PUBLIC CUDA::cudart CUDA::cusparse)
+    target_link_libraries(polysolve PUBLIC CUDA::cudart CUDA::cusparse CUDA::cublas)
+    target_link_libraries(polysolve_linear PUBLIC CUDA::cudart CUDA::cusparse CUDA::cublas)
 endif()
 
 # ------
@@ -430,6 +432,13 @@ if(POLYSOLVE_WITH_SPECTRA)
     include(spectra)
     target_link_libraries(polysolve_linear PUBLIC Spectra::Spectra)
     target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_SPECTRA)
+endif()
+
+# STRUMPACK (BSD 3-Clause), used only by CPUHybrid's experimental use_strumpack
+if(POLYSOLVE_WITH_STRUMPACK)
+    include(strumpack)
+    target_link_libraries(polysolve_linear PRIVATE STRUMPACK::strumpack)
+    target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_STRUMPACK)
 endif()
 
 # cuSolver solvers

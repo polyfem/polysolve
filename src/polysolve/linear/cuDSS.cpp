@@ -123,7 +123,7 @@ namespace polysolve::linear
             auto phase_begin = clock::now();
             CHECK_CUDSS(cudssConfigCreate(&config));
             CHECK_CUDSS(cudssDataCreate(cudss_handle, &solverData));
-            SPDLOG_TRACE("[cuDSS] [create_solver_objects] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[cuDSS] [create_solver_objects] [{:.6f}]", elapsed_seconds(phase_begin));
         }
 
         {
@@ -147,7 +147,7 @@ namespace polysolve::linear
                 CUDSS_MVIEW_FULL, CUDSS_BASE_ZERO));
 
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_TRACE("[cuDSS] [copy_sparse_matrix] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[cuDSS] [copy_sparse_matrix] [{:.6f}]", elapsed_seconds(phase_begin));
         }
 
         {
@@ -159,7 +159,7 @@ namespace polysolve::linear
                                      MatrixA, nullptr, nullptr));
             CHECK_CUDA(cudaDeviceSynchronize());
 
-            SPDLOG_TRACE("[cuDSS] [pattern_analysis] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[cuDSS] [pattern_analysis] [{:.6f}]", elapsed_seconds(phase_begin));
         }
     }
 
@@ -169,7 +169,7 @@ namespace polysolve::linear
         CHECK_CUDSS(cudssExecute(cudss_handle, CUDSS_PHASE_FACTORIZATION, config, solverData,
                                  MatrixA, nullptr, nullptr));
         CHECK_CUDA(cudaDeviceSynchronize());
-        SPDLOG_TRACE("[cuDSS] [numerical_factorization] [{:.6f}]", elapsed_seconds(phase_begin));
+        SPDLOG_INFO("[cuDSS] [numerical_factorization] [{:.6f}]", elapsed_seconds(phase_begin));
     }
 
     void cuDSSSolver::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
@@ -194,7 +194,7 @@ namespace polysolve::linear
             CHECK_CUDA(cudaMemcpy(d_x, x.data(), m_nrows * sizeof(double), cudaMemcpyHostToDevice));
 
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_TRACE("[cuDSS] [copy_vectors] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[cuDSS] [copy_vectors] [{:.6f}]", elapsed_seconds(phase_begin));
         }
 
         {
@@ -202,7 +202,7 @@ namespace polysolve::linear
             CHECK_CUDSS(cudssExecute(cudss_handle, CUDSS_PHASE_SOLVE, config, solverData,
                                      MatrixA, MatrixX, MatrixB));
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_TRACE("[cuDSS] [solve] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[cuDSS] [solve] [{:.6f}]", elapsed_seconds(phase_begin));
         }
 
         CHECK_CUDA(cudaMemcpy(x.data(), d_x, m_nrows * sizeof(double), cudaMemcpyDeviceToHost));

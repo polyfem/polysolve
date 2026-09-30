@@ -5,7 +5,12 @@
 
 #include "hybrid_utils/DisjointSet.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
+#include <limits>
+#include <mutex>
+#include <numeric>
 
 #include <HYPRE_utilities.h>
 #include <Eigen/SparseCholesky>
@@ -16,6 +21,10 @@
 
 #if POLYSOLVE_WITH_MKL
 #include <Eigen/PardisoSupport>
+#endif
+
+#ifdef POLYSOLVE_WITH_STRUMPACK
+#include <StrumpackSparseSolver.hpp>
 #endif
 
 #include <chrono>
@@ -37,7 +46,115 @@ namespace polysolve::linear
         {
             return std::chrono::duration<double>(clock::now() - begin).count();
         }
+
+#ifdef POLYSOLVE_WITH_STRUMPACK
+        // A subdomain factorized by STRUMPACK, under use_strumpack. Only the
+        // rank that owns the subdomain -- a thread of this process -- ever
+        // touches it, and STRUMPACK is built without MPI or OpenMP, so it runs
+        // sequentially on that thread.
+        //
+        // Note that STRUMPACK's solver installs a process-wide new-handler
+        // for its lifetime, which aborts on out-of-memory rather than
+        // throwing std::bad_alloc.
+        class StrumpackWrapper : public AbstractSolver
+        {
+            strumpack::StrumpackSparseSolver<double, int> solver{/*verbose=*/false};
+
+        public:
+            StrumpackWrapper(CPUHybridSolver::StrumpackCompression compression, double compression_rel_tol)
+            {
+                auto &opts = solver.options();
+
+                // Apply the factorization exactly once per solve. The default
+                // (AUTO) wraps it in iterative refinement -- or, once
+                // compressed, in GMRES -- which would make this preconditioner
+                // nonlinear under PCG.
+                opts.set_Krylov_solver(strumpack::KrylovSolver::DIRECT);
+                // Subdomains are principal submatrices of an SPD system, so
+                // their diagonal needs no help from MC64's row permutation,
+                // which would only throw away their symmetry.
+                opts.set_matching(strumpack::MatchingJob::NONE);
+
+                switch (compression)
+                {
+                case CPUHybridSolver::StrumpackCompression::NONE:
+                    opts.set_compression(strumpack::CompressionType::NONE);
+                    break;
+                case CPUHybridSolver::StrumpackCompression::BLR:
+                    opts.set_compression(strumpack::CompressionType::BLR);
+                    break;
+                case CPUHybridSolver::StrumpackCompression::HSS:
+                    opts.set_compression(strumpack::CompressionType::HSS);
+                    break;
+                }
+                opts.set_compression_rel_tol(compression_rel_tol);
+            }
+
+            void compute(const Eigen::SparseMatrix<double> &A) override
+            {
+                // STRUMPACK takes CSR, and keeps a copy of its own.
+                Eigen::SparseMatrix<double, Eigen::RowMajor> A_csr = A;
+                A_csr.makeCompressed();
+
+                // Don't promise a symmetric pattern: an assembled matrix can
+                // store an explicit zero on one side of the diagonal only,
+                // and STRUMPACK would trust the promise.
+                solver.set_csr_matrix(A_csr.rows(), A_csr.outerIndexPtr(), A_csr.innerIndexPtr(), A_csr.valuePtr(), /*symmetric_pattern=*/false);
+
+                // The reordering is METIS nested dissection, and METIS keeps
+                // its random number generator in a process-wide static that
+                // the other ranks' subdomains, reordered at the same time,
+                // would race on. So reorder one subdomain at a time; METIS
+                // reseeds on every call, which also makes the orderings
+                // deterministic. The numeric factorization stays concurrent.
+                strumpack::ReturnCode status;
+                {
+                    static std::mutex metis_mutex;
+                    std::lock_guard<std::mutex> lock(metis_mutex);
+                    status = solver.reorder();
+                }
+                if (status == strumpack::ReturnCode::SUCCESS)
+                {
+                    status = solver.factor();
+                }
+                if (status != strumpack::ReturnCode::SUCCESS)
+                {
+                    SPDLOG_ERROR("[CPUHybrid] STRUMPACK failed to factorize a subdomain of size {} (return code {})", A.rows(), static_cast<int>(status));
+                }
+            }
+
+            Eigen::VectorXd solve(const Eigen::VectorXd &b) override
+            {
+                Eigen::VectorXd x(b.size());
+                solver.solve(b.data(), x.data());
+                return x;
+            }
+        };
+#endif
     } // namespace
+
+    // Workers (nanompi ranks 1..N-1, each a thread of this process) run the
+    // very same collective code paths as rank 0 -- see run_worker_loop --
+    // so an unguarded SPDLOG_INFO below would print once per rank. Route
+    // rank-scoped logging through this macro instead of muting the logger
+    // globally: spdlog::set_level() mutates the single process-wide default
+    // logger, so calling it from a worker thread silences rank 0 as well.
+#define CPUHYBRID_LOG_INFO(...)      \
+    do                               \
+    {                                \
+        if (myid == 0)               \
+            SPDLOG_INFO(__VA_ARGS__); \
+    } while (0)
+
+    // Per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve,
+    // pcg_iter) go through this instead of CPUHYBRID_LOG_INFO, so they can be
+    // silenced with detailed_log=false without affecting any other log line.
+#define CPUHYBRID_LOG_ITER(...)                   \
+    do                                             \
+    {                                              \
+        if (myid == 0 && detailed_log)             \
+            SPDLOG_INFO(__VA_ARGS__);               \
+    } while (0)
 
     CPUHybridSolver::CPUHybridSolver()
     {
@@ -63,11 +180,7 @@ namespace polysolve::linear
         HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
         HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
 
-        if (myid != 0)
-        {
-            spdlog::set_level(spdlog::level::off);
-        }
-        else
+        if (myid == 0)
         {
             spdlog::flush_on(spdlog::level::info);
         }
@@ -131,10 +244,6 @@ namespace polysolve::linear
             {
                 theta = shared_params["CPUHybrid"]["theta"];
             }
-            if (shared_params["CPUHybrid"].contains("block_dim"))
-            {
-                dimension_ = shared_params["CPUHybrid"]["block_dim"];
-            }
             if (shared_params["CPUHybrid"].contains("decompose_subdomains"))
             {
                 decompose_subdomains = shared_params["CPUHybrid"]["decompose_subdomains"];
@@ -171,7 +280,124 @@ namespace polysolve::linear
             {
                 additive_mode = shared_params["CPUHybrid"]["additive_mode"];
             }
+            if (shared_params["CPUHybrid"].contains("select_bad_dofs_from_l1_norm"))
+            {
+                select_bad_dofs_from_l1_row_norm = shared_params["CPUHybrid"]["select_bad_dofs_from_l1_norm"];
+            }
+            if (shared_params["CPUHybrid"].contains("subdomain_selection_strategy"))
+            {
+                const std::string strategy_str = shared_params["CPUHybrid"]["subdomain_selection_strategy"];
+                if (strategy_str == "knee")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::KNEE;
+                }
+                else if (strategy_str == "gmm")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::GMM;
+                }
+                else if (strategy_str == "fd")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::FD;
+                }
+                else if (strategy_str == "cost")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::COST;
+                }
+                else if (strategy_str == "aposteriori")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::APOSTERIORI;
+                }
+                else
+                {
+                    throw std::runtime_error("Unknown subdomain selection strategy: " + strategy_str);
+                }
+            }
+            if (shared_params["CPUHybrid"].contains("contact_patch_schwarz"))
+            {
+                contact_patch_schwarz = shared_params["CPUHybrid"]["contact_patch_schwarz"];
+            }
+            if (shared_params["CPUHybrid"].contains("contact_patch_remove_covered"))
+            {
+                contact_patch_remove_covered = shared_params["CPUHybrid"]["contact_patch_remove_covered"];
+            }
+            if (shared_params["CPUHybrid"].contains("ras_correction"))
+            {
+                ras_correction = shared_params["CPUHybrid"]["ras_correction"];
+            }
+            if (shared_params["CPUHybrid"].contains("use_strumpack"))
+            {
+                use_strumpack = shared_params["CPUHybrid"]["use_strumpack"];
+            }
+            if (shared_params["CPUHybrid"].contains("strumpack_compression"))
+            {
+                const std::string compression_str = shared_params["CPUHybrid"]["strumpack_compression"];
+                if (compression_str == "none")
+                {
+                    strumpack_compression = StrumpackCompression::NONE;
+                }
+                else if (compression_str == "blr")
+                {
+                    strumpack_compression = StrumpackCompression::BLR;
+                }
+                else if (compression_str == "hss")
+                {
+                    strumpack_compression = StrumpackCompression::HSS;
+                }
+                else
+                {
+                    throw std::runtime_error("Unknown STRUMPACK compression: " + compression_str);
+                }
+            }
+            if (shared_params["CPUHybrid"].contains("strumpack_compression_rel_tol"))
+            {
+                strumpack_compression_rel_tol = shared_params["CPUHybrid"]["strumpack_compression_rel_tol"];
+            }
+            if (shared_params["CPUHybrid"].contains("detailed_log"))
+            {
+                detailed_log = shared_params["CPUHybrid"]["detailed_log"];
+            }
         }
+    }
+
+    // Set block size for multigrid solvers
+    void CPUHybridSolver::set_block_size(int block_size)
+    {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_SET_BLOCK_SIZE;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
+        // Broadcast the block size itself, so worker ranks (which pass in a
+        // dummy value from run_worker_loop) end up with the root's value.
+        MPI_Bcast(&block_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        dimension_ = block_size;
+    }
+
+    // Set the function (block) assigned to each row for multigrid solvers
+    void CPUHybridSolver::set_block_mapping(const Eigen::VectorXi &block_mapping)
+    {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_SET_BLOCK_MAPPING;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            block_mapping_ = block_mapping;
+        }
+
+        // Broadcast the full (global) mapping to every rank; each rank keeps the
+        // whole thing since the local row range ([starts[myid], ends[myid]]) is
+        // only known once factorize() has partitioned the rows.
+        int size = myid == 0 ? (int)block_mapping_.size() : 0;
+        MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        if (myid != 0)
+            block_mapping_.resize(size);
+
+        if (size > 0)
+            MPI_Bcast(block_mapping_.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     void CPUHybridSolver::check_settings() const
@@ -180,6 +406,23 @@ namespace polysolve::linear
         {
             return;
         }
+
+        if (subdomain_selection_strategy == SubdomainSelectionStrategy::APOSTERIORI)
+        {
+            throw std::runtime_error("A Posteriori subdomain selection strategy is not yet implemented!");
+        }
+
+        if (contact_patch_schwarz && ras_correction)
+        {
+            throw std::runtime_error("contact_patch_schwarz and ras_correction cannot both be enabled!");
+        }
+
+#ifndef POLYSOLVE_WITH_STRUMPACK
+        if (use_strumpack)
+        {
+            throw std::runtime_error("use_strumpack requires polysolve to be built with POLYSOLVE_WITH_STRUMPACK=ON!");
+        }
+#endif
     }
 
     void CPUHybridSolver::get_info(json &params) const
@@ -204,7 +447,7 @@ namespace polysolve::linear
         int rows, cols, nnz;
         if (myid == 0)
         {
-            SPDLOG_TRACE("[{}] [start_solve] [0.000000] [num_procs={}] [problem_size={}]", name(), num_procs, Ain.rows());
+            CPUHYBRID_LOG_INFO("[{}] [start_solve] [0.000000] [num_procs={}] [problem_size={}]", name(), num_procs, Ain.rows());
             rows = Ain.rows();
             cols = Ain.cols();
             nnz = Ain.nonZeros();
@@ -254,7 +497,7 @@ namespace polysolve::linear
 
             MPI_Win_fence(0, A_win);
 
-            SPDLOG_TRACE("[{}] [create_shared_matrix_window] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            CPUHYBRID_LOG_INFO("[{}] [create_shared_matrix_window] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         SharedSparseMatrix shared_A(rows, cols, nnz, outer_pointers, inner_indices, values);
@@ -263,25 +506,49 @@ namespace polysolve::linear
 
         bad_indices_sets.clear();
         bad_indices_arrays.clear();
+        ras_target_dofs.clear();
         select_bad_dofs(shared_A);
+
+        if (myid == 0 && contact_patch_schwarz)
+        {
+            for (const auto &patch : contact_patches)
+            {
+                bad_indices_sets.emplace_back(patch.begin(), patch.end());
+                bad_indices_arrays.emplace_back(patch.begin(), patch.end());
+            }
+
+            if (contact_patch_remove_covered)
+            {
+                remove_covered_contact_patches();
+            }
+        }
+
+        if (myid == 0 && ras_correction)
+        {
+            // Snapshot all_bad_dofs into per-dof RAS subdomains now, before
+            // the filter/expand/decompose block below can mutate or replace
+            // all_bad_dofs -- the same reason contact_patch_schwarz builds
+            // its subdomains up front instead of going through that block.
+            build_ras_subdomains(shared_A);
+        }
 
         if (myid == 0)
         {
-            if (decompose_subdomains)
+            if (decompose_subdomains && !ras_correction)
             {
                 filter_subdomains(shared_A);
             }
 
-            if (expand_subdomains)
+            if (expand_subdomains && !ras_correction)
             {
                 expand_subdomains_to_strongly_connected(shared_A);
             }
 
-            if (decompose_subdomains)
+            if (decompose_subdomains && !ras_correction)
             {
                 decompose_subdomains_to_disjoint_subsets(shared_A);
             }
-            else
+            else if (!contact_patch_schwarz && !ras_correction)
             {
                 bad_indices_sets.emplace_back(all_bad_dofs.begin(), all_bad_dofs.end());
             }
@@ -290,9 +557,15 @@ namespace polysolve::linear
         }
 
         share_bad_subdomains();
+
+        if (contact_patch_schwarz)
+        {
+            compute_overlap_scale();
+        }
+
         factorize_submatrix(shared_A);
 
-        SPDLOG_TRACE("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        CPUHYBRID_LOG_INFO("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
 
         if (has_matrix_)
         {
@@ -305,7 +578,7 @@ namespace polysolve::linear
             auto phase_begin = clock::now();
             copy_matrix_to_hypre(shared_A);
             has_matrix_ = true;
-            SPDLOG_TRACE("[{}] [copy_matrix_to_hypre] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            CPUHYBRID_LOG_INFO("[{}] [copy_matrix_to_hypre] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         MPI_Win_free(&A_win);
@@ -483,6 +756,21 @@ namespace polysolve::linear
                     precond,
                     dimension_,
                     theta);
+
+                if (block_mapping_.size() > 0)
+                {
+                    assert(block_mapping_.size() == problem_size);
+
+                    // HYPRE_IJMatrixCreate for this rank used the global row range
+                    // [starts[myid], ends[myid]], so dof_func must be the matching
+                    // *local* slice of the (globally-indexed) mapping -- each rank
+                    // only reports the function numbers for the rows it owns.
+                    const int n_local = my_size();
+                    HYPRE_Int *dof_func = hypre_CTAlloc(HYPRE_Int, n_local, HYPRE_MEMORY_HOST);
+                    for (int i = 0; i < n_local; ++i)
+                        dof_func[i] = block_mapping_[starts[myid] + i];
+                    HYPRE_BoomerAMGSetDofFunc(precond, dof_func);
+                }
             }
 
             MPI_Barrier(MPI_COMM_WORLD);
@@ -496,7 +784,7 @@ namespace polysolve::linear
             HYPRE_IJVectorGetObject(ij_x, (void **)&par_x);
 
             HYPRE_BoomerAMGSetup(precond, parcsr_A, par_b, par_x);
-            SPDLOG_TRACE("[{}] [amg_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            CPUHYBRID_LOG_INFO("[{}] [amg_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         /* Now setup and solve! */
@@ -520,7 +808,7 @@ namespace polysolve::linear
             matmul(shared_result, buffer);
             buffer = shared_rhs - buffer;
             final_res_norm = sqrt(dot(buffer, buffer));
-            SPDLOG_TRACE("[{}] [pcg_solve] [{:.6f}] [pcg_iters={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, final_res_norm);
+            CPUHYBRID_LOG_INFO("[{}] [pcg_solve] [{:.6f}] [pcg_iters={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, final_res_norm);
         }
 
         /* Destroy preconditioner */
@@ -538,6 +826,8 @@ namespace polysolve::linear
 
         double pre_loop_time;
         double bi_prod, rel_eps, abs_eps, gamma, old_gamma;
+
+        num_iterations = 0;
 
         r.setZero();
         {
@@ -570,7 +860,7 @@ namespace polysolve::linear
 
             gamma = dot(r, z1);
             old_gamma = gamma;
-            SPDLOG_TRACE("[{}] [pre_loop] [{:.6f}] [rhs_norm={}]", name(), elapsed_seconds(phase_begin), sqrt(bi_prod));
+            CPUHYBRID_LOG_INFO("[{}] [pre_loop] [{:.6f}] [rhs_norm={}]", name(), elapsed_seconds(phase_begin), sqrt(bi_prod));
         }
 
         for (int k = 0; k < max_iter_; ++k)
@@ -583,7 +873,7 @@ namespace polysolve::linear
 
             if (sdotp == 0.0)
             {
-                SPDLOG_TRACE("[{}] [err_zero_sdotp] [0.000000]", name());
+                CPUHYBRID_LOG_INFO("[{}] [err_zero_sdotp] [0.000000]", name());
                 break;
             }
 
@@ -591,12 +881,12 @@ namespace polysolve::linear
 
             if (alpha <= 0.0)
             {
-                SPDLOG_TRACE("[{}] [err_negative_alpha] [0.000000]", name());
+                CPUHYBRID_LOG_INFO("[{}] [err_negative_alpha] [0.000000]", name());
                 break;
             }
             else if (alpha < __DBL_MIN__)
             {
-                SPDLOG_TRACE("[{}] [err_subnormal_alpha] [0.000000]", name());
+                CPUHYBRID_LOG_INFO("[{}] [err_subnormal_alpha] [0.000000]", name());
                 break;
             }
 
@@ -606,13 +896,13 @@ namespace polysolve::linear
             double i_prod = dot(r, r);
             if (rel_eps > 0 && (i_prod / bi_prod) < rel_eps)
             {
-                SPDLOG_TRACE("[{}] [converged_rel] [0.000000]", name());
+                CPUHYBRID_LOG_INFO("[{}] [converged_rel] [0.000000]", name());
                 break;
             }
 
             if (abs_eps > 0 && i_prod < abs_eps)
             {
-                SPDLOG_TRACE("[{}] [converged_abs] [0.000000]", name());
+                CPUHYBRID_LOG_INFO("[{}] [converged_abs] [0.000000]", name());
                 break;
             }
 
@@ -625,7 +915,7 @@ namespace polysolve::linear
             old_gamma = gamma;
 
             p = z1 + beta * p;
-            SPDLOG_TRACE("[{}] [pcg_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), k, sqrt(i_prod));
+            CPUHYBRID_LOG_ITER("[{}] [pcg_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), k, sqrt(i_prod));
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
@@ -677,7 +967,7 @@ namespace polysolve::linear
 
         HYPRE_BoomerAMGSolve(precond, parcsr_A, par_b, par_x);
         MPI_Barrier(MPI_COMM_WORLD);
-        SPDLOG_TRACE("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        CPUHYBRID_LOG_INFO("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     void CPUHybridSolver::dss_precond_iter(Eigen::VectorXd &z, Eigen::VectorXd &r, Eigen::VectorXd &next_z, SharedVector &vec, MPI_Win &vec_win)
@@ -693,6 +983,18 @@ namespace polysolve::linear
             vec(2 * problem_size + starts[myid] + i) = 0.0;
         }
         MPI_Win_fence(0, vec_win);
+
+        // Contact patches may overlap, including patches assigned to
+        // different ranks. Rather than have every rank atomically update a
+        // shared correction vector, each rank accumulates the subdomains it
+        // owns into a private buffer (plain += is safe -- nothing else
+        // touches it) and the per-dof sums are then combined once, across
+        // all ranks, with a single sum reduction.
+        Eigen::VectorXd local_correction;
+        if (contact_patch_schwarz)
+        {
+            local_correction = Eigen::VectorXd::Zero(problem_size);
+        }
 
         int index_counter = 0;
         for (int index : bad_subdomain_assignments[myid])
@@ -710,27 +1012,64 @@ namespace polysolve::linear
                 sub_result = D_solvers[index_counter]->solve(sub_rhs);
             }
 
-            for (int i = 0; i < subdomain.size(); ++i)
+            if (ras_correction)
             {
-                vec(2 * problem_size + subdomain[i]) = sub_result(index_mappings[index_counter][subdomain[i]]);
+                // Restricted Additive Schwarz: this subdomain exists only to
+                // correct the one dof it was built around, even though the
+                // solve above covered its whole row neighborhood -- so
+                // overlapping subdomains never double-correct a shared dof.
+                const int target = ras_target_dofs[index];
+                vec(2 * problem_size + target) = sub_result(index_mappings[index_counter][target]);
+            }
+            else
+            {
+                for (int i = 0; i < subdomain.size(); ++i)
+                {
+                    if (contact_patch_schwarz)
+                    {
+                        local_correction(subdomain[i]) += sub_result(index_mappings[index_counter][subdomain[i]]);
+                    }
+                    else
+                    {
+                        vec(2 * problem_size + subdomain[i]) = sub_result(index_mappings[index_counter][subdomain[i]]);
+                    }
+                }
             }
             ++index_counter;
         }
+
+        if (contact_patch_schwarz)
+        {
+            // Sum each rank's private contribution into the true overall
+            // correction, then damp it by the (global, not per-dof) average
+            // amount of patch overlap so overlapping patches don't
+            // over-correct on average.
+            MPI_Allreduce(MPI_IN_PLACE, local_correction.data(), problem_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            local_correction *= overlap_scale_;
+        }
+
         MPI_Barrier(MPI_COMM_WORLD);
 
         MPI_Win_fence(0, vec_win);
         for (int i = 0; i < my_size(); ++i)
         {
-            next_z(i) = vec(starts[myid] + i) + vec(2 * problem_size + starts[myid] + i);
+            next_z(i) = vec(starts[myid] + i) + (contact_patch_schwarz ? local_correction(starts[myid] + i) : vec(2 * problem_size + starts[myid] + i));
         }
         MPI_Win_fence(0, vec_win);
 
-        SPDLOG_TRACE("[{}] [subdomain_solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        CPUHYBRID_LOG_ITER("[{}] [subdomain_solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     void CPUHybridSolver::select_bad_dofs(SharedSparseMatrix &sparse_A)
     {
         auto phase_begin = clock::now();
+
+        if (!select_bad_dofs_from_l1_row_norm)
+        {
+            // AMGF mode: bad DOFs come only from set_problematic_dofs (and,
+            // if enabled, contact_patch_schwarz), not from this heuristic.
+            return;
+        }
 
         MPI_Win row_norm_win;
         int local_alloc_size = (myid == 0) ? (sparse_A.rows() * sizeof(double)) : 0;
@@ -775,96 +1114,214 @@ namespace polysolve::linear
         double min_cost = -1.0;
         int split_idx = 0;
 
-        MPI_Win gamma_win;
-        void *gamma_ptr;
-        MPI_Win_allocate_shared(2 * local_alloc_size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &gamma_ptr, &gamma_win);
-        if (myid != 0)
+        switch (subdomain_selection_strategy)
         {
-            int disp_unit;
-            MPI_Aint sz;
-            MPI_Win_shared_query(gamma_win, 0, &sz, &disp_unit, &gamma_ptr);
-        }
-
-        SharedVector gamma((double *)gamma_ptr, 2 * sparse_A.rows());
-
-        mean_0 = row_norms.minCoeff();
-        var_0 = global_var;
-        mean_1 = row_norms.maxCoeff();
-        var_1 = global_var;
-        double w0 = 0.5;
-        double w1 = 0.5;
-        double var_reg = 1e-6;
-
-        for (gmm_iter = 0; gmm_iter < max_gmm_iterations; ++gmm_iter)
+        case SubdomainSelectionStrategy::KNEE:
+        case SubdomainSelectionStrategy::FD:
+        case SubdomainSelectionStrategy::COST:
         {
-            double log_w0 = std::log(w0);
-            double log_w1 = std::log(w1);
-            double log_norm_const_0 = -0.5 * std::log(2.0 * M_PI * var_0);
-            double log_norm_const_1 = -0.5 * std::log(2.0 * M_PI * var_1);
-
-            auto x = row_norms.segment(starts[myid], my_size()).array();
-
-            Eigen::ArrayXd log_g0 = log_w0 + log_norm_const_0 - 0.5 * (x - mean_0).square() / var_0;
-            Eigen::ArrayXd log_g1 = log_w1 + log_norm_const_1 - 0.5 * (x - mean_1).square() / var_1;
-            Eigen::ArrayXd max_log_g = log_g0.cwiseMax(log_g1);
-            Eigen::ArrayXd log_total = max_log_g + ((log_g0 - max_log_g).exp() + (log_g1 - max_log_g).exp()).log();
-
-            MPI_Win_fence(0, gamma_win);
-            gamma.segment(starts[myid], my_size()).array() = (log_g0 - log_total).exp();
-            gamma.segment(starts[myid] + row_norms.size(), my_size()).array() = (log_g1 - log_total).exp();
-            MPI_Win_fence(0, gamma_win);
-
-            w0 = 1.0 / row_norms.size() * gamma.segment(starts[myid], my_size()).sum();
-            w1 = 1.0 / row_norms.size() * gamma.segment(starts[myid] + row_norms.size(), my_size()).sum();
-
-            MPI_Allreduce(MPI_IN_PLACE, &w0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            MPI_Allreduce(MPI_IN_PLACE, &w1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-            double old_mean_0 = mean_0;
-            double old_mean_1 = mean_1;
-            double old_var_0 = var_0;
-            double old_var_1 = var_1;
-
-            mean_0 = (row_norms.segment(starts[myid], my_size()).array() * gamma.segment(starts[myid], my_size()).array()).sum() / (w0 * row_norms.size());
-            mean_1 = (row_norms.segment(starts[myid], my_size()).array() * gamma.segment(starts[myid] + row_norms.size(), my_size()).array()).sum() / (w1 * row_norms.size());
-
-            MPI_Allreduce(MPI_IN_PLACE, &mean_0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            MPI_Allreduce(MPI_IN_PLACE, &mean_1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-            var_0 = (gamma.segment(starts[myid], my_size()).array() * (row_norms.segment(starts[myid], my_size()).array() - mean_0).square()).sum() / (w0 * row_norms.size());
-            var_1 = (gamma.segment(starts[myid] + row_norms.size(), my_size()).array() * (row_norms.segment(starts[myid], my_size()).array() - mean_1).square()).sum() / (w1 * row_norms.size());
-
-            MPI_Allreduce(MPI_IN_PLACE, &var_0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            MPI_Allreduce(MPI_IN_PLACE, &var_1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-            var_0 += var_reg;
-            var_1 += var_reg;
-
-            if (std::abs(mean_0 - old_mean_0) / std::abs(old_mean_0) < gmm_tol && std::abs(mean_1 - old_mean_1) / std::abs(old_mean_1) < gmm_tol && std::abs(var_0 - old_var_0) / std::abs(old_var_0) < gmm_tol && std::abs(var_1 - old_var_1) / std::abs(old_var_1) < gmm_tol)
+            if (myid == 0)
             {
-                break;
-            }
-        }
-
-        if (myid == 0)
-        {
-            if (std::abs(mean_1) / std::abs(mean_0) > gmm_jump_threshold)
-            {
+                std::vector<std::pair<double, int>> sorted_norms;
+                sorted_norms.reserve(row_norms.size());
                 for (int i = 0; i < row_norms.size(); ++i)
                 {
-                    if (gamma(i) < gamma(i + row_norms.size()))
+                    sorted_norms.push_back({row_norms(i), i});
+                }
+
+                std::sort(sorted_norms.begin(), sorted_norms.end());
+                int N = sorted_norms.size();
+
+                if (N >= 2)
+                {
+                    if (subdomain_selection_strategy == SubdomainSelectionStrategy::KNEE)
                     {
-                        all_bad_dofs.insert(i);
+                        double x1 = 0.0;
+                        double y1 = std::log(sorted_norms[0].first + 1e-12);
+                        double x2 = N - 1.0;
+                        double y2 = std::log(sorted_norms[N - 1].first + 1e-12);
+
+                        for (int i = 1; i < N - 1; ++i)
+                        {
+                            double x0 = (double)i;
+                            double y0 = std::log(sorted_norms[i].first + 1e-12);
+
+                            double dist = std::abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1);
+
+                            if (dist > max_dist)
+                            {
+                                max_dist = dist;
+                                split_idx = i;
+                            }
+                        }
+                    }
+                    else if (subdomain_selection_strategy == SubdomainSelectionStrategy::FD)
+                    {
+                        for (int i = 1; i < N; ++i)
+                        {
+                            double jump = sorted_norms[i].first - sorted_norms[i - 1].first;
+                            if (jump > max_jump)
+                            {
+                                max_jump = jump;
+                                split_idx = i;
+                            }
+                        }
+                    }
+                    else if (subdomain_selection_strategy == SubdomainSelectionStrategy::COST)
+                    {
+                        // TODO: Migrate these to class variables later
+                        const double c_pcg_conv = 1.0;
+                        const double c_pcg = 1.0;
+                        const double c_fac = 1.0;
+                        const double c_solve = 1.0;
+
+                        min_cost = std::numeric_limits<double>::max();
+
+                        double lambda_min = sorted_norms[0].first;
+
+                        for (int i = 0; i < N; ++i)
+                        {
+                            double p = static_cast<double>(N - i);
+                            double lambda_max = sorted_norms[i].first;
+
+                            double m = c_pcg_conv * std::sqrt(lambda_max / lambda_min);
+                            double cost = (m * c_pcg * N) +
+                                          (c_fac * p * p) +
+                                          (m * c_solve * std::pow(p, 4.0 / 3.0));
+
+                            if (cost < min_cost)
+                            {
+                                min_cost = cost;
+                                split_idx = i;
+                            }
+                        }
+                    }
+
+                    for (int i = split_idx; i < N; ++i)
+                    {
+                        all_bad_dofs.insert(sorted_norms[i].second);
                     }
                 }
             }
+            break;
+        }
+        case SubdomainSelectionStrategy::GMM:
+        {
+            MPI_Win gamma_win;
+            void *gamma_ptr;
+            MPI_Win_allocate_shared(2 * local_alloc_size, 1, MPI_INFO_NULL, MPI_COMM_WORLD, &gamma_ptr, &gamma_win);
+            if (myid != 0)
+            {
+                int disp_unit;
+                MPI_Aint sz;
+                MPI_Win_shared_query(gamma_win, 0, &sz, &disp_unit, &gamma_ptr);
+            }
+
+            SharedVector gamma((double *)gamma_ptr, 2 * sparse_A.rows());
+
+            mean_0 = row_norms.minCoeff();
+            var_0 = global_var;
+            mean_1 = row_norms.maxCoeff();
+            var_1 = global_var;
+            double w0 = 0.5;
+            double w1 = 0.5;
+            double var_reg = 1e-6;
+
+            for (gmm_iter = 0; gmm_iter < max_gmm_iterations; ++gmm_iter)
+            {
+                double log_w0 = std::log(w0);
+                double log_w1 = std::log(w1);
+                double log_norm_const_0 = -0.5 * std::log(2.0 * M_PI * var_0);
+                double log_norm_const_1 = -0.5 * std::log(2.0 * M_PI * var_1);
+
+                auto x = row_norms.segment(starts[myid], my_size()).array();
+
+                Eigen::ArrayXd log_g0 = log_w0 + log_norm_const_0 - 0.5 * (x - mean_0).square() / var_0;
+                Eigen::ArrayXd log_g1 = log_w1 + log_norm_const_1 - 0.5 * (x - mean_1).square() / var_1;
+                Eigen::ArrayXd max_log_g = log_g0.cwiseMax(log_g1);
+                Eigen::ArrayXd log_total = max_log_g + ((log_g0 - max_log_g).exp() + (log_g1 - max_log_g).exp()).log();
+
+                MPI_Win_fence(0, gamma_win);
+                gamma.segment(starts[myid], my_size()).array() = (log_g0 - log_total).exp();
+                gamma.segment(starts[myid] + row_norms.size(), my_size()).array() = (log_g1 - log_total).exp();
+                MPI_Win_fence(0, gamma_win);
+
+                w0 = 1.0 / row_norms.size() * gamma.segment(starts[myid], my_size()).sum();
+                w1 = 1.0 / row_norms.size() * gamma.segment(starts[myid] + row_norms.size(), my_size()).sum();
+
+                MPI_Allreduce(MPI_IN_PLACE, &w0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &w1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                double old_mean_0 = mean_0;
+                double old_mean_1 = mean_1;
+                double old_var_0 = var_0;
+                double old_var_1 = var_1;
+
+                mean_0 = (row_norms.segment(starts[myid], my_size()).array() * gamma.segment(starts[myid], my_size()).array()).sum() / (w0 * row_norms.size());
+                mean_1 = (row_norms.segment(starts[myid], my_size()).array() * gamma.segment(starts[myid] + row_norms.size(), my_size()).array()).sum() / (w1 * row_norms.size());
+
+                MPI_Allreduce(MPI_IN_PLACE, &mean_0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &mean_1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                var_0 = (gamma.segment(starts[myid], my_size()).array() * (row_norms.segment(starts[myid], my_size()).array() - mean_0).square()).sum() / (w0 * row_norms.size());
+                var_1 = (gamma.segment(starts[myid] + row_norms.size(), my_size()).array() * (row_norms.segment(starts[myid], my_size()).array() - mean_1).square()).sum() / (w1 * row_norms.size());
+
+                MPI_Allreduce(MPI_IN_PLACE, &var_0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, &var_1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                var_0 += var_reg;
+                var_1 += var_reg;
+
+                if (std::abs(mean_0 - old_mean_0) / std::abs(old_mean_0) < gmm_tol && std::abs(mean_1 - old_mean_1) / std::abs(old_mean_1) < gmm_tol && std::abs(var_0 - old_var_0) / std::abs(old_var_0) < gmm_tol && std::abs(var_1 - old_var_1) / std::abs(old_var_1) < gmm_tol)
+                {
+                    break;
+                }
+            }
+
+            if (myid == 0)
+            {
+                if (std::abs(mean_1) / std::abs(mean_0) > gmm_jump_threshold)
+                {
+                    for (int i = 0; i < row_norms.size(); ++i)
+                    {
+                        if (gamma(i) < gamma(i + row_norms.size()))
+                        {
+                            all_bad_dofs.insert(i);
+                        }
+                    }
+                }
+            }
+
+            MPI_Win_free(&gamma_win);
+            break;
+        }
+        case SubdomainSelectionStrategy::APOSTERIORI:
+            break;
         }
 
-        MPI_Win_free(&gamma_win);
         MPI_Win_free(&row_norm_win);
 
-        SPDLOG_TRACE("[{}] [bad_dof_selection] [{}] [strategy=GMM] [global_mean={}] [global_var={}] [mean_0={}] [mean_1={}] [var_0={}] [var_1={}] [gmm_iters={}] [num_bad_dofs={}]",
-                     name(), elapsed_seconds(phase_begin), global_mean, global_var, mean_0, mean_1, var_0, var_1, gmm_iter, all_bad_dofs.size());
+        switch (subdomain_selection_strategy)
+        {
+        case SubdomainSelectionStrategy::KNEE:
+            CPUHYBRID_LOG_INFO("[{}] [bad_dof_selection] [{}] [strategy=KNEE] [global_mean={}] [global_var={}] [split_idx={}] [max_dist={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, split_idx, max_dist, all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::FD:
+            CPUHYBRID_LOG_INFO("[{}] [bad_dof_selection] [{}] [strategy=FD] [global_mean={}] [global_var={}] [split_idx={}] [max_jump={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, split_idx, max_jump, all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::COST:
+            CPUHYBRID_LOG_INFO("[{}] [bad_dof_selection] [{}] [strategy=COST] [global_mean={}] [global_var={}] [split_idx={}] [min_cost={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, split_idx, min_cost, all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::GMM:
+            CPUHYBRID_LOG_INFO("[{}] [bad_dof_selection] [{}] [strategy=GMM] [global_mean={}] [global_var={}] [mean_0={}] [mean_1={}] [var_0={}] [var_1={}] [gmm_iters={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, mean_0, mean_1, var_0, var_1, gmm_iter, all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::APOSTERIORI:
+            break;
+        }
     }
 
     void CPUHybridSolver::factorize_submatrix(SharedSparseMatrix &sparse_A)
@@ -876,6 +1333,13 @@ namespace polysolve::linear
         {
             if (bad_indices_sets[i].size() > 1000)
             {
+#ifdef POLYSOLVE_WITH_STRUMPACK
+                if (use_strumpack)
+                {
+                    D_solvers.push_back(std::make_unique<StrumpackWrapper>(strumpack_compression, strumpack_compression_rel_tol));
+                    continue;
+                }
+#endif
 #if POLYSOLVE_WITH_MKL
                 D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::PardisoLDLT<Eigen::SparseMatrix<double>>>>());
 #elif POLYSOLVE_WITH_ACCELERATE
@@ -905,7 +1369,7 @@ namespace polysolve::linear
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
-        SPDLOG_TRACE("[{}] [factorize_submatrix] [{}]", name(), elapsed_seconds(phase_begin));
+        CPUHYBRID_LOG_INFO("[{}] [factorize_submatrix] [{}]", name(), elapsed_seconds(phase_begin));
     }
 
     void CPUHybridSolver::matmul(Eigen::VectorXd &x, Eigen::VectorXd &result)
@@ -922,7 +1386,7 @@ namespace polysolve::linear
         HYPRE_IJVectorAssemble(ij_b);
         HYPRE_IJVectorGetObject(ij_b, (void **)&par_result);
         HYPRE_ParCSRMatrixMatvec(1.0, parcsr_A, par_x, 0.0, par_result);
-        SPDLOG_TRACE("[{}] [matmul] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        CPUHYBRID_LOG_ITER("[{}] [matmul] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     double CPUHybridSolver::dot(Eigen::VectorXd &a, Eigen::VectorXd &b)
@@ -1177,7 +1641,7 @@ namespace polysolve::linear
             ++num_not_poorly_conditioned;
         }
 
-        SPDLOG_TRACE("[{}] [subdomain_filtering] [{}] [total_dofs_before={}] [total_dofs_after={}] [num_too_small={}] [num_too_large={}] [num_not_poorly_conditioned={}]",
+        CPUHYBRID_LOG_INFO("[{}] [subdomain_filtering] [{}] [total_dofs_before={}] [total_dofs_after={}] [num_too_small={}] [num_too_large={}] [num_not_poorly_conditioned={}]",
                      name(), elapsed_seconds(phase_begin), original_num_bad_dofs, all_bad_dofs.size(), num_too_small, num_too_large, num_not_poorly_conditioned);
     }
 
@@ -1187,7 +1651,6 @@ namespace polysolve::linear
         int num_bad_dofs_before = all_bad_dofs.size();
 
         std::set<int> new_bad_dofs;
-        ;
 
         for (int k : all_bad_dofs)
         {
@@ -1198,8 +1661,107 @@ namespace polysolve::linear
         }
         all_bad_dofs = std::move(new_bad_dofs);
 
-        SPDLOG_TRACE("[{}] [subdomain_expansion] [{}] [num_dofs_before={}] [num_dofs_after={}]",
+        CPUHYBRID_LOG_INFO("[{}] [subdomain_expansion] [{}] [num_dofs_before={}] [num_dofs_after={}]",
                      name(), elapsed_seconds(phase_begin), num_bad_dofs_before, all_bad_dofs.size());
+    }
+
+    // A patch fully contained in another contributes nothing that the larger
+    // patch doesn't already correct, so it is dropped rather than solved and
+    // added redundantly into the overlap sum in dss_precond_iter. Patches are
+    // processed smallest-first so each is only ever tested against patches
+    // that could actually contain it; ties (identical patches) keep exactly
+    // one copy rather than deleting each other.
+    void CPUHybridSolver::remove_covered_contact_patches()
+    {
+        auto phase_begin = clock::now();
+        const int num_before = static_cast<int>(bad_indices_sets.size());
+
+        std::vector<int> order(bad_indices_sets.size());
+        std::iota(order.begin(), order.end(), 0);
+        std::sort(order.begin(), order.end(), [&](int a, int b) {
+            if (bad_indices_sets[a].size() != bad_indices_sets[b].size())
+                return bad_indices_sets[a].size() < bad_indices_sets[b].size();
+            return a < b;
+        });
+
+        std::vector<bool> covered(bad_indices_sets.size(), false);
+        for (size_t oi = 0; oi < order.size(); ++oi)
+        {
+            const int i = order[oi];
+            if (covered[i])
+                continue;
+
+            for (size_t oj = oi + 1; oj < order.size(); ++oj)
+            {
+                const int j = order[oj];
+                if (covered[j] || bad_indices_sets[i].size() > bad_indices_sets[j].size())
+                    continue;
+
+                if (std::includes(bad_indices_sets[j].begin(), bad_indices_sets[j].end(),
+                                   bad_indices_sets[i].begin(), bad_indices_sets[i].end()))
+                {
+                    if (bad_indices_sets[i].size() == bad_indices_sets[j].size())
+                    {
+                        // Identical patches: keep i (processed first), drop j.
+                        covered[j] = true;
+                    }
+                    else
+                    {
+                        covered[i] = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        std::vector<std::set<int>> kept_sets;
+        std::vector<std::vector<int>> kept_arrays;
+        kept_sets.reserve(bad_indices_sets.size());
+        kept_arrays.reserve(bad_indices_arrays.size());
+        for (int i = 0; i < static_cast<int>(bad_indices_sets.size()); ++i)
+        {
+            if (!covered[i])
+            {
+                kept_sets.push_back(std::move(bad_indices_sets[i]));
+                kept_arrays.push_back(std::move(bad_indices_arrays[i]));
+            }
+        }
+        bad_indices_sets = std::move(kept_sets);
+        bad_indices_arrays = std::move(kept_arrays);
+
+        CPUHYBRID_LOG_INFO("[{}] [remove_covered_contact_patches] [{:.6f}] [num_patches_before={}] [num_patches_after={}] [num_removed={}]",
+                     name(), elapsed_seconds(phase_begin), num_before, bad_indices_sets.size(), num_before - static_cast<int>(bad_indices_sets.size()));
+    }
+
+    // RAS: one subdomain per bad dof, made of every dof with a nonzero entry
+    // in that dof's row. sparse_A is column-major, so column k is used as a
+    // stand-in for row k -- the same structural-symmetry assumption already
+    // relied on elsewhere in this file (e.g. assemble_D's global_to_row).
+    // Unlike the other subdomain-construction paths, the subdomain a dof
+    // lands in here is never merged, filtered, or expanded: it is exactly the
+    // dof's own sparsity neighborhood, and dss_precond_iter restricts its
+    // correction to that one owning dof (ras_target_dofs), so overlapping
+    // subdomains never double-correct a dof the way additive Schwarz would.
+    void CPUHybridSolver::build_ras_subdomains(SharedSparseMatrix &sparse_A)
+    {
+        auto phase_begin = clock::now();
+
+        for (int d : all_bad_dofs)
+        {
+            std::set<int> subdomain;
+            for (SharedSparseMatrix::InnerIterator it(sparse_A, d); it; ++it)
+            {
+                subdomain.insert(it.row());
+            }
+            subdomain.insert(d);
+
+            bad_indices_sets.push_back(subdomain);
+            bad_indices_arrays.emplace_back(subdomain.begin(), subdomain.end());
+            ras_target_dofs.push_back(d);
+        }
+
+        CPUHYBRID_LOG_INFO("[{}] [build_ras_subdomains] [{:.6f}] [num_bad_dofs={}] [num_subdomains={}]",
+                     name(), elapsed_seconds(phase_begin), all_bad_dofs.size(), bad_indices_sets.size());
     }
 
     void CPUHybridSolver::decompose_subdomains_to_disjoint_subsets(SharedSparseMatrix &sparse_A)
@@ -1242,7 +1804,7 @@ namespace polysolve::linear
             }
             bad_indices_sets.emplace_back(kv.second.begin(), kv.second.end());
         }
-        SPDLOG_TRACE("[{}] [subdomain_decomposition] [{}] [num_subdomains={}] ",
+        CPUHYBRID_LOG_INFO("[{}] [subdomain_decomposition] [{}] [num_subdomains={}] ",
                      name(), elapsed_seconds(phase_begin), bad_indices_sets.size());
     }
 
@@ -1304,6 +1866,20 @@ namespace polysolve::linear
             }
         }
 
+        if (ras_correction)
+        {
+            int ras_size = (myid == 0) ? static_cast<int>(ras_target_dofs.size()) : 0;
+            MPI_Bcast(&ras_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            if (myid != 0)
+            {
+                ras_target_dofs.resize(ras_size);
+            }
+            if (ras_size > 0)
+            {
+                MPI_Bcast(ras_target_dofs.data(), ras_size, MPI_INT, 0, MPI_COMM_WORLD);
+            }
+        }
+
         bad_indices_arrays.clear();
         bad_indices_arrays.resize(bad_indices_sets.size());
         for (int i = 0; i < bad_indices_sets.size(); ++i)
@@ -1314,8 +1890,44 @@ namespace polysolve::linear
                 bad_indices_arrays[i].push_back(index);
             }
         }
-        SPDLOG_TRACE("[{}] [share_bad_subdomains] [{}] ",
+        CPUHYBRID_LOG_INFO("[{}] [share_bad_subdomains] [{}] ",
                      name(), elapsed_seconds(phase_begin));
+    }
+
+    // Under contact_patch_schwarz, bad_indices_sets (the contact patches) may
+    // overlap, so a covered dof can belong to more than one patch. Compute a
+    // single global scale factor -- 1 / (average number of patches per
+    // covered dof) -- used to damp the summed correction in dss_precond_iter
+    // so overlapping patches don't over-correct on average. bad_indices_sets
+    // is identical on every rank by this point (share_bad_subdomains already
+    // broadcast it), so no communication is needed here.
+    void CPUHybridSolver::compute_overlap_scale()
+    {
+        std::unordered_map<int, int> dof_patch_count;
+        for (const auto &subdomain : bad_indices_sets)
+        {
+            for (int dof : subdomain)
+            {
+                ++dof_patch_count[dof];
+            }
+        }
+
+        if (dof_patch_count.empty())
+        {
+            overlap_scale_ = 1.0;
+            return;
+        }
+
+        long long total_incidences = 0;
+        for (const auto &kv : dof_patch_count)
+        {
+            total_incidences += kv.second;
+        }
+
+        const double avg_overlap = static_cast<double>(total_incidences) / static_cast<double>(dof_patch_count.size());
+        overlap_scale_ = 1.0 / avg_overlap;
+
+        CPUHYBRID_LOG_INFO("[{}] [contact_patch_overlap] [avg_overlap={}] [overlap_scale={}]", name(), avg_overlap, overlap_scale_);
     }
 
     void CPUHybridSolver::load_balance_subdomains()
@@ -1356,7 +1968,7 @@ namespace polysolve::linear
         const int max_size = subdomain_sizes.size() > 0 ? subdomain_sizes.front().second : 0;
         const int min_size = subdomain_sizes.size() > 0 ? subdomain_sizes.back().second : 0;
 
-        SPDLOG_TRACE("[{}] [subdomain_load_balance] [{}] [max_size={}] [min_size={}] [total_dofs={}]",
+        CPUHYBRID_LOG_INFO("[{}] [subdomain_load_balance] [{}] [max_size={}] [min_size={}] [total_dofs={}]",
                      name(), elapsed_seconds(phase_begin), max_size, min_size, total_bad_dofs);
     }
 
@@ -1375,7 +1987,6 @@ namespace polysolve::linear
         Eigen::setNbThreads(1);
         HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
         HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
-        spdlog::set_level(spdlog::level::off);
         CPUHybridSolver::run_worker_loop();
         return 0;
     }
@@ -1448,6 +2059,18 @@ namespace polysolve::linear
             {
                 json dummy_params;
                 worker_registry[id]->set_parameters(dummy_params);
+                break;
+            }
+            case CMD_SET_BLOCK_SIZE:
+            {
+                int dummy_block_size = 0;
+                worker_registry[id]->set_block_size(dummy_block_size);
+                break;
+            }
+            case CMD_SET_BLOCK_MAPPING:
+            {
+                Eigen::VectorXi dummy_block_mapping;
+                worker_registry[id]->set_block_mapping(dummy_block_mapping);
                 break;
             }
             case CMD_FACTORIZE:

@@ -39,6 +39,22 @@ function(amgcl_import_target)
     # Prefer Config mode before Module mode to prevent lib from loading its own FindXXX.cmake
     set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 
+    # AMGCL's own build optionally calls find_package(MPI) to enable its
+    # distributed-memory backend. When nano-mpi is in play, CMAKE_FIND_PACKAGE_PREFER_CONFIG
+    # above makes that call skip Module mode entirely -- bypassing
+    # CMAKE_MODULE_PATH and nano-mpi's FindMPI shim -- and resolve via Config
+    # mode straight to a real system MPI instead (Homebrew's Open MPI ships
+    # an MPIConfig.cmake). Since MPI::MPI_C is a single GLOBAL imported
+    # target, that unconditionally overwrites its INTERFACE_INCLUDE_DIRECTORIES
+    # for everyone, including hypre, silently pointing their #include <mpi.h>
+    # at a real MPI nano-mpi cannot run against. AMGCL's distributed backend
+    # would need a real launcher anyway, which nano-mpi does not provide, so
+    # disable that find_package(MPI) call here rather than let it corrupt the
+    # shared target.
+    if(TARGET nanompi::nanompi)
+        set(CMAKE_DISABLE_FIND_PACKAGE_MPI TRUE)
+    endif()
+
     # Ready to include third-party lib
     include(CPM)
     CPMAddPackage(

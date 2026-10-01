@@ -4,8 +4,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cmath>
-
 namespace polysolve::nonlinear::line_search
 {
 
@@ -25,12 +23,7 @@ namespace polysolve::nonlinear::line_search
     {
         double step_size = starting_step_size;
 
-        // Local copies: a rejection by is_step_acceptable() may change the
-        // problem, after which these are re-evaluated at x.
-        double energy0 = old_energy;
-        TVector grad0 = old_grad;
-
-        init_compute_descent_step_size(delta_x, grad0);
+        init_compute_descent_step_size(delta_x, old_grad);
 
         for (; step_size > current_min_step_size() && cur_iter < current_max_step_size_iter(); step_size *= step_ratio, ++cur_iter)
         {
@@ -59,31 +52,23 @@ namespace polysolve::nonlinear::line_search
                 continue;
             }
 
-            m_logger.trace("ls it: {} {}: {}, {}: {}", cur_iter, log::delta("E"), new_energy - energy0, log::delta("x"), objFunc.step_norm(delta_x, norm_type));
+            m_logger.trace("ls it: {} {}: {}, {}: {}", cur_iter, log::delta("E"), new_energy - old_energy, log::delta("x"), objFunc.step_norm(delta_x, norm_type));
 
-            if (!criteria(delta_x, objFunc, use_grad_norm, energy0, grad0, new_x, new_energy, step_size))
+            if (!criteria(delta_x, objFunc, use_grad_norm, old_energy, old_grad, new_x, new_energy, step_size))
                 continue;
 
             if (objFunc.is_step_acceptable(x, new_x))
                 break; // found a good step size
 
-            // Rejected. The problem may have changed its discretization, so
-            // re-evaluate x before comparing further trial points against it.
-            m_logger.debug("Step of size {} rejected by the problem; re-evaluating and backtracking", step_size);
+            // Rejected. The problem may have changed its discretization, and
+            // delta_x was computed for the old one, so do not keep searching
+            // along it: fail through the caller's usual path (which restores
+            // x and ends the line search), and the solver computes a new
+            // direction on the problem as it is now. Each line search thus
+            // works on a single, fixed problem.
+            m_logger.debug("Step of size {} rejected by the problem; ending the line search", step_size);
             problem_changed = true;
-            objFunc.solution_changed(x);
-            energy0 = objFunc(x);
-            objFunc.gradient(x, grad0);
-            if (!std::isfinite(energy0) || !grad0.array().isFinite().all() || delta_x.dot(grad0) >= 0)
-            {
-                // delta_x was computed for the previous problem and need not
-                // descend on the new one. Fail through the caller's usual path
-                // (which restores x and ends the line search) so the solver
-                // picks a new direction.
-                m_logger.debug("Search direction is no longer a descent direction after the problem changed");
-                return 0;
-            }
-            init_compute_descent_step_size(delta_x, grad0);
+            return 0;
         }
 
         return step_size;

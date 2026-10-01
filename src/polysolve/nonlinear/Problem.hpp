@@ -105,16 +105,17 @@ namespace polysolve::nonlinear
         /// @brief Last word on a step the line search is about to accept.
         ///
         /// Called once a trial step has passed the line search's descent
-        /// criteria, before it is accepted. Returning false rejects it and the
-        /// line search keeps backtracking. Unlike is_step_valid(), which runs on
-        /// every trial point, this runs only on steps that would otherwise be
-        /// taken, so it suits checks too expensive to run per trial.
+        /// criteria, before it is accepted. Returning false rejects it and
+        /// ends the line search as failed, so the solver computes a new
+        /// direction. Unlike is_step_valid(), which runs on every trial point,
+        /// this runs only on steps that would otherwise be taken, so it suits
+        /// checks too expensive to run per trial.
         ///
         /// Before returning false the problem may change its own
         /// discretization (e.g. refine a quadrature where the step was found
-        /// invalid, so that the energy there is no longer finite). The line
-        /// search therefore re-evaluates the energy and gradient at x0 after a
-        /// rejection, so its descent criteria keep comparing like with like.
+        /// invalid, so that the energy there is no longer finite). Ending the
+        /// line search keeps each one on a single, fixed problem: the change
+        /// only affects the directions and line searches that follow.
         ///
         /// Line searches that never backtrack (NoLineSearch) cannot honor a
         /// rejection and do not call this.

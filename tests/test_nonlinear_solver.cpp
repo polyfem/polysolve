@@ -826,43 +826,34 @@ TEST_CASE("line-search-step-acceptable", "[solver][line_search]")
                 CHECK(problem.n_acceptable_calls == 1);
             }
 
-            SECTION("a rejection makes the line search keep backtracking")
+            SECTION("a rejection ends the line search")
             {
                 problem.acceptable = [](const Problem::TVector &, const Problem::TVector &x1) { return x1(0) <= 1.2; };
-                const double step = ls->line_search(x, dx, problem);
-                CHECK(step > 0);
-                CHECK(step * dx(0) <= 1.2);
-                CHECK(problem.n_acceptable_calls >= 2);
+                CHECK(std::isnan(ls->line_search(x, dx, problem)));
+                CHECK(problem.n_acceptable_calls == 1);
             }
 
-            SECTION("a rejection may change the problem")
+            SECTION("a rejection may change the problem for the next line search")
             {
-                // As polyfem does when it refines a quadrature: the first
-                // rejected step makes the energy beyond it infinite. The next
-                // trial (x(0) = 1) lies past the wall, so it has to be turned
-                // down by the line search's own finiteness check -- only the
-                // step it finally accepts reaches the hook again.
+                // As polyfem does when it refines a quadrature: the rejected
+                // step makes the energy beyond it infinite. That line search
+                // ends; the next one, on the changed problem, turns down the
+                // trials past the wall through its own finiteness check, so
+                // only the step it finally accepts reaches the hook again.
                 problem.acceptable = [&](const Problem::TVector &, const Problem::TVector &x1) {
                     if (x1(0) <= 0.8)
                         return true;
                     problem.wall = 0.8;
                     return false;
                 };
+                CHECK(std::isnan(ls->line_search(x, dx, problem)));
+                CHECK(problem.n_acceptable_calls == 1);
+
                 const double step = ls->line_search(x, dx, problem);
                 CHECK(step > 0);
                 CHECK(step * dx(0) <= 0.8);
                 CHECK(std::isfinite(problem.value(x + step * dx)));
                 CHECK(problem.n_acceptable_calls == 2);
-            }
-
-            SECTION("a change that leaves no descent direction fails the line search")
-            {
-                problem.acceptable = [&](const Problem::TVector &, const Problem::TVector &) {
-                    problem.c = -problem.c; // dx now points uphill
-                    return false;
-                };
-                CHECK(std::isnan(ls->line_search(x, dx, problem)));
-                CHECK(problem.n_acceptable_calls == 1);
             }
         }
     }

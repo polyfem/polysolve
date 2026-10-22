@@ -493,7 +493,7 @@ namespace polysolve::nonlinear
             }
 
             {
-                TVector x1 = x + rate * delta_x;
+                TVector x1 = step_along(x, rate, delta_x);
                 if (objFunc.after_line_search_custom_operation(x, x1))
                     objFunc.solution_changed(x1);
                 x = x1;

@@ -74,6 +74,8 @@ namespace polysolve::nonlinear::line_search
         double classical_line_search_time;
 
         double use_grad_norm_tol = -1;
+        /// In gradient-norm mode, also accept a step that decreases the energy.
+        bool accept_energy_decrease_in_grad_mode = false;
         NormType norm_type = NormType::EUCLIDEAN;
 
     protected:

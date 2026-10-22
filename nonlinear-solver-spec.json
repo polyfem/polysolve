@@ -588,6 +588,7 @@
         "optional": [
             "method",
             "use_grad_norm_tol",
+            "accept_energy_decrease_in_grad_mode",
             "min_step_size",
             "max_step_size_iter",
             "min_step_size_final",
@@ -617,6 +618,12 @@
         "default": 1e-6,
         "type": "float",
         "doc": "When the energy is smaller than use_grad_norm_tol, line-search uses norm of gradient instead of energy"
+    },
+    {
+        "pointer": "/line_search/accept_energy_decrease_in_grad_mode",
+        "default": false,
+        "type": "bool",
+        "doc": "When line-search is using the norm of the gradient, also accept a step that decreases the energy. The gradient-only test can fail to accept any step near convergence, where the gradient plateaus while the energy is still descending."
     },
     {
         "pointer": "/line_search/min_step_size",

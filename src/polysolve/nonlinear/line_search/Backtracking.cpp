@@ -77,7 +77,14 @@ namespace polysolve::nonlinear::line_search
         {
             TVector new_grad;
             objFunc.gradient(new_x, new_grad);
-            return objFunc.grad_norm(new_grad, norm_type) < objFunc.grad_norm(old_grad, norm_type); // TODO cache old grad norm
+            // TODO cache old grad norm
+            if (objFunc.grad_norm(new_grad, norm_type)
+                < objFunc.grad_norm(old_grad, norm_type))
+                return true;
+            // Optionally also accept a step that decreases the energy: the
+            // gradient-only test can stall near convergence, where the
+            // gradient plateaus but the energy is still descending.
+            return accept_energy_decrease_in_grad_mode && new_energy < old_energy;
         }
         return new_energy < old_energy;
     }

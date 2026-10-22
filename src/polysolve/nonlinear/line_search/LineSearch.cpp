@@ -68,6 +68,9 @@ namespace polysolve::nonlinear::line_search
 
         default_init_step_size = params["line_search"]["default_init_step_size"];
         step_ratio = params["line_search"]["step_ratio"];
+
+        accept_energy_decrease_in_grad_mode =
+            params["line_search"]["accept_energy_decrease_in_grad_mode"];
     }
 
     double LineSearch::line_search(

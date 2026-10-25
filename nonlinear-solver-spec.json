@@ -20,6 +20,7 @@
             "L-BFGS",
             "L-BFGS-B",
             "Newton",
+            "NonsmoothNewton",
             "ADAM",
             "StochasticADAM",
             "StochasticGradientDescent",
@@ -35,6 +36,7 @@
         "options": [
             "Newton",
             "DenseNewton",
+            "NonsmoothNewton",
             "GradientDescent",
             "ADAM",
             "StochasticADAM",
@@ -219,6 +221,148 @@
         "default": true,
         "type": "bool",
         "doc": "Use PSD in regularized Newton."
+    },
+    {
+        "pointer": "/NonsmoothNewton",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "max_inner",
+            "relative_stop",
+            "fraction_to_boundary",
+            "rho_min",
+            "max_columns",
+            "guard",
+            "debug"
+        ],
+        "doc": "Options for NonsmoothNewton: Newton with a protected path on the split f = s + n of the problem (Problem::has_nonsmooth_term). On an iterate with active nonsmooth terms it minimizes a reduced model (frozen quadratic of s, exact n) with Levenberg-Marquardt steps in a growing subspace, certifies every segment of the path with max_step_size and accepts the end point (or a retraction along the path) by the true decrease; otherwise the Newton direction is line searched. Falls back to the Newton chain."
+    },
+    {
+        "pointer": "/NonsmoothNewton/max_inner",
+        "default": 10,
+        "type": "int",
+        "min": 1,
+        "doc": "Inner step budget per outer iteration."
+    },
+    {
+        "pointer": "/NonsmoothNewton/relative_stop",
+        "default": 0.001,
+        "type": "float",
+        "min": 0,
+        "doc": "Stop the inner loop when a step's model decrease is below this fraction of the accumulated decrease (0 = off)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/fraction_to_boundary",
+        "default": 0.2,
+        "type": "float",
+        "min": 0,
+        "max": 0.99,
+        "doc": "Linearized fraction-to-boundary on the active nonsmooth terms: distance >= tau * distance at the segment start (0 = off)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/rho_min",
+        "default": 0.0001,
+        "type": "float",
+        "min": 0,
+        "max": 1,
+        "doc": "Acceptance ratio of the true decrease to the model decrease, in (0, 1)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/max_columns",
+        "default": 100,
+        "type": "int",
+        "min": 1,
+        "doc": "Subspace column cap."
+    },
+    {
+        "pointer": "/NonsmoothNewton/guard",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "enabled",
+            "c",
+            "abs",
+            "check"
+        ],
+        "doc": "Long-segment guard: validity shortening of the Newton step and a cap on the segment length (scaled, never rejected)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/guard/enabled",
+        "default": true,
+        "type": "bool",
+        "doc": "Enable the guard."
+    },
+    {
+        "pointer": "/NonsmoothNewton/guard/c",
+        "default": 2.0,
+        "type": "float",
+        "min": 0,
+        "doc": "Segment cap = min(c * alpha_v * |p_N|, abs * h) + activation distance (|p_N| = nonsmooth_step_length of the Newton step, h = nonsmooth_length_scale)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/guard/abs",
+        "default": 10.0,
+        "type": "float",
+        "min": 0,
+        "doc": "Absolute segment cap in units of nonsmooth_length_scale."
+    },
+    {
+        "pointer": "/NonsmoothNewton/guard/check",
+        "default": 0.5,
+        "type": "float",
+        "min": 0,
+        "doc": "Shorten the Newton step for validity when its length exceeds check * nonsmooth_length_scale."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "method",
+            "certificate",
+            "dedupe",
+            "local_blocks",
+            "fast_validity",
+            "candidate_permutation"
+        ],
+        "doc": "Internal switches for debugging and ablation (not user parameters). certificate, local_blocks and candidate_permutation are read by the problem implementation."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug/method",
+        "default": true,
+        "type": "bool",
+        "doc": "False: the Newton chain only (no NonsmoothNewton strategy)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug/certificate",
+        "default": true,
+        "type": "bool",
+        "doc": "Problem side: certificate in front of the exact CCD in max_step_size."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug/dedupe",
+        "default": true,
+        "type": "bool",
+        "doc": "Reuse the nonsmooth state rebuilt at a trial point for its true energy (problem side: drop provably inactive candidates per segment)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug/local_blocks",
+        "default": true,
+        "type": "bool",
+        "doc": "Problem side: provide nonsmooth_hessian_blocks."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug/fast_validity",
+        "default": true,
+        "type": "bool",
+        "doc": "Check the validity of every segment end (problem side: fast element validity where applicable)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/debug/candidate_permutation",
+        "default": 0,
+        "type": "int",
+        "min": 0,
+        "doc": "Problem side: null control on the candidate order within a segment (0 off, 1 reverse, >= 2 seeded shuffle)."
     },
     {
         "pointer": "/ADAM",

@@ -6,6 +6,7 @@
 #include <polysolve/linear/Solver.hpp>
 
 #include <memory>
+#include <string>
 
 namespace polysolve::nonlinear
 {
@@ -18,7 +19,8 @@ namespace polysolve::nonlinear
     /// subspace that starts with p_N and grows with B^-1 (model residual) columns (one factorization of B), limits each
     /// step by a segment guard, a linearized fraction-to-boundary and max_step_size on the segment, and accepts the end
     /// point of the resulting polyline (or a retraction along it) by its true decrease. Otherwise p_N is line searched.
-    /// Without a split (has_nonsmooth_term() false) the direction is the plain Newton direction.
+    /// Once the true energy can no longer verify the path (Options::handoff), the rest of the solve is left to the Newton
+    /// chain. Without a split (has_nonsmooth_term() false) the direction is the plain Newton direction.
     class NonsmoothNewton : public DescentStrategy
     {
     public:
@@ -36,6 +38,14 @@ namespace polysolve::nonlinear
             double guard_check = 0.5; ///< validity shortening of p_N when |p_N|_n > check * h
             double rho_min = 1e-4;    ///< true-energy acceptance ratio
             int max_columns = 100;    ///< subspace column cap
+            /// hand the rest of the solve to the Newton chain once the true energy can no longer verify the path: "any"
+            /// (an outer iteration whose inner loop stopped at the noise floor or whose path is below the resolution),
+            /// "first" (only if no inner step was accepted before) or "off"; both also hand off when the gradient norm is
+            /// below line_search/use_grad_norm_tol. Decided before any factorization.
+            std::string handoff = "any";
+            /// resolution of the true energy E: the inner noise floor also counts 32 eps |E|, and a path whose model
+            /// decrease does not exceed 32 eps |E| is not verified by the true energy
+            bool resolution = true;
 
             // internal switches (debug block) used by the strategy
             bool dedupe = true;        ///< true energy at a trial point reuses the nonsmooth state rebuilt there

@@ -56,6 +56,8 @@ namespace polysolve::nonlinear
         o.ftb_tau = value_or(p, "fraction_to_boundary", o.ftb_tau);
         o.rho_min = value_or(p, "rho_min", o.rho_min);
         o.max_columns = value_or(p, "max_columns", o.max_columns);
+        o.handoff = value_or(p, "handoff", o.handoff);
+        o.resolution = value_or(p, "resolution", o.resolution);
         if (p.is_object() && p.contains("guard"))
         {
             const json &g = p["guard"];
@@ -81,6 +83,8 @@ namespace polysolve::nonlinear
             throw std::runtime_error("NonsmoothNewton: rho_min must be in (0, 1), got " + std::to_string(o.rho_min));
         if (o.max_columns < 1)
             throw std::runtime_error("NonsmoothNewton: max_columns must be >= 1");
+        if (o.handoff != "off" && o.handoff != "first" && o.handoff != "any")
+            throw std::runtime_error("NonsmoothNewton: handoff must be off, first or any, got " + o.handoff);
         if (!(o.guard_c > 0) || !(o.guard_abs > 0) || !(o.guard_check >= 0)
             || !std::isfinite(o.guard_c) || !std::isfinite(o.guard_abs) || !std::isfinite(o.guard_check))
             throw std::runtime_error("NonsmoothNewton: guard/c and guard/abs must be finite and > 0, guard/check finite and >= 0");
@@ -95,6 +99,8 @@ namespace polysolve::nonlinear
             long active_iters = 0, path_iters = 0, ls_iters = 0, path_fail = 0, failed = 0;
             long inner = 0, factorizations = 0, factorization_failures = 0, solves = 0, true_energy = 0, retractions = 0;
             long projected = 0, rebuilds = 0;
+            long handoff_noise = 0, handoff_grad = 0; ///< handoffs after a noise-floor / resolution stop, on a small gradient
+            long handoff_iters = 0;                   ///< direction requests declined after the handoff (each goes to the Newton chain)
         };
 
         /// outcome of the last take_step that went to the line search (undone if the line search fails)
@@ -148,6 +154,7 @@ namespace polysolve::nonlinear
         spdlog::logger &logger;
         const NormType norm_type;
         double res_tol = 1e-5;
+        double use_grad_norm_tol = -1; ///< line_search/use_grad_norm_tol of the solver (handoff on a small gradient)
         std::unique_ptr<polysolve::linear::Solver> linear;
         std::vector<SpMat::StorageIndex> pattern_outer, pattern_inner; ///< pattern of the last successful factorization
         Eigen::Index pattern_rows = -1;
@@ -159,6 +166,8 @@ namespace polysolve::nonlinear
         bool fresh = true;
         Vec Mred;
         double h_edge = NaN;
+        bool handed_off = false;  ///< the rest of this solve is left to the Newton chain
+        bool handing_off = false; ///< the last direction request was declined by the handoff (not a failure)
 
         // per direction
         bool use_B = false;
@@ -166,12 +175,15 @@ namespace polysolve::nonlinear
         Vec gnc, gc0;
         double Ec0 = 0;
         bool projected = false;
-        Vec last_built; ///< point of the last nonsmooth_update done by eval (empty: unknown)
+        Vec last_built;          ///< point of the last nonsmooth_update done by eval (empty: unknown)
+        bool noise_stop = false; ///< the last path stopped at the noise floor or below the resolution of the true energy
 
         Impl(const Options &o, const json &solver_params, const json &linear_solver_params, spdlog::logger &l, const NormType nt)
             : opts(o), logger(l), norm_type(nt)
         {
             res_tol = extract_param("Newton", "residual_tolerance", solver_params);
+            if (solver_params.contains("line_search") && solver_params["line_search"].contains("use_grad_norm_tol"))
+                use_grad_norm_tol = solver_params["line_search"]["use_grad_norm_tol"];
             linear = polysolve::linear::Solver::create(linear_solver_params, logger);
         }
 
@@ -450,9 +462,12 @@ namespace polysolve::nonlinear
         bool method_path(Problem &p, const Vec &x, const Vec &g, double E0, const Vec &pN, Vec &step, int &n_inner)
         {
             last_built.resize(0); // the nonsmooth state is only tracked inside this function
+            noise_stop = false;
             const int inner_max = opts.max_inner;
             const int n = int(x.size());
             const int cap = std::min(opts.max_columns, inner_max) + 2;
+            // smallest change of the true energy the acceptance test can resolve (0: model rounding only)
+            const double e_res = opts.resolution ? 32 * EPS * std::abs(E0) : 0.0;
             const int col_cap = opts.max_columns;
             Model M;
             M.init(n, cap);
@@ -569,8 +584,11 @@ namespace polysolve::nonlinear
                 if (!found)
                     break; // Armijo failure
                 const double dec = m_cur - mtrial.m;
-                if (dec <= 32 * EPS * (mtrial.sumabs + me.sumabs))
+                if (dec <= 32 * EPS * (mtrial.sumabs + me.sumabs) + e_res)
+                {
+                    noise_stop = true;
                     break; // decrease below the noise floor (step not accepted)
+                }
                 z = ztrial;
                 m_cur = mtrial.m;
                 const Vec p_new = M.Q.leftCols(k) * z.head(k);
@@ -626,6 +644,12 @@ namespace polysolve::nonlinear
                 return std::isfinite(Ey) && (E0 - Ey) / pred >= opts.rho_min;
             };
             const int K = int(pts.size()) - 1;
+            // the model decreases along the polyline, so no retraction point could be verified either
+            if (opts.resolution && !(-mvals[K] > e_res))
+            {
+                noise_stop = true;
+                return false;
+            }
             for (int sg = K; sg >= 1; --sg)
             {
                 if (sg == K)
@@ -698,6 +722,19 @@ namespace polysolve::nonlinear
         // no split (e.g. a full-size phase): leave the iteration to the Newton chain that follows
         if (!objFunc.has_nonsmooth_term())
             return false;
+        // handoff on a small gradient, where the line search compares gradient norms (checked before any factorization)
+        if (opts_.handoff != "off" && !m.handed_off
+            && objFunc.grad_norm(grad, m.norm_type) < m.use_grad_norm_tol * objFunc.grad_norm_rescaling(m.norm_type))
+        {
+            m.handed_off = true;
+            ++m.st.handoff_grad;
+        }
+        if (m.handed_off)
+        {
+            ++m.st.handoff_iters;
+            m.handing_off = true;
+            return false;
+        }
         m.init_minimize(objFunc);
         bool ok = false;
         try
@@ -730,7 +767,15 @@ namespace polysolve::nonlinear
         }
         const bool active = objFunc.nonsmooth_active_size() > 0;
         int n_inner = 0;
-        if (active && grad.dot(direction) < 0 && m.method_path(objFunc, x, grad, energy, direction, step, n_inner))
+        m.noise_stop = false;
+        const bool took_path = active && grad.dot(direction) < 0 && m.method_path(objFunc, x, grad, energy, direction, step, n_inner);
+        // the true energy no longer resolves the path: the Newton chain finishes the solve from the next iteration
+        if (opts_.handoff != "off" && !m.handed_off && m.noise_stop && (opts_.handoff == "any" || n_inner == 0))
+        {
+            m.handed_off = true;
+            ++m.st.handoff_noise;
+        }
+        if (took_path)
         {
             m.record(m.st.path_iters, active, n_inner);
             m.pending = Impl::Pending();
@@ -744,6 +789,12 @@ namespace polysolve::nonlinear
 
     bool NonsmoothNewton::handle_error()
     {
+        // a direction declined by the handoff is not a failure: move on to the Newton chain
+        if (impl_->handing_off)
+        {
+            impl_->handing_off = false;
+            return false;
+        }
         ++impl_->st.failed;
         impl_->undo_pending(); // the line search on p_N failed: the iteration does not count
         return false;
@@ -754,6 +805,8 @@ namespace polysolve::nonlinear
         impl_->st = Impl::Stats();
         impl_->pending = Impl::Pending();
         impl_->fresh = true;
+        impl_->handed_off = false;
+        impl_->handing_off = false;
     }
 
     void NonsmoothNewton::update_solver_info(json &solver_info, const double per_iteration)
@@ -775,6 +828,9 @@ namespace polysolve::nonlinear
             {"true_energy_evaluations", s.true_energy},
             {"retractions", s.retractions},
             {"projected_iterations", s.projected},
-            {"nonsmooth_updates", s.rebuilds}};
+            {"nonsmooth_updates", s.rebuilds},
+            {"handoff_noise_floor", s.handoff_noise},
+            {"handoff_grad_norm", s.handoff_grad},
+            {"handoff_iterations", s.handoff_iters}};
     }
 } // namespace polysolve::nonlinear

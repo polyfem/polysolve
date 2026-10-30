@@ -143,8 +143,12 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK(d.max_inner == 10);
     CHECK(d.guard);
     CHECK(d.dedupe);
-    const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"guard", {{"c", 3.0}}}, {"debug", {{"dedupe", false}}}}}});
+    CHECK(d.handoff == "any");
+    CHECK(d.resolution);
+    const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"handoff", "first"}, {"resolution", false}, {"guard", {{"c", 3.0}}}, {"debug", {{"dedupe", false}}}}}});
     CHECK(o.max_inner == 20);
+    CHECK(o.handoff == "first");
+    CHECK(!o.resolution);
     CHECK(o.guard_c == 3.0);
     CHECK(o.guard_abs == 10.0);
     CHECK(!o.dedupe);
@@ -156,12 +160,13 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"rho_min", 1.0}})));
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"max_columns", 0}})));
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"guard", {{"c", 0.0}}}})));
+    CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"handoff", "last"}})));
 }
 
 #ifdef POLYSOLVE_WITH_CHOLMOD
 TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
 {
-    // the protected path takes the steps into the region where the log term is active; the Newton chain behind it is not needed
+    // the protected path takes the steps into the region where the log term is active
     static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonsmooth-newton-test-logger");
     logger->set_level(spdlog::level::warn);
     const json solver_params = R"({"solver": "NonsmoothNewton", "max_iterations": 100, "grad_norm_tol": 1e-10})"_json;
@@ -181,9 +186,48 @@ TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
     REQUIRE(info.contains("NonsmoothNewton"));
     const json &s = info["NonsmoothNewton"];
     CHECK(s["path_iterations"].get<long>() > 0);
-    CHECK(s["fallback_iterations"].get<long>() == 0);
-    CHECK(s["path_iterations"].get<long>() + s["line_search_iterations"].get<long>() + s["path_failures"].get<long>() == info["iterations"].get<long>());
     CHECK(s["nonsmooth_updates"].get<long>() > 0);
+    // handoff "any" (default): one handoff, after which the Newton chain finishes the solve
+    CHECK(s["handoff_grad_norm"].get<long>() + s["handoff_noise_floor"].get<long>() == 1);
+    CHECK(s["handoff_iterations"].get<long>() >= 1);
+    CHECK(s["fallback_iterations"].get<long>() > 0);
+
+    // without the handoff the protected path finishes the solve; the Newton chain behind it is not needed
+    json no_handoff_params = solver_params;
+    no_handoff_params["NonsmoothNewton"]["handoff"] = "off";
+    auto solver1 = Solver::create(no_handoff_params, linear_solver_params, 1, *logger);
+    LogTermProblem p1(4);
+    Problem::TVector x1 = Problem::TVector::LinSpaced(4, 0.5, 2.0);
+    solver1->minimize(p1, x1);
+    p1.gradient(x1, g);
+    CHECK(g.norm() < 1e-8);
+    const json &info1 = solver1->info();
+    const json &s1 = info1["NonsmoothNewton"];
+    CHECK(s1["handoff_grad_norm"].get<long>() + s1["handoff_noise_floor"].get<long>() + s1["handoff_iterations"].get<long>() == 0);
+    CHECK(s1["fallback_iterations"].get<long>() == 0);
+    CHECK(s1["path_iterations"].get<long>() + s1["line_search_iterations"].get<long>() + s1["path_failures"].get<long>() == info1["iterations"].get<long>());
+
+    // a large constant in the energy puts the last decreases below 32 eps |E|: with the resolution the method does not
+    // try to verify them by the true energy; without it the retraction search spends true energy evaluations on them
+    struct Offset : LogTermProblem
+    {
+        using LogTermProblem::LogTermProblem;
+        double value(const TVector &x) override { return 1e8 + LogTermProblem::value(x); }
+    };
+    json res_params = no_handoff_params;
+    json evals[2];
+    for (const bool res : {true, false})
+    {
+        res_params["NonsmoothNewton"]["resolution"] = res;
+        auto so = Solver::create(res_params, linear_solver_params, 1, *logger);
+        Offset po(4);
+        Problem::TVector xo = Problem::TVector::LinSpaced(4, 0.5, 2.0);
+        so->minimize(po, xo);
+        CHECK(xo.maxCoeff() < LogTermProblem::dhat);
+        evals[res ? 0 : 1] = so->info()["NonsmoothNewton"];
+    }
+    CHECK(evals[0]["retractions"].get<long>() < evals[1]["retractions"].get<long>());
+    CHECK(evals[0]["true_energy_evaluations"].get<long>() < evals[1]["true_energy_evaluations"].get<long>());
 
     // without a split the iterations are left to the Newton chain: same iterates as the Newton solver
     struct NoSplit : LogTermProblem

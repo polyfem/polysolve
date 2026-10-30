@@ -232,6 +232,8 @@
             "fraction_to_boundary",
             "rho_min",
             "max_columns",
+            "handoff",
+            "resolution",
             "guard",
             "debug"
         ],
@@ -273,6 +275,23 @@
         "type": "int",
         "min": 1,
         "doc": "Subspace column cap."
+    },
+    {
+        "pointer": "/NonsmoothNewton/handoff",
+        "default": "any",
+        "type": "string",
+        "options": [
+            "off",
+            "first",
+            "any"
+        ],
+        "doc": "Hand the rest of the solve to the Newton chain once the true energy can no longer verify the path: any = after an outer iteration whose inner loop stopped at the noise floor of the energy or whose path is below the energy resolution; first = only if this happened before any inner step was accepted; off = never. Except for off, also when the gradient norm is below line_search/use_grad_norm_tol, where the line search compares gradient norms instead of energies."
+    },
+    {
+        "pointer": "/NonsmoothNewton/resolution",
+        "default": true,
+        "type": "bool",
+        "doc": "Take 32 eps |E| as the resolution of the true energy E: the inner noise floor includes it, and a path whose model decrease does not exceed it is not verified by the true energy (the Newton step is line searched instead)."
     },
     {
         "pointer": "/NonsmoothNewton/guard",

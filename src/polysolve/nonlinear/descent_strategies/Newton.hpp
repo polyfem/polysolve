@@ -18,7 +18,8 @@ namespace polysolve::nonlinear
             const json &linear_solver_params,
             const double characteristic_length,
             spdlog::logger &logger,
-            const NormType norm_type);
+            const NormType norm_type,
+            const int dimension = 1);
 
     protected:
         Newton(const bool sparse,
@@ -27,7 +28,8 @@ namespace polysolve::nonlinear
                const json &linear_solver_params,
                const double characteristic_length,
                spdlog::logger &logger,
-               const NormType norm_type);
+               const NormType norm_type,
+               const int dimension = 1);
 
     public:
         Newton(const bool sparse,
@@ -35,7 +37,8 @@ namespace polysolve::nonlinear
                const json &linear_solver_params,
                const double characteristic_length,
                spdlog::logger &logger,
-               const NormType norm_type);
+               const NormType norm_type,
+               const int dimension = 1);
 
         std::string name() const override { return internal_name() + "Newton"; }
 
@@ -61,6 +64,10 @@ namespace polysolve::nonlinear
 
     protected:
         std::string internal_name() const { return is_sparse ? "Sparse" : "Dense"; }
+        NormType get_norm_type() const { return norm_type; }
+
+        std::string linear_solver_name() const { return linear_solver->name(); }
+        void set_linear_solver_relative_tolerance(const double tol);
 
         virtual void compute_hessian(Problem &objFunc,
                                      const TVector &x,
@@ -89,7 +96,8 @@ namespace polysolve::nonlinear
                         const json &linear_solver_params,
                         const double characteristic_length,
                         spdlog::logger &logger,
-                        const NormType norm_type);
+                        const NormType norm_type,
+                        const int dimension = 1);
 
         std::string name() const override { return internal_name() + "ProjectedNewton"; }
 
@@ -113,7 +121,8 @@ namespace polysolve::nonlinear
                           const json &linear_solver_params,
                           const double characteristic_length,
                           spdlog::logger &logger,
-                          const NormType norm_type);
+                          const NormType norm_type,
+                          const int dimension = 1);
 
         std::string name() const override
         {
@@ -133,6 +142,39 @@ namespace polysolve::nonlinear
         polysolve::StiffnessMatrix hessian_cache;
 
         double reg_weight; ///< Regularization Coefficients
+    protected:
+        void compute_hessian(Problem &objFunc,
+                             const TVector &x,
+                             polysolve::StiffnessMatrix &hessian) override;
+
+        void compute_hessian(Problem &objFunc,
+                             const TVector &x,
+                             Eigen::MatrixXd &hessian) override;
+    };
+
+    /// @brief Inexact Newton solver that requires a Hybrid CG-based linear
+    /// solver (CPUHybridSolver or GPUHybridSolver). The relative tolerance of
+    /// the linear solve is adapted to the current gradient norm, and the
+    /// resulting (possibly inexact) direction is always accepted.
+    class NewtonCG : public Newton
+    {
+    public:
+        using Superclass = Newton;
+
+        NewtonCG(const bool sparse,
+                 const json &solver_params,
+                 const json &linear_solver_params,
+                 const double characteristic_length,
+                 spdlog::logger &logger,
+                 const NormType norm_type);
+
+        std::string name() const override { return internal_name() + "NewtonCG"; }
+
+        bool compute_update_direction(Problem &objFunc, const TVector &x, const TVector &grad, TVector &direction) override;
+
+    private:
+        const bool force_psd_projection;
+
     protected:
         void compute_hessian(Problem &objFunc,
                              const TVector &x,

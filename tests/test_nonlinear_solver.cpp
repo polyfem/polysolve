@@ -482,6 +482,33 @@ TEST_CASE("nonlinear-fallbacks", "[solver]")
     }
 }
 
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+// NewtonCG requires a Hybrid CG-based linear solver (see Newton.hpp). This
+// just checks that the new force_psd_projection option is accepted by the
+// JSON spec and threaded through NewtonCG's constructor without throwing --
+// not a full solve, since the underlying CPUHybridSolver's MPI-rank
+// partitioning isn't meant for a problem this tiny.
+TEST_CASE("newton_cg_force_psd_projection", "[.][solver]")
+{
+    json solver_params = R"({"solver": [
+        {
+            "type": "NewtonCG",
+            "force_psd_projection": true
+        }
+    ]
+    })"_json;
+    json linear_solver_params;
+    linear_solver_params["solver"] = "CPUHybrid";
+
+    const double characteristic_length = 1;
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("newton-cg-psd-test-logger");
+    logger->set_level(spdlog::level::info);
+
+    REQUIRE_NOTHROW(Solver::create(solver_params, linear_solver_params, characteristic_length, *logger));
+}
+#endif
+
 TEST_CASE("nonlinear-gradient-fd", "[solver]")
 {
     test_solvers_gradient_fd(false);

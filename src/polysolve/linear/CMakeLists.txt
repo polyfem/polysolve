@@ -23,6 +23,8 @@ if(POLYSOLVE_WITH_CUDA)
     list(APPEND SOURCES
         GPUHybridSolver.cu
         GPUHybridSolver.hpp
+        RestartedAMGPCG.cu
+        RestartedAMGPCG.hpp
         cuDSS.hpp
         cuDSS.cpp
     )

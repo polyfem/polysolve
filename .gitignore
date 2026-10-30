@@ -8,3 +8,5 @@ tests/data
 PolySolveOptions.cmake
 .vs
 __cmake_systeminformation
+scaling-experiment
+restart-experiments

@@ -40,7 +40,8 @@ namespace polysolve::nonlinear
             const double characteristic_length,
             spdlog::logger &logger,
             const bool strict_validation = true,
-            const NormType norm_type = NormType::EUCLIDEAN);
+            const NormType norm_type = NormType::EUCLIDEAN,
+            const int dimension = 1);
 
         /// @brief List available solvers
         static std::vector<std::string> available_solvers();

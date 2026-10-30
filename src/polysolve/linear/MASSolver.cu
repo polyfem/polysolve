@@ -197,8 +197,6 @@ namespace polysolve::linear
 
         void set_parameters(const json &params)
         {
-            if (params.contains("block_dim"))
-                block_dim_ = params["block_dim"];
             if (params.contains("max_iter"))
                 max_iter_ = params["max_iter"];
             if (params.contains("relative_tolerance"))
@@ -209,6 +207,11 @@ namespace polysolve::linear
                 lazy_partitioning_ = params["lazy_partitioning"];
             if (params.contains("use_preconditioned_residual_norm"))
                 use_preconditioned_residual_norm_ = params["use_preconditioned_residual_norm"];
+        }
+
+        void set_block_size(int block_size)
+        {
+            block_dim_ = block_size;
         }
 
         void get_info(json &params) const
@@ -308,16 +311,16 @@ namespace polysolve::linear
                 // Build adjacency for graph partition.
                 auto phase_begin = clock::now();
                 BSRAdjacency adj{A, block_dim_, rt};
-                SPDLOG_TRACE("[MAS] [factorize_topology_adj] [{:.6f}]", elapsed_seconds(phase_begin));
+                SPDLOG_INFO("[MAS] [factorize_topology_adj] [{:.6f}]", elapsed_seconds(phase_begin));
 
                 // Sort nodes based on parition.
                 phase_begin = clock::now();
                 build_partition_and_perm(adj);
-                SPDLOG_TRACE("[MAS] [factorize_graph_partition] [{:.6f}]", elapsed_seconds(phase_begin));
+                SPDLOG_INFO("[MAS] [factorize_graph_partition] [{:.6f}]", elapsed_seconds(phase_begin));
             }
             else
             {
-                SPDLOG_TRACE("[MAS] [factorize_reuse_partition] [0.000000]");
+                SPDLOG_INFO("[MAS] [factorize_reuse_partition] [0.000000]");
             }
 
             // Build new sorted BSR matrix for MAS initialization.
@@ -327,7 +330,7 @@ namespace polysolve::linear
                 block_dim_,
                 ctd::span<const int>(permutation_.data(), permutation_.size()),
                 rt};
-            SPDLOG_TRACE("[MAS] [factorize_permuted_bsr] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[MAS] [factorize_permuted_bsr] [{:.6f}]", elapsed_seconds(phase_begin));
 
             BSRView view = A_.view();
             dim_ = A.rows();
@@ -340,7 +343,7 @@ namespace polysolve::linear
                 ctd::span<const int>(part_offsets_.data(), part_offsets_.size()),
                 rt);
             rt.stream.sync();
-            SPDLOG_TRACE("[MAS] [factorize_mas] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[MAS] [factorize_mas] [{:.6f}]", elapsed_seconds(phase_begin));
 
             // Copy permutation to device.
             phase_begin = clock::now();
@@ -363,14 +366,14 @@ namespace polysolve::linear
             scalar_rz_old_ = safe_alloc<double>(1, rt, "device_buffers scalar_rz_old");
             scalar_rr_ = safe_alloc<double>(1, rt, "device_buffers scalar_rr");
             rt.stream.sync();
-            SPDLOG_TRACE("[MAS] [factorize_device_buffers] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[MAS] [factorize_device_buffers] [{:.6f}]", elapsed_seconds(phase_begin));
 
             // Allocates buffers for CuSparse.
             phase_begin = clock::now();
             setup_cusparse(rt);
             rt.stream.sync();
-            SPDLOG_TRACE("[MAS] [factorize_cusparse] [{:.6f}]", elapsed_seconds(phase_begin));
-            SPDLOG_TRACE("[MAS] [factorize_total] [{:.6f}]", elapsed_seconds(total_begin));
+            SPDLOG_INFO("[MAS] [factorize_cusparse] [{:.6f}]", elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[MAS] [factorize_total] [{:.6f}]", elapsed_seconds(total_begin));
         }
 
         void solve(const Eigen::Ref<const Eigen::VectorXd> b, Eigen::Ref<Eigen::VectorXd> x)
@@ -563,7 +566,7 @@ namespace polysolve::linear
                 if (k % 100 == 0)
                 {
                     rt.stream.sync();
-                    SPDLOG_TRACE(
+                    SPDLOG_INFO(
                         "[MAS] [pcg_loop] [{:.6f}] [iter={}] [residual={:.6e}]",
                         elapsed_seconds(iter_window_begin),
                         k,
@@ -587,7 +590,7 @@ namespace polysolve::linear
                 status_ = MASSolverStatus::ReachMaxIterations;
             }
 
-            SPDLOG_TRACE(
+            SPDLOG_INFO(
                 "[MAS] [pcg_loop] [{:.6f}] [iter={}] [residual={:.6e}]",
                 elapsed_seconds(iter_window_begin),
                 iterations_,
@@ -611,6 +614,11 @@ namespace polysolve::linear
         }
 
         impl_->set_parameters(params[solver_name]);
+    }
+
+    void MASSolver::set_block_size(int block_size)
+    {
+        impl_->set_block_size(block_size);
     }
 
     void MASSolver::get_info(json &params) const

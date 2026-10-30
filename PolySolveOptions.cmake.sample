@@ -34,6 +34,7 @@
 # option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                ON)
 # option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                   ON)
 # option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                      ON)
+# option(POLYSOLVE_WITH_STRUMPACK     "Enable STRUMPACK (experimental CPUHybrid subdomain factorization)" OFF)
 
 # Options for third-party libraries
 # option(EIGEN_WITH_MKL "Use Eigen with MKL" ON)

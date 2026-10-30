@@ -8,6 +8,11 @@
 #include <spdlog/fmt/bundled/color.h>
 #endif
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <set>
+
 namespace polysolve::nonlinear
 {
 
@@ -17,7 +22,8 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger,
-        const NormType norm_type)
+        const NormType norm_type,
+        const int dimension)
     {
         // Copies stuff from main newton
         json proj_solver_params = R"({"ProjectedNewton": {}})"_json;
@@ -35,21 +41,21 @@ namespace polysolve::nonlinear
             res.push_back(std::make_unique<Newton>(
                 sparse,
                 solver_params, linear_solver_params,
-                characteristic_length, logger, norm_type));
+                characteristic_length, logger, norm_type, dimension));
 
         const bool use_psd_projection = solver_params["Newton"]["use_psd_projection"];
         if (use_psd_projection)
             res.push_back(std::make_unique<ProjectedNewton>(
                 sparse,
                 proj_solver_params, linear_solver_params,
-                characteristic_length, logger, norm_type));
+                characteristic_length, logger, norm_type, dimension));
 
         const double reg_weight_min = solver_params["Newton"]["reg_weight_min"];
         if (reg_weight_min > 0)
             res.push_back(std::make_unique<RegularizedNewton>(
                 sparse, solver_params["Newton"]["use_psd_projection_in_regularized"],
                 reg_solver_params, linear_solver_params,
-                characteristic_length, logger, norm_type));
+                characteristic_length, logger, norm_type, dimension));
 
         if (res.empty())
             log_and_throw_error(logger, "Newton needs to have at least one of force_psd_projection=false, reg_weight_min>0, or use_psd_projection=true");
@@ -63,11 +69,12 @@ namespace polysolve::nonlinear
                    const json &linear_solver_params,
                    const double characteristic_length,
                    spdlog::logger &logger,
-                   const NormType norm_type)
+                   const NormType norm_type,
+                   const int dimension)
         : Superclass(solver_params, characteristic_length, logger),
           is_sparse(sparse), characteristic_length(characteristic_length), residual_tolerance(residual_tolerance), norm_type(norm_type)
     {
-        linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
+        linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger, true, dimension);
 
         if (linear_solver->is_dense() == sparse)
             log_and_throw_error(logger, "Newton linear solver must be {}, instead got {}", sparse ? "sparse" : "dense", linear_solver->name());
@@ -82,8 +89,9 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger,
-        const NormType norm_type)
-        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
+        const NormType norm_type,
+        const int dimension)
+        : Newton(sparse, extract_param("Newton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension)
     {
     }
 
@@ -93,8 +101,9 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger,
-        const NormType norm_type)
-        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type)
+        const NormType norm_type,
+        const int dimension)
+        : Superclass(sparse, extract_param("ProjectedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension)
     {
     }
 
@@ -105,8 +114,9 @@ namespace polysolve::nonlinear
         const json &linear_solver_params,
         const double characteristic_length,
         spdlog::logger &logger,
-        const NormType norm_type)
-        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type),
+        const NormType norm_type,
+        const int dimension)
+        : Superclass(sparse, extract_param("RegularizedNewton", "residual_tolerance", solver_params), solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension),
           project_to_psd(project_to_psd)
     {
         reg_weight_min = extract_param("RegularizedNewton", "reg_weight_min", solver_params);
@@ -123,6 +133,28 @@ namespace polysolve::nonlinear
 
         if (reg_weight_max <= reg_weight_min)
             log_and_throw_error(logger, "Newton reg_weight_max must be  > {}, instead got {}", reg_weight_min, reg_weight_max);
+    }
+
+    NewtonCG::NewtonCG(
+        const bool sparse,
+        const json &solver_params,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const NormType norm_type)
+        : Superclass(sparse, std::numeric_limits<double>::infinity(), solver_params, linear_solver_params, characteristic_length, logger, norm_type),
+          force_psd_projection(solver_params.contains("NewtonCG")
+                                    ? solver_params["NewtonCG"].value("force_psd_projection", false)
+                                    : solver_params.value("force_psd_projection", false))
+    {
+        const std::string solver_name = linear_solver_name();
+        // CPUHybridSolver/GPUHybridSolver report themselves as "CPUAMGF"/"GPUAMGF"
+        // (rather than "CPUHybrid"/"GPUHybrid") when select_bad_dofs_from_l1_norm
+        // is false, i.e. the informed/AMGF-Schwarz subdomain-selection mode --
+        // same underlying class, just a different display name.
+        if (solver_name != "CPUHybrid" && solver_name != "GPUHybrid"
+            && solver_name != "CPUAMGF" && solver_name != "GPUAMGF")
+            log_and_throw_error(logger, "NewtonCG requires the linear solver to be CPUHybridSolver or GPUHybridSolver, instead got {}", solver_name);
     }
 
     // =======================================================================
@@ -168,6 +200,45 @@ namespace polysolve::nonlinear
         return true;
     }
 
+    void Newton::set_linear_solver_relative_tolerance(const double tol)
+    {
+        json params;
+        params[linear_solver->name()]["relative_tolerance"] = tol;
+        linear_solver->set_parameters(params);
+    }
+
+    // =======================================================================
+
+    bool NewtonCG::compute_update_direction(
+        Problem &objFunc,
+        const TVector &x,
+        const TVector &grad,
+        TVector &direction)
+    {
+        const double grad_norm = objFunc.grad_norm(grad, get_norm_type());
+        set_linear_solver_relative_tolerance(std::min(0.5, std::sqrt(grad_norm)));
+
+        return Superclass::compute_update_direction(objFunc, x, grad, direction);
+    }
+
+    void NewtonCG::compute_hessian(Problem &objFunc,
+                                   const TVector &x,
+                                   polysolve::StiffnessMatrix &hessian)
+
+    {
+        objFunc.set_project_to_psd(force_psd_projection);
+        objFunc.hessian(x, hessian);
+    }
+
+    void NewtonCG::compute_hessian(Problem &objFunc,
+                                   const TVector &x,
+                                   Eigen::MatrixXd &hessian)
+
+    {
+        objFunc.set_project_to_psd(force_psd_projection);
+        objFunc.hessian(x, hessian);
+    }
+
     // =======================================================================
 
     double Newton::solve_sparse_linear_system(Problem &objFunc,
@@ -184,6 +255,15 @@ namespace polysolve::nonlinear
 
         {
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+
+            const Eigen::VectorXi block_mapping = objFunc.block_mapping();
+            if (block_mapping.size() > 0)
+                linear_solver->set_block_mapping(block_mapping);
+
+            std::set<int> bad_dofs;
+            objFunc.get_problematic_dofs(bad_dofs);
+            linear_solver->set_problematic_dofs(bad_dofs);
+            linear_solver->contact_patches = objFunc.contact_patches;
 
             // TODO: get the correct size
             linear_solver->analyze_pattern(hessian, hessian.rows());
@@ -227,6 +307,10 @@ namespace polysolve::nonlinear
 
         {
             POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+
+            const Eigen::VectorXi block_mapping = objFunc.block_mapping();
+            if (block_mapping.size() > 0)
+                linear_solver->set_block_mapping(block_mapping);
 
             try
             {

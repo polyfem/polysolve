@@ -2,7 +2,9 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 #include "EigenSolver.hpp"
+#include <chrono>
 #include <iostream>
+#include <spdlog/spdlog.h>
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -10,6 +12,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 namespace polysolve::linear
 {
+    namespace
+    {
+        using clock = std::chrono::steady_clock;
+
+        double elapsed_seconds(const std::chrono::time_point<clock> &begin)
+        {
+            return std::chrono::duration<double>(clock::now() - begin).count();
+        }
+    } // namespace
+
     // Get info on the last solve step
     template <typename SparseSolver>
     void EigenDirect<SparseSolver>::get_info(json &params) const
@@ -37,18 +49,22 @@ namespace polysolve::linear
     template <typename SparseSolver>
     void EigenDirect<SparseSolver>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
     {
+        auto phase_begin = clock::now();
         m_Solver.analyzePattern(A);
+        SPDLOG_INFO("[{}] [analyze_pattern] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     // Factorize system matrix
     template <typename SparseSolver>
     void EigenDirect<SparseSolver>::factorize(const StiffnessMatrix &A)
     {
+        auto phase_begin = clock::now();
         m_Solver.factorize(A);
         if (m_Solver.info() == Eigen::NumericalIssue)
         {
             throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
         }
+        SPDLOG_INFO("[{}] [factorize] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     // Solve the linear system
@@ -56,7 +72,9 @@ namespace polysolve::linear
     void EigenDirect<SparseSolver>::solve(
         const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
+        auto phase_begin = clock::now();
         x = m_Solver.solve(b);
+        SPDLOG_INFO("[{}] [solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -93,15 +111,19 @@ namespace polysolve::linear
     template <typename SparseSolver>
     void EigenIterative<SparseSolver>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
     {
+        auto phase_begin = clock::now();
         m_Solver.analyzePattern(A);
+        SPDLOG_INFO("[{}] [analyze_pattern] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     // Factorize system matrix
     template <typename SparseSolver>
     void EigenIterative<SparseSolver>::factorize(const StiffnessMatrix &A)
     {
+        auto phase_begin = clock::now();
         m_A = A;
         m_Solver.factorize(m_A);
+        SPDLOG_INFO("[{}] [factorize] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     // Solve the linear system
@@ -110,7 +132,9 @@ namespace polysolve::linear
         const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
         assert(x.size() == b.size());
+        auto phase_begin = clock::now();
         x = m_Solver.solveWithGuess(b, x);
+        SPDLOG_INFO("[{}] [solve] [{:.6f}] [iters={}]", name(), elapsed_seconds(phase_begin), m_Solver.iterations());
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -134,7 +158,9 @@ namespace polysolve::linear
     template <typename DenseSolver>
     void EigenDenseSolver<DenseSolver>::factorize_dense(const Eigen::MatrixXd &A)
     {
+        auto phase_begin = clock::now();
         m_Solver.compute(A);
+        SPDLOG_INFO("[{}] [factorize] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     // Solve the linear system
@@ -142,6 +168,8 @@ namespace polysolve::linear
     void EigenDenseSolver<DenseSolver>::solve(
         const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
+        auto phase_begin = clock::now();
         x = m_Solver.solve(b);
+        SPDLOG_INFO("[{}] [solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 } // namespace polysolve::linear

@@ -3,6 +3,8 @@
 #include <polysolve/Types.hpp>
 
 #include <memory>
+#include <set>
+#include <vector>
 
 #define POLYSOLVE_DELETE_MOVE_COPY(Base) \
     Base(Base &&) = delete;              \
@@ -56,11 +58,13 @@ namespace polysolve::linear
         /// @param[in]  params   Parameter of the solver, including name and preconditioner
         /// @param[in]  logger   Logger used for error
         /// @param[in]  strict_validation    strict validation of the input paraams
+        /// @param[in]  dimension    block size for multigrid solvers, set before set_parameters
         /// @return a pointer to a linear solver
         //
         static std::unique_ptr<Solver> create(const json &params,
                                               spdlog::logger &logger,
-                                              const bool strict_validation = true);
+                                              const bool strict_validation = true,
+                                              const int dimension = 1);
 
         /// @brief Static constructor
         ///
@@ -110,11 +114,23 @@ namespace polysolve::linear
         /// Set block size for multigrid solvers
         virtual void set_block_size(int block_size) {}
 
+        /// Set block mapping for multigrid solvers
+        virtual void set_block_mapping(const Eigen::VectorXi &block_mapping) {}
+
         /// If the problem is nullspace for multigrid solvers
         virtual void set_is_nullspace(const VectorXd &x) {}
 
         /// Set solver tolerance
         virtual void set_tolerance(const double tol) {}
+
+        /// Set the set of DOFs flagged as problematic (e.g. poorly conditioned or
+        /// in contact), letting a caller drive subdomain selection instead of the
+        /// solver's own heuristics.
+        virtual void set_problematic_dofs(const std::set<int> &bad_dofs) {}
+
+        /// Contact patches (e.g. one per contact pair), used by solvers that
+        /// support Schwarz-style overlapping subdomain treatment of contact DOFs.
+        std::vector<std::set<int>> contact_patches;
 
         ///
         /// @brief         { Solve the linear system Ax = b }

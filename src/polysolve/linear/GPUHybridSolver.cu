@@ -21,14 +21,24 @@
 #include <thrust/inner_product.h>
 #include <thrust/distance.h>
 #include <thrust/binary_search.h>
+#include <thrust/reduce.h>
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <fstream>
+#include <limits>
+#include <string>
 
 #include <chrono>
 #include <stdexcept>
 
 #include <spdlog/spdlog.h>
+
+// Internal header, needed for hypre_CTAlloc/hypre_TFree/hypre_TMemcpy so the
+// dof_func array handed to HYPRE_BoomerAMGSetDofFunc uses the allocator HYPRE
+// itself frees it with (and lives in the device memory HYPRE expects here).
+#include "_hypre_utilities.h"
 
 #ifdef HYPRE_ENABLE_MPI
 #include <mpi.h>
@@ -57,6 +67,29 @@
                       << " code " << (int)status << std::endl;            \
             exit(EXIT_FAILURE);                                           \
         }                                                                 \
+    } while (0)
+
+#define CHECK_CUBLAS(call)                                                 \
+    do                                                                     \
+    {                                                                      \
+        cublasStatus_t status = call;                                     \
+        if (status != CUBLAS_STATUS_SUCCESS)                              \
+        {                                                                 \
+            std::cerr << "cuBLAS Error at " << __FILE__ << ":" << __LINE__ \
+                      << " code " << (int)status << std::endl;            \
+            exit(EXIT_FAILURE);                                          \
+        }                                                                 \
+    } while (0)
+
+    // Per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve,
+    // contact_patch_dense_subdomain_solve, pcg_iter) go through this instead
+    // of SPDLOG_INFO directly, so they can be silenced with
+    // detailed_log=false without affecting any other log line.
+#define GPUHYBRID_LOG_ITER(...)     \
+    do                              \
+    {                               \
+        if (detailed_log)           \
+            SPDLOG_INFO(__VA_ARGS__); \
     } while (0)
 
 namespace polysolve::linear
@@ -94,6 +127,7 @@ namespace polysolve::linear
         HYPRE_SetUseGpuRand(true);
 
         CHECK_CUDSS(cudssCreate(&cudss_handle));
+        CHECK_CUBLAS(cublasCreate(&cublas_handle));
     }
 
     void GPUHybridSolver::set_parameters(const json &params)
@@ -115,10 +149,6 @@ namespace polysolve::linear
             if (params["GPUHybrid"].contains("theta"))
             {
                 theta = params["GPUHybrid"]["theta"];
-            }
-            if (params["GPUHybrid"].contains("block_dim"))
-            {
-                dimension_ = params["GPUHybrid"]["block_dim"];
             }
             if (params["GPUHybrid"].contains("decompose_subdomains"))
             {
@@ -156,7 +186,57 @@ namespace polysolve::linear
             {
                 additive_mode = params["GPUHybrid"]["additive_mode"];
             }
+            if (params["GPUHybrid"].contains("contact_patch_schwarz"))
+            {
+                contact_patch_schwarz = params["GPUHybrid"]["contact_patch_schwarz"];
+            }
+            if (params["GPUHybrid"].contains("detailed_log"))
+            {
+                detailed_log = params["GPUHybrid"]["detailed_log"];
+            }
+            if (params["GPUHybrid"].contains("select_bad_dofs_from_l1_norm"))
+            {
+                select_bad_dofs_from_l1_row_norm = params["GPUHybrid"]["select_bad_dofs_from_l1_norm"];
+            }
+            if (params["GPUHybrid"].contains("subdomain_selection_strategy"))
+            {
+                const std::string strategy_str = params["GPUHybrid"]["subdomain_selection_strategy"];
+                if (strategy_str == "knee")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::KNEE;
+                }
+                else if (strategy_str == "gmm")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::GMM;
+                }
+                else if (strategy_str == "fd")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::FD;
+                }
+                else if (strategy_str == "cost")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::COST;
+                }
+                else if (strategy_str == "aposteriori")
+                {
+                    subdomain_selection_strategy = SubdomainSelectionStrategy::APOSTERIORI;
+                }
+                else
+                {
+                    throw std::runtime_error("Unknown subdomain selection strategy: " + strategy_str);
+                }
+            }
         }
+    }
+
+    void GPUHybridSolver::set_block_size(int block_size)
+    {
+        dimension_ = block_size;
+    }
+
+    void GPUHybridSolver::set_block_mapping(const Eigen::VectorXi &block_mapping)
+    {
+        block_mapping_ = block_mapping;
     }
 
     void GPUHybridSolver::get_info(json &params) const
@@ -167,12 +247,16 @@ namespace polysolve::linear
 
     void GPUHybridSolver::check_settings() const
     {
+        if (subdomain_selection_strategy == SubdomainSelectionStrategy::APOSTERIORI)
+        {
+            throw std::runtime_error("A Posteriori subdomain selection strategy is not yet implemented!");
+        }
     }
 
     void GPUHybridSolver::factorize(const StiffnessMatrix &Ain)
     {
         check_settings();
-        SPDLOG_TRACE("[{}] [start_solve] [0.000000] [problem_size={}]", name(), Ain.rows());
+        SPDLOG_INFO("[{}] [start_solve] [0.000000] [problem_size={}]", name(), Ain.rows());
 
         {
             auto phase_begin = clock::now();
@@ -185,7 +269,7 @@ namespace polysolve::linear
             thrust::copy(Ain.innerIndexPtr(), Ain.innerIndexPtr() + d_inner_indices.size(), d_inner_indices.begin());
             thrust::copy(Ain.valuePtr(), Ain.valuePtr() + d_values.size(), d_values.begin());
 
-            SPDLOG_TRACE("[{}] [copy_matrix_to_gpu] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[{}] [copy_matrix_to_gpu] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         {
@@ -193,6 +277,14 @@ namespace polysolve::linear
 
             bad_indices_arrays.clear();
             select_bad_dofs();
+
+            if (contact_patch_schwarz)
+            {
+                for (const auto &patch : contact_patches)
+                {
+                    bad_indices_arrays.emplace_back(patch.begin(), patch.end());
+                }
+            }
 
             if (decompose_subdomains)
             {
@@ -208,26 +300,33 @@ namespace polysolve::linear
             {
                 decompose_subdomains_to_disjoint_subsets(Ain);
             }
-            else
+            else if (!contact_patch_schwarz)
             {
                 bad_indices_arrays.emplace_back(h_all_bad_dofs.begin(), h_all_bad_dofs.end());
             }
 
-            d_all_bad_dofs.clear();
-            h_subdomain_sizes.clear();
-            d_subdomain_sizes.clear();
-
-            for (int i = 0; i < bad_indices_arrays.size(); ++i)
+            if (contact_patch_schwarz)
             {
-                d_all_bad_dofs.insert(d_all_bad_dofs.end(), bad_indices_arrays[i].begin(), bad_indices_arrays[i].end());
-                h_subdomain_sizes.push_back(bad_indices_arrays[i].size());
+                factorize_contact_patches_dense(Ain);
+            }
+            else
+            {
+                d_all_bad_dofs.clear();
+                h_subdomain_sizes.clear();
+                d_subdomain_sizes.clear();
+
+                for (int i = 0; i < bad_indices_arrays.size(); ++i)
+                {
+                    d_all_bad_dofs.insert(d_all_bad_dofs.end(), bad_indices_arrays[i].begin(), bad_indices_arrays[i].end());
+                    h_subdomain_sizes.push_back(bad_indices_arrays[i].size());
+                }
+
+                d_subdomain_sizes.insert(d_subdomain_sizes.end(), h_subdomain_sizes.begin(), h_subdomain_sizes.end());
+
+                factorize_submatrix();
             }
 
-            d_subdomain_sizes.insert(d_subdomain_sizes.end(), h_subdomain_sizes.begin(), h_subdomain_sizes.end());
-
-            factorize_submatrix();
-
-            SPDLOG_TRACE("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         if (has_matrix_)
@@ -296,8 +395,6 @@ namespace polysolve::linear
             // Make sure the systems AMG options are set
             HYPRE_BoomerAMGSetNumFunctions(amg_precond, dim);
 
-            // HYPRE_BoomerAMGSetDofFunc(amg_precond, (HYPRE_Int*) dof_to_function.data());
-
             // More robust options with respect to convergence
             HYPRE_BoomerAMGSetAggNumLevels(amg_precond, 0);
             HYPRE_BoomerAMGSetStrongThreshold(amg_precond, theta);
@@ -332,11 +429,29 @@ namespace polysolve::linear
                     precond,
                     dimension_,
                     theta);
+
+                if (block_mapping_.size() > 0)
+                {
+                    assert(block_mapping_.size() == b.size());
+
+                    // HYPRE_MEMORY_DEVICE is the active memory location here (see the
+                    // constructor), so the array must live on the GPU. Build it on the
+                    // host first, then copy it over with HYPRE's own allocator/copy so
+                    // HYPRE can free it (via hypre_TFree) when the AMG precond is destroyed.
+                    std::vector<HYPRE_Int> dof_func_host(b.size());
+                    for (int i = 0; i < b.size(); ++i)
+                        dof_func_host[i] = block_mapping_[i];
+
+                    HYPRE_Int *dof_func = hypre_CTAlloc(HYPRE_Int, b.size(), HYPRE_MEMORY_DEVICE);
+                    hypre_TMemcpy(dof_func, dof_func_host.data(), HYPRE_Int, b.size(),
+                                  HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+                    HYPRE_BoomerAMGSetDofFunc(precond, dof_func);
+                }
             }
 
             HYPRE_BoomerAMGSetup(precond, parcsr_A, par_b, par_x);
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_TRACE("[{}] [amg_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            SPDLOG_INFO("[{}] [amg_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
         {
@@ -352,7 +467,7 @@ namespace polysolve::linear
             thrust::copy(d_x.begin(), d_x.end(), x.data());
 
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_TRACE("[{}] [pcg_solve] [{:.6f}] [pcg_iters={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, final_res_norm);
+            SPDLOG_INFO("[{}] [pcg_solve] [{:.6f}] [pcg_iters={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, final_res_norm);
         }
 
         {
@@ -405,7 +520,7 @@ namespace polysolve::linear
         HYPRE_IJMatrixGetObject(A, &temp_A);
         parcsr_A = static_cast<decltype(parcsr_A)>(temp_A);
 
-        SPDLOG_TRACE("[{}] [copy_matrix_to_hypre] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        SPDLOG_INFO("[{}] [copy_matrix_to_hypre] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     void GPUHybridSolver::init_hypre_vectors(const int size)
@@ -437,7 +552,7 @@ namespace polysolve::linear
 
         HYPRE_ParCSRMatrixMatvec(1.0, parcsr_A, par_x, 0.0, par_result);
         CHECK_CUDA(cudaDeviceSynchronize());
-        SPDLOG_TRACE("[{}] [matmul] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        GPUHYBRID_LOG_ITER("[{}] [matmul] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     double GPUHybridSolver::dot(const thrust::device_vector<double> &a, const thrust::device_vector<double> &b)
@@ -495,7 +610,7 @@ namespace polysolve::linear
 
     void GPUHybridSolver::custom_mixed_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double> &r, thrust::device_vector<double> &z, thrust::device_vector<double> &buffer, thrust::device_vector<double> &z2)
     {
-        if (d_all_bad_dofs.size() == 0)
+        if (d_all_bad_dofs.size() == 0 && num_contact_patches_ == 0)
         {
             amg_precond_iter(precond, r, z);
         }
@@ -524,6 +639,12 @@ namespace polysolve::linear
 
     void GPUHybridSolver::dss_precond_iter(thrust::device_vector<double> &z, thrust::device_vector<double> &r, thrust::device_vector<double> &next_z)
     {
+        if (contact_patch_schwarz)
+        {
+            dense_contact_patch_precond_iter(z, r, next_z);
+            return;
+        }
+
         auto phase_begin = clock::now();
 
         matmul(z, next_z);
@@ -557,7 +678,98 @@ namespace polysolve::linear
         vector_add(1.0, z, next_z);
 
         CHECK_CUDA(cudaDeviceSynchronize());
-        SPDLOG_TRACE("[{}] [subdomain_solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        GPUHYBRID_LOG_ITER("[{}] [subdomain_solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+    }
+
+    void GPUHybridSolver::dense_contact_patch_precond_iter(thrust::device_vector<double> &z, thrust::device_vector<double> &r, thrust::device_vector<double> &next_z)
+    {
+        auto phase_begin = clock::now();
+
+        matmul(z, next_z);
+        vector_scale(-1.0, next_z);
+        vector_add(1.0, r, next_z);
+
+        if (num_contact_patches_ > 0)
+        {
+            thrust::fill(d_dense_b.begin(), d_dense_b.end(), 0.0);
+
+            const double *raw_next_z = thrust::raw_pointer_cast(next_z.data());
+            double *raw_dense_b = thrust::raw_pointer_cast(d_dense_b.data());
+            const int *raw_dof_map = thrust::raw_pointer_cast(d_contact_dof_map.data());
+            const int *raw_slot = thrust::raw_pointer_cast(d_contact_real_to_dense_slot.data());
+
+            // Scatter each real dof's current rhs into its patch's padded
+            // slot; padding slots stay 0 from the fill above, so they solve
+            // to 0 and never affect the real dofs (see factorize_contact_patches_dense).
+            thrust::for_each(thrust::device,
+                             thrust::make_counting_iterator(0),
+                             thrust::make_counting_iterator(total_contact_patch_real_dofs_),
+                             [=] __device__(int i) {
+                                 raw_dense_b[raw_slot[i]] = raw_next_z[raw_dof_map[i]];
+                             });
+
+            // getrsBatched's info is a single HOST scalar (parameter validation
+            // only), unlike getrfBatched's per-matrix DEVICE info array used in
+            // factorize_contact_patches_dense -- these are not interchangeable.
+            int host_info = 0;
+            CHECK_CUBLAS(cublasDgetrsBatched(
+                cublas_handle, CUBLAS_OP_N, kContactPatchDenseSize, 1,
+                thrust::raw_pointer_cast(d_dense_A_ptrs.data()), kContactPatchDenseSize,
+                thrust::raw_pointer_cast(d_dense_pivot.data()),
+                thrust::raw_pointer_cast(d_dense_b_ptrs.data()), kContactPatchDenseSize,
+                &host_info, num_contact_patches_));
+            if (host_info != 0)
+            {
+                throw std::runtime_error("GPUHybridSolver: cublasDgetrsBatched reported an invalid argument (info=" + std::to_string(host_info) + ")");
+            }
+        }
+
+        thrust::fill(next_z.begin(), next_z.end(), 0.0);
+
+        if (num_contact_patches_ > 0)
+        {
+            // Contact patches may overlap, so a dof's solved value can come
+            // from more than one patch. Gather every real entry's solved
+            // value (still in the padded per-patch layout) into the order
+            // sorted by global dof -- precomputed once at factorize time --
+            // then sum each dof's duplicate entries with reduce_by_key
+            // instead of racing to scatter overlapping writes into next_z.
+            const double *raw_dense_b = thrust::raw_pointer_cast(d_dense_b.data());
+            const int *raw_slot = thrust::raw_pointer_cast(d_contact_real_to_dense_slot.data());
+            const int *raw_perm = thrust::raw_pointer_cast(d_reduce_perm.data());
+            double *raw_reduce_values = thrust::raw_pointer_cast(d_reduce_values.data());
+
+            thrust::for_each(thrust::device,
+                             thrust::make_counting_iterator(0),
+                             thrust::make_counting_iterator(total_contact_patch_real_dofs_),
+                             [=] __device__(int k) {
+                                 int i = raw_perm[k];
+                                 raw_reduce_values[k] = raw_dense_b[raw_slot[i]];
+                             });
+
+            thrust::reduce_by_key(
+                thrust::device,
+                d_reduce_keys.begin(), d_reduce_keys.end(),
+                d_reduce_values.begin(),
+                d_reduce_unique_keys.begin(), d_reduce_unique_values.begin());
+
+            const double scale = overlap_scale_;
+            thrust::transform(thrust::device,
+                              d_reduce_unique_values.begin(), d_reduce_unique_values.begin() + num_unique_overlap_dofs_,
+                              d_reduce_unique_values.begin(),
+                              [scale] __device__(double v) { return v * scale; });
+
+            thrust::scatter(
+                thrust::device,
+                d_reduce_unique_values.begin(), d_reduce_unique_values.begin() + num_unique_overlap_dofs_,
+                d_reduce_unique_keys.begin(),
+                next_z.begin());
+        }
+
+        vector_add(1.0, z, next_z);
+
+        CHECK_CUDA(cudaDeviceSynchronize());
+        GPUHYBRID_LOG_ITER("[{}] [contact_patch_dense_subdomain_solve] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     void GPUHybridSolver::amg_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double> &b, thrust::device_vector<double> &x)
@@ -571,7 +783,7 @@ namespace polysolve::linear
 
         HYPRE_BoomerAMGSolve(precond, parcsr_A, par_b, par_x);
         CHECK_CUDA(cudaDeviceSynchronize());
-        SPDLOG_TRACE("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        GPUHYBRID_LOG_ITER("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     void GPUHybridSolver::decompose_subdomains_to_disjoint_subsets(const Eigen::SparseMatrix<double> &sparse_A)
@@ -616,12 +828,19 @@ namespace polysolve::linear
             bad_indices_arrays.emplace_back(kv.second.begin(), kv.second.end());
         }
 
-        SPDLOG_TRACE("[{}] [subdomain_decomposition] [{}] [num_subdomains={}] ",
+        SPDLOG_INFO("[{}] [subdomain_decomposition] [{}] [num_subdomains={}] ",
                      name(), elapsed_seconds(phase_begin), bad_indices_arrays.size());
     }
 
     void GPUHybridSolver::select_bad_dofs()
     {
+        if (!select_bad_dofs_from_l1_row_norm)
+        {
+            // AMGF mode: bad DOFs come only from whatever set_problematic_dofs
+            // supplied, not from this heuristic.
+            return;
+        }
+
         auto phase_begin = clock::now();
 
         const int num_rows = d_outer_indices.size() - 1;
@@ -652,92 +871,223 @@ namespace polysolve::linear
         double var_sum = thrust::transform_reduce(thrust::device, d_row_norms.begin(), d_row_norms.end(), [global_mean] __device__(double x) -> double { return (x - global_mean) * (x - global_mean); }, 0.0, thrust::plus<double>());
         double global_var = var_sum / num_rows;
 
-        auto minmax = thrust::minmax_element(d_row_norms.begin(), d_row_norms.end());
-        double mean_0 = *minmax.first;
-        double mean_1 = *minmax.second;
-        double var_0 = global_var;
-        double var_1 = global_var;
-        double w0 = 0.5;
-        double w1 = 0.5;
-
-        double var_reg = 1e-6;
-
-        thrust::device_vector<double> d_gamma0(num_rows);
-        thrust::device_vector<double> d_gamma1(num_rows);
-        double *g0 = thrust::raw_pointer_cast(d_gamma0.data());
-        double *g1 = thrust::raw_pointer_cast(d_gamma1.data());
-
-        int gmm_iter;
-
-        for (gmm_iter = 0; gmm_iter < max_gmm_iterations; ++gmm_iter)
-        {
-
-            double log_likelihood = thrust::transform_reduce(thrust::device, thrust::make_counting_iterator(0), thrust::make_counting_iterator(num_rows), [=] __device__(int i) -> double {
-                    double x = row_norms[i];
-
-                    double log_w0 = log(w0);
-                    double log_w1 = log(w1);
-                    
-                    double log_N0 = -0.5 * log(2.0 * M_PI * var_0) - 0.5 * (x - mean_0) * (x - mean_0) / var_0;
-                    double log_N1 = -0.5 * log(2.0 * M_PI * var_1) - 0.5 * (x - mean_1) * (x - mean_1) / var_1;
-                    
-                    double log_g0 = log_w0 + log_N0;
-                    double log_g1 = log_w1 + log_N1;
-                    
-                    double max_log_g = max(log_g0, log_g1);
-                    double log_total = max_log_g + log(exp(log_g0 - max_log_g) + exp(log_g1 - max_log_g));
-                    
-                    g0[i] = exp(log_g0 - log_total);
-                    g1[i] = exp(log_g1 - log_total);
-
-                    return log_total; }, 0.0, thrust::plus<double>());
-
-            double sum_g0 = thrust::reduce(d_gamma0.begin(), d_gamma0.end(), 0.0);
-            double sum_g1 = thrust::reduce(d_gamma1.begin(), d_gamma1.end(), 0.0);
-
-            w0 = sum_g0 / num_rows;
-            w1 = sum_g1 / num_rows;
-
-            double old_mean_0 = mean_0, old_mean_1 = mean_1;
-            double old_var_0 = var_0, old_var_1 = var_1;
-
-            mean_0 = thrust::inner_product(d_gamma0.begin(), d_gamma0.end(), d_row_norms.begin(), 0.0) / sum_g0;
-            mean_1 = thrust::inner_product(d_gamma1.begin(), d_gamma1.end(), d_row_norms.begin(), 0.0) / sum_g1;
-
-            var_0 = thrust::transform_reduce(thrust::device, thrust::make_counting_iterator(0), thrust::make_counting_iterator(num_rows), [=] __device__(int i) -> double { return g0[i] * (row_norms[i] - mean_0) * (row_norms[i] - mean_0); }, 0.0, thrust::plus<double>()) / sum_g0 + var_reg;
-
-            var_1 = thrust::transform_reduce(thrust::device, thrust::make_counting_iterator(0), thrust::make_counting_iterator(num_rows), [=] __device__(int i) -> double { return g1[i] * (row_norms[i] - mean_1) * (row_norms[i] - mean_1); }, 0.0, thrust::plus<double>()) / sum_g1 + var_reg;
-
-            // Check Convergence
-            if (abs(mean_0 - old_mean_0) / abs(old_mean_0) < gmm_tol && abs(mean_1 - old_mean_1) / abs(old_mean_1) < gmm_tol && abs(var_0 - old_var_0) / abs(old_var_0) < gmm_tol && abs(var_1 - old_var_1) / abs(old_var_1) < gmm_tol)
-            {
-                break;
-            }
-        }
-
-        int num_bad_dofs = 0;
-        if (abs(mean_1) / abs(mean_0) > gmm_jump_threshold)
-        {
-            d_all_bad_dofs.resize(num_rows);
-            auto end_it = thrust::copy_if(thrust::device,
-                                          thrust::make_counting_iterator(0),
-                                          thrust::make_counting_iterator(num_rows),
-                                          d_all_bad_dofs.begin(),
-                                          [=] __device__(int i) { return g0[i] < g1[i]; });
-
-            num_bad_dofs = thrust::distance(d_all_bad_dofs.begin(), end_it);
-        }
-
-        d_all_bad_dofs.resize(num_bad_dofs);
-
-        std::vector<int> h_bad_dofs(num_bad_dofs);
-        thrust::copy(d_all_bad_dofs.begin(), d_all_bad_dofs.end(), h_bad_dofs.begin());
-
         h_all_bad_dofs.clear();
-        h_all_bad_dofs.insert(h_bad_dofs.begin(), h_bad_dofs.end());
 
-        SPDLOG_TRACE("[{}] [bad_dof_selection] [{:.6f}] [global_mean={}] [global_var={}] [mean_0={}] [mean_1={}] [var_0={}] [var_1={}] [gmm_iters={}] [num_bad_dofs={}]",
-                     name(), elapsed_seconds(phase_begin), global_mean, global_var, mean_0, mean_1, var_0, var_1, gmm_iter, num_bad_dofs);
+        double mean_0 = 0.0, mean_1 = 0.0;
+        double var_0 = 0.0, var_1 = 0.0;
+        int gmm_iter = 0;
+
+        double max_dist = -1.0;
+        double max_jump = -1.0;
+        double min_cost = -1.0;
+        int split_idx = 0;
+
+        switch (subdomain_selection_strategy)
+        {
+        case SubdomainSelectionStrategy::KNEE:
+        case SubdomainSelectionStrategy::FD:
+        case SubdomainSelectionStrategy::COST:
+        {
+            // Sort on GPU, preserving original row indices
+            thrust::device_vector<double> d_sorted_norms = d_row_norms;
+            thrust::device_vector<int> d_indices(num_rows);
+            thrust::sequence(d_indices.begin(), d_indices.end());
+
+            thrust::sort_by_key(d_sorted_norms.begin(), d_sorted_norms.end(), d_indices.begin());
+
+            // Bring sorted data back to host for O(N) linear scanning
+            std::vector<double> h_sorted_norms(num_rows);
+            std::vector<int> h_indices(num_rows);
+
+            thrust::copy(d_sorted_norms.begin(), d_sorted_norms.end(), h_sorted_norms.begin());
+            thrust::copy(d_indices.begin(), d_indices.end(), h_indices.begin());
+
+            int N = num_rows;
+            if (N >= 2)
+            {
+                if (subdomain_selection_strategy == SubdomainSelectionStrategy::KNEE)
+                {
+                    double x1 = 0.0;
+                    double y1 = std::log(h_sorted_norms[0] + 1e-12);
+                    double x2 = N - 1.0;
+                    double y2 = std::log(h_sorted_norms[N - 1] + 1e-12);
+
+                    for (int i = 1; i < N - 1; ++i)
+                    {
+                        double x0 = (double)i;
+                        double y0 = std::log(h_sorted_norms[i] + 1e-12);
+
+                        double dist = std::abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1);
+
+                        if (dist > max_dist)
+                        {
+                            max_dist = dist;
+                            split_idx = i;
+                        }
+                    }
+                }
+                else if (subdomain_selection_strategy == SubdomainSelectionStrategy::FD)
+                {
+                    for (int i = 1; i < N; ++i)
+                    {
+                        double jump = h_sorted_norms[i] - h_sorted_norms[i - 1];
+                        if (jump > max_jump)
+                        {
+                            max_jump = jump;
+                            split_idx = i;
+                        }
+                    }
+                }
+                else if (subdomain_selection_strategy == SubdomainSelectionStrategy::COST)
+                {
+                    const double c_pcg_conv = 1.0;
+                    const double c_pcg = 1.0;
+                    const double c_fac = 1.0;
+                    const double c_solve = 1.0;
+
+                    min_cost = std::numeric_limits<double>::max();
+
+                    double lambda_min = h_sorted_norms[0];
+
+                    for (int i = 0; i < N; ++i)
+                    {
+                        double p = static_cast<double>(N - i);
+                        double lambda_max = h_sorted_norms[i];
+
+                        double m = c_pcg_conv * std::sqrt(lambda_max / lambda_min);
+                        double cost = (m * c_pcg * N) +
+                                      (c_fac * p * p) +
+                                      (m * c_solve * std::pow(p, 4.0 / 3.0));
+
+                        if (cost < min_cost)
+                        {
+                            min_cost = cost;
+                            split_idx = i;
+                        }
+                    }
+                }
+
+                std::vector<int> h_bad_dofs;
+                h_bad_dofs.reserve(N - split_idx);
+
+                for (int i = split_idx; i < N; ++i)
+                {
+                    h_all_bad_dofs.insert(h_indices[i]);
+                    h_bad_dofs.push_back(h_indices[i]);
+                }
+
+                d_all_bad_dofs = h_bad_dofs;
+            }
+            break;
+        }
+        case SubdomainSelectionStrategy::GMM:
+        {
+            auto minmax = thrust::minmax_element(d_row_norms.begin(), d_row_norms.end());
+            mean_0 = *minmax.first;
+            mean_1 = *minmax.second;
+            var_0 = global_var;
+            var_1 = global_var;
+            double w0 = 0.5;
+            double w1 = 0.5;
+
+            double var_reg = 1e-6;
+
+            thrust::device_vector<double> d_gamma0(num_rows);
+            thrust::device_vector<double> d_gamma1(num_rows);
+            double *g0 = thrust::raw_pointer_cast(d_gamma0.data());
+            double *g1 = thrust::raw_pointer_cast(d_gamma1.data());
+
+            for (gmm_iter = 0; gmm_iter < max_gmm_iterations; ++gmm_iter)
+            {
+                double log_likelihood = thrust::transform_reduce(thrust::device, thrust::make_counting_iterator(0), thrust::make_counting_iterator(num_rows), [=] __device__(int i) -> double {
+                        double x = row_norms[i];
+
+                        double log_w0 = log(w0);
+                        double log_w1 = log(w1);
+
+                        double log_N0 = -0.5 * log(2.0 * M_PI * var_0) - 0.5 * (x - mean_0) * (x - mean_0) / var_0;
+                        double log_N1 = -0.5 * log(2.0 * M_PI * var_1) - 0.5 * (x - mean_1) * (x - mean_1) / var_1;
+
+                        double log_g0 = log_w0 + log_N0;
+                        double log_g1 = log_w1 + log_N1;
+
+                        double max_log_g = max(log_g0, log_g1);
+                        double log_total = max_log_g + log(exp(log_g0 - max_log_g) + exp(log_g1 - max_log_g));
+
+                        g0[i] = exp(log_g0 - log_total);
+                        g1[i] = exp(log_g1 - log_total);
+
+                        return log_total; }, 0.0, thrust::plus<double>());
+
+                double sum_g0 = thrust::reduce(d_gamma0.begin(), d_gamma0.end(), 0.0);
+                double sum_g1 = thrust::reduce(d_gamma1.begin(), d_gamma1.end(), 0.0);
+
+                w0 = sum_g0 / num_rows;
+                w1 = sum_g1 / num_rows;
+
+                double old_mean_0 = mean_0, old_mean_1 = mean_1;
+                double old_var_0 = var_0, old_var_1 = var_1;
+
+                mean_0 = thrust::inner_product(d_gamma0.begin(), d_gamma0.end(), d_row_norms.begin(), 0.0) / sum_g0;
+                mean_1 = thrust::inner_product(d_gamma1.begin(), d_gamma1.end(), d_row_norms.begin(), 0.0) / sum_g1;
+
+                var_0 = thrust::transform_reduce(thrust::device, thrust::make_counting_iterator(0), thrust::make_counting_iterator(num_rows), [=] __device__(int i) -> double { return g0[i] * (row_norms[i] - mean_0) * (row_norms[i] - mean_0); }, 0.0, thrust::plus<double>()) / sum_g0 + var_reg;
+
+                var_1 = thrust::transform_reduce(thrust::device, thrust::make_counting_iterator(0), thrust::make_counting_iterator(num_rows), [=] __device__(int i) -> double { return g1[i] * (row_norms[i] - mean_1) * (row_norms[i] - mean_1); }, 0.0, thrust::plus<double>()) / sum_g1 + var_reg;
+
+                // Check Convergence
+                if (abs(mean_0 - old_mean_0) / abs(old_mean_0) < gmm_tol && abs(mean_1 - old_mean_1) / abs(old_mean_1) < gmm_tol && abs(var_0 - old_var_0) / abs(old_var_0) < gmm_tol && abs(var_1 - old_var_1) / abs(old_var_1) < gmm_tol)
+                {
+                    break;
+                }
+            }
+
+            int num_bad_dofs = 0;
+            if (abs(mean_1) / abs(mean_0) > gmm_jump_threshold)
+            {
+                d_all_bad_dofs.resize(num_rows);
+                auto end_it = thrust::copy_if(thrust::device,
+                                              thrust::make_counting_iterator(0),
+                                              thrust::make_counting_iterator(num_rows),
+                                              d_all_bad_dofs.begin(),
+                                              [=] __device__(int i) { return g0[i] < g1[i]; });
+
+                num_bad_dofs = thrust::distance(d_all_bad_dofs.begin(), end_it);
+            }
+
+            d_all_bad_dofs.resize(num_bad_dofs);
+
+            std::vector<int> h_bad_dofs(num_bad_dofs);
+            thrust::copy(d_all_bad_dofs.begin(), d_all_bad_dofs.end(), h_bad_dofs.begin());
+
+            h_all_bad_dofs.insert(h_bad_dofs.begin(), h_bad_dofs.end());
+            break;
+        }
+        case SubdomainSelectionStrategy::APOSTERIORI:
+            break;
+        }
+
+        switch (subdomain_selection_strategy)
+        {
+        case SubdomainSelectionStrategy::KNEE:
+            SPDLOG_INFO("[{}] [bad_dof_selection] [{:.6f}] [strategy=KNEE] [global_mean={}] [global_var={}] [split_idx={}] [max_dist={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, split_idx, max_dist, h_all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::FD:
+            SPDLOG_INFO("[{}] [bad_dof_selection] [{:.6f}] [strategy=FD] [global_mean={}] [global_var={}] [split_idx={}] [max_jump={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, split_idx, max_jump, h_all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::COST:
+            SPDLOG_INFO("[{}] [bad_dof_selection] [{:.6f}] [strategy=COST] [global_mean={}] [global_var={}] [split_idx={}] [min_cost={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, split_idx, min_cost, h_all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::GMM:
+            SPDLOG_INFO("[{}] [bad_dof_selection] [{:.6f}] [strategy=GMM] [global_mean={}] [global_var={}] [mean_0={}] [mean_1={}] [var_0={}] [var_1={}] [gmm_iters={}] [num_bad_dofs={}]",
+                         name(), elapsed_seconds(phase_begin), global_mean, global_var, mean_0, mean_1, var_0, var_1, gmm_iter, h_all_bad_dofs.size());
+            break;
+        case SubdomainSelectionStrategy::APOSTERIORI:
+            break;
+        }
     }
 
     void GPUHybridSolver::filter_subdomains(const Eigen::SparseMatrix<double> &sparse_A)
@@ -823,7 +1173,7 @@ namespace polysolve::linear
             ++num_not_poorly_conditioned;
         }
 
-        SPDLOG_TRACE("[{}] [subdomain_filtering] [{}] [total_dofs_before={}] [total_dofs_after={}] [num_too_small={}] [num_too_large={}] [num_not_poorly_conditioned={}]",
+        SPDLOG_INFO("[{}] [subdomain_filtering] [{}] [total_dofs_before={}] [total_dofs_after={}] [num_too_small={}] [num_too_large={}] [num_not_poorly_conditioned={}]",
                      name(), elapsed_seconds(phase_begin), original_num_bad_dofs, h_all_bad_dofs.size(), num_too_small, num_too_large, num_not_poorly_conditioned);
     }
 
@@ -845,8 +1195,187 @@ namespace polysolve::linear
 
         h_all_bad_dofs = std::move(new_bad_dofs);
 
-        SPDLOG_TRACE("[{}] [subdomain_expansion] [{}] [num_dofs_before={}] [num_dofs_after={}]",
+        SPDLOG_INFO("[{}] [subdomain_expansion] [{}] [num_dofs_before={}] [num_dofs_after={}]",
                      name(), elapsed_seconds(phase_begin), num_bad_dofs_before, h_all_bad_dofs.size());
+    }
+
+    // Under contact_patch_schwarz, bad_indices_arrays (the contact patches)
+    // may overlap, so a covered dof can belong to more than one patch.
+    // Compute a single global scale factor -- 1 / (average number of patches
+    // per covered dof) -- used to damp the summed correction in
+    // dense_contact_patch_precond_iter so overlapping patches don't
+    // over-correct on average. Also records the number of distinct covered
+    // dofs, needed to size the reduce_by_key output in that same function.
+    void GPUHybridSolver::compute_overlap_scale()
+    {
+        std::unordered_map<int, int> dof_patch_count;
+        for (const auto &subdomain : bad_indices_arrays)
+        {
+            for (int dof : subdomain)
+            {
+                ++dof_patch_count[dof];
+            }
+        }
+
+        num_unique_overlap_dofs_ = static_cast<int>(dof_patch_count.size());
+
+        if (dof_patch_count.empty())
+        {
+            overlap_scale_ = 1.0;
+            return;
+        }
+
+        long long total_incidences = 0;
+        for (const auto &kv : dof_patch_count)
+        {
+            total_incidences += kv.second;
+        }
+
+        const double avg_overlap = static_cast<double>(total_incidences) / static_cast<double>(dof_patch_count.size());
+        overlap_scale_ = 1.0 / avg_overlap;
+
+        SPDLOG_INFO("[{}] [contact_patch_overlap] [avg_overlap={}] [overlap_scale={}] [num_unique_dofs={}]",
+                     name(), avg_overlap, overlap_scale_, num_unique_overlap_dofs_);
+    }
+
+    void GPUHybridSolver::factorize_contact_patches_dense(const Eigen::SparseMatrix<double> &sparse_A)
+    {
+        auto phase_begin = clock::now();
+
+        free_contact_patch_dense_memory();
+
+        constexpr int N = kContactPatchDenseSize;
+
+        num_contact_patches_ = bad_indices_arrays.size();
+
+        for (const auto &patch : bad_indices_arrays)
+        {
+            if ((int)patch.size() > N)
+            {
+                throw std::runtime_error(
+                    "GPUHybridSolver: contact patch has " + std::to_string(patch.size()) +
+                    " dofs, which exceeds the fixed dense batched solve size of " + std::to_string(N));
+            }
+            total_contact_patch_real_dofs_ += patch.size();
+        }
+
+        if (num_contact_patches_ == 0)
+        {
+            SPDLOG_INFO("[{}] [factorize_contact_patches_dense] [{:.6f}] [n_patches=0]", name(), elapsed_seconds(phase_begin));
+            return;
+        }
+
+        // Assemble each patch's dense (padded) block on the host from the
+        // sparse system matrix, the same way the CPU hybrid solver's
+        // assemble_D does. This runs once per factorize() call, not on the
+        // per-iteration hot path, so host-side assembly is fine here even
+        // though the factorization and every solve happen on the GPU.
+        std::vector<double> h_dense_A(static_cast<size_t>(num_contact_patches_) * N * N, 0.0);
+        std::vector<int> h_dof_map;
+        std::vector<int> h_real_to_dense_slot;
+        h_dof_map.reserve(total_contact_patch_real_dofs_);
+        h_real_to_dense_slot.reserve(total_contact_patch_real_dofs_);
+
+        for (int p = 0; p < num_contact_patches_; ++p)
+        {
+            const auto &patch = bad_indices_arrays[p];
+            std::unordered_map<int, int> local_index;
+            local_index.reserve(patch.size());
+            for (int i = 0; i < (int)patch.size(); ++i)
+            {
+                local_index[patch[i]] = i;
+            }
+
+            double *block = h_dense_A.data() + (size_t)p * N * N;
+
+            for (int local_col = 0; local_col < (int)patch.size(); ++local_col)
+            {
+                int global_col = patch[local_col];
+                for (Eigen::SparseMatrix<double>::InnerIterator it(sparse_A, global_col); it; ++it)
+                {
+                    auto found = local_index.find(it.row());
+                    if (found != local_index.end())
+                    {
+                        // Column-major (lda = N), to match cublas<t>getrfBatched/getrsBatched.
+                        block[found->second + local_col * N] = it.value();
+                    }
+                }
+
+                h_dof_map.push_back(global_col);
+                h_real_to_dense_slot.push_back(p * N + local_col);
+            }
+
+            // Pad the unused rows/cols with an identity block, so the padded
+            // system stays nonsingular and decouples from the real dofs --
+            // the padded slots always solve to 0, leaving the real dofs'
+            // solve exactly as if the patch had been solved unpadded.
+            for (int i = (int)patch.size(); i < N; ++i)
+            {
+                block[i + i * N] = 1.0;
+            }
+        }
+
+        d_dense_A = h_dense_A;
+        d_dense_pivot.resize((size_t)num_contact_patches_ * N);
+        d_dense_info.resize(num_contact_patches_);
+        d_dense_b.resize((size_t)num_contact_patches_ * N);
+        d_contact_dof_map = h_dof_map;
+        d_contact_real_to_dense_slot = h_real_to_dense_slot;
+
+        std::vector<double *> h_dense_A_ptrs(num_contact_patches_);
+        std::vector<double *> h_dense_b_ptrs(num_contact_patches_);
+        double *raw_dense_A = thrust::raw_pointer_cast(d_dense_A.data());
+        double *raw_dense_b = thrust::raw_pointer_cast(d_dense_b.data());
+        for (int p = 0; p < num_contact_patches_; ++p)
+        {
+            h_dense_A_ptrs[p] = raw_dense_A + (size_t)p * N * N;
+            h_dense_b_ptrs[p] = raw_dense_b + (size_t)p * N;
+        }
+        d_dense_A_ptrs = h_dense_A_ptrs;
+        d_dense_b_ptrs = h_dense_b_ptrs;
+
+        // Factorize every patch's padded block in one batched call. d_dense_info
+        // is a device array (one entry per patch), per cublasDgetrfBatched's
+        // documented convention -- unlike getrsBatched's info below, which is
+        // a single host scalar.
+        CHECK_CUBLAS(cublasDgetrfBatched(
+            cublas_handle, N,
+            thrust::raw_pointer_cast(d_dense_A_ptrs.data()), N,
+            thrust::raw_pointer_cast(d_dense_pivot.data()),
+            thrust::raw_pointer_cast(d_dense_info.data()),
+            num_contact_patches_));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        std::vector<int> h_info(num_contact_patches_);
+        thrust::copy(d_dense_info.begin(), d_dense_info.end(), h_info.begin());
+        for (int p = 0; p < num_contact_patches_; ++p)
+        {
+            if (h_info[p] != 0)
+            {
+                SPDLOG_WARN("[{}] [contact_patch_singular] [patch={}] [info={}]", name(), p, h_info[p]);
+            }
+        }
+
+        compute_overlap_scale();
+
+        // Precompute the sort-by-global-dof plan used every iteration to sum
+        // overlapping patches' contributions to a shared dof with
+        // thrust::reduce_by_key, instead of racing to scatter into it. Since
+        // bad_indices_arrays (and so d_contact_dof_map) is fixed for the life
+        // of this factorization, both the permutation and the sorted keys
+        // only need to be computed once, here.
+        d_reduce_perm.resize(total_contact_patch_real_dofs_);
+        thrust::sequence(d_reduce_perm.begin(), d_reduce_perm.end());
+
+        d_reduce_keys = d_contact_dof_map;
+        thrust::sort_by_key(d_reduce_keys.begin(), d_reduce_keys.end(), d_reduce_perm.begin());
+
+        d_reduce_values.resize(total_contact_patch_real_dofs_);
+        d_reduce_unique_keys.resize(total_contact_patch_real_dofs_);
+        d_reduce_unique_values.resize(total_contact_patch_real_dofs_);
+
+        SPDLOG_INFO("[{}] [factorize_contact_patches_dense] [{:.6f}] [n_patches={}] [n_real_dofs={}] [n_unique_dofs={}]",
+                     name(), elapsed_seconds(phase_begin), num_contact_patches_, total_contact_patch_real_dofs_, num_unique_overlap_dofs_);
     }
 
     void GPUHybridSolver::factorize_submatrix()
@@ -1075,7 +1604,7 @@ namespace polysolve::linear
         }
 
         CHECK_CUDA(cudaDeviceSynchronize());
-        SPDLOG_TRACE("[{}] [factorize_submatrix] [{}] [n_sparse={}] [n_sparse_dofs={}]",
+        SPDLOG_INFO("[{}] [factorize_submatrix] [{}] [n_sparse={}] [n_sparse_dofs={}]",
                      name(), elapsed_seconds(phase_begin), sparse_batch_count, total_sparse_dofs);
     }
 
@@ -1118,7 +1647,7 @@ namespace polysolve::linear
 
             gamma = dot(r, z);
             old_gamma = gamma;
-            SPDLOG_TRACE("[{}] [pre_loop] [{:.6f}] [rhs_norm={}]", name(), elapsed_seconds(phase_begin), sqrt(bi_prod));
+            SPDLOG_INFO("[{}] [pre_loop] [{:.6f}] [rhs_norm={}]", name(), elapsed_seconds(phase_begin), sqrt(bi_prod));
         }
 
         for (int k = 0; k < max_iter_; ++k)
@@ -1131,7 +1660,7 @@ namespace polysolve::linear
 
             if (sdotp == 0.0)
             {
-                SPDLOG_TRACE("[{}] [err_zero_sdotp] [0.000000]", name());
+                SPDLOG_INFO("[{}] [err_zero_sdotp] [0.000000]", name());
                 break;
             }
 
@@ -1139,12 +1668,12 @@ namespace polysolve::linear
 
             if (alpha <= 0.0)
             {
-                SPDLOG_TRACE("[{}] [err_negative_alpha] [0.000000]", name());
+                SPDLOG_INFO("[{}] [err_negative_alpha] [0.000000]", name());
                 break;
             }
             else if (alpha < __DBL_MIN__)
             {
-                SPDLOG_TRACE("[{}] [err_subnormal_alpha] [0.000000]", name());
+                SPDLOG_INFO("[{}] [err_subnormal_alpha] [0.000000]", name());
                 break;
             }
 
@@ -1154,13 +1683,13 @@ namespace polysolve::linear
 
             if (rel_eps > 0 && (i_prod / bi_prod) < rel_eps)
             {
-                SPDLOG_TRACE("[{}] [converged_rel] [0.000000]", name());
+                SPDLOG_INFO("[{}] [converged_rel] [0.000000]", name());
                 break;
             }
 
             if (abs_eps > 0 && i_prod < abs_eps)
             {
-                SPDLOG_TRACE("[{}] [converged_abs] [0.000000]", name());
+                SPDLOG_INFO("[{}] [converged_abs] [0.000000]", name());
                 break;
             }
 
@@ -1176,7 +1705,7 @@ namespace polysolve::linear
             vector_add(1.0, z, p);
 
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_TRACE("[{}] [pcg_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), k, sqrt(i_prod));
+            GPUHYBRID_LOG_ITER("[{}] [pcg_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), k, sqrt(i_prod));
         }
     }
 
@@ -1190,12 +1719,39 @@ namespace polysolve::linear
         }
 
         free_device_memory();
+        free_contact_patch_dense_memory();
 
         if (cudss_handle)
         {
             cudssDestroy(cudss_handle);
             cudss_handle = nullptr;
         }
+        if (cublas_handle)
+        {
+            cublasDestroy(cublas_handle);
+            cublas_handle = nullptr;
+        }
+    }
+
+    void GPUHybridSolver::free_contact_patch_dense_memory()
+    {
+        num_contact_patches_ = 0;
+        total_contact_patch_real_dofs_ = 0;
+        num_unique_overlap_dofs_ = 0;
+
+        d_dense_A.clear();
+        d_dense_A_ptrs.clear();
+        d_dense_pivot.clear();
+        d_dense_info.clear();
+        d_dense_b.clear();
+        d_dense_b_ptrs.clear();
+        d_contact_dof_map.clear();
+        d_contact_real_to_dense_slot.clear();
+        d_reduce_perm.clear();
+        d_reduce_keys.clear();
+        d_reduce_values.clear();
+        d_reduce_unique_keys.clear();
+        d_reduce_unique_values.clear();
     }
 
     void GPUHybridSolver::free_device_memory()

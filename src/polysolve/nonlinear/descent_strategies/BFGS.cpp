@@ -8,10 +8,11 @@ namespace polysolve::nonlinear
     BFGS::BFGS(const json &solver_params,
                const json &linear_solver_params,
                const double characteristic_length,
-               spdlog::logger &logger)
+               spdlog::logger &logger,
+               const int dimension)
         : Superclass(solver_params, characteristic_length, logger)
     {
-        linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger);
+        linear_solver = polysolve::linear::Solver::create(linear_solver_params, logger, true, dimension);
         if (!linear_solver->is_dense())
             log_and_throw_error(logger, "BFGS linear solver must be dense, instead got {}", linear_solver->name());
     }
@@ -42,6 +43,10 @@ namespace polysolve::nonlinear
         }
         else
         {
+            const Eigen::VectorXi block_mapping = objFunc.block_mapping();
+            if (block_mapping.size() > 0)
+                linear_solver->set_block_mapping(block_mapping);
+
             try
             {
                 linear_solver->analyze_pattern_dense(hess, hess.rows());

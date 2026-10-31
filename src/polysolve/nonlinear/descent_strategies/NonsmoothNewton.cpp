@@ -193,8 +193,8 @@ namespace polysolve::nonlinear
                 return;
             // checked on first use, so that a problem without the split can still select this solver
             // the projected-mode switch relies on the factorization reporting an indefinite B (an LDLT backend would not)
-            if (linear->name() != "Eigen::CholmodSupernodalLLT")
-                log_and_throw_error(logger, "NonsmoothNewton: needs the linear solver Eigen::CholmodSupernodalLLT (an LLT that reports indefinite matrices), got {}", linear->name());
+            if (linear->name() != "Eigen::CholmodSupernodalLLT" && linear->name() != "Eigen::SimplicialLLT")
+                log_and_throw_error(logger, "NonsmoothNewton: needs an LLT linear solver that reports indefinite matrices (Eigen::CholmodSupernodalLLT or Eigen::SimplicialLLT), got {}", linear->name());
             fresh = false;
             p.metric_diagonal(Mred);
             h_edge = p.nonsmooth_length_scale();

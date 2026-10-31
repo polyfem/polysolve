@@ -163,14 +163,17 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"handoff", "last"}})));
 }
 
-#ifdef POLYSOLVE_WITH_CHOLMOD
 TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
 {
     // the protected path takes the steps into the region where the log term is active
     static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonsmooth-newton-test-logger");
     logger->set_level(spdlog::level::warn);
     const json solver_params = R"({"solver": "NonsmoothNewton", "max_iterations": 100, "grad_norm_tol": 1e-10})"_json;
+#ifdef POLYSOLVE_WITH_CHOLMOD
     const json linear_solver_params = R"({"solver": "Eigen::CholmodSupernodalLLT"})"_json;
+#else
+    const json linear_solver_params = R"({"solver": "Eigen::SimplicialLLT"})"_json;
+#endif
     auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
 
     LogTermProblem p(4);
@@ -261,5 +264,13 @@ TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
     Problem::TVector y4 = Problem::TVector::LinSpaced(4, 0.5, 2.0);
     auto solver5 = Solver::create(solver_params, ldlt_params, 1, *logger);
     CHECK_THROWS(solver5->minimize(q4, y4));
+
+    // Eigen::SimplicialLLT also reports indefinite matrices (the backend of builds without CHOLMOD)
+    LogTermProblem q5(4);
+    Problem::TVector y5 = Problem::TVector::LinSpaced(4, 0.5, 2.0);
+    auto solver6 = Solver::create(solver_params, R"({"solver": "Eigen::SimplicialLLT"})"_json, 1, *logger);
+    solver6->minimize(q5, y5);
+    q5.gradient(y5, g);
+    CHECK(g.norm() < 1e-8);
+    CHECK(solver6->info()["NonsmoothNewton"]["path_iterations"].get<long>() > 0);
 }
-#endif

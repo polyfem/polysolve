@@ -25,6 +25,16 @@ namespace polysolve::nonlinear
             return j.is_object() && j.contains(key) ? j[key].get<T>() : def;
         }
 
+        /// solver_params/norm_type as Solver::set_line_search reads it for the line search's switch to comparing gradient
+        /// norms (unknown names map to Euclidean, as there); the strategy's own norm type if the entry is missing
+        NormType line_search_norm(const json &solver_params, const NormType fallback)
+        {
+            if (!solver_params.contains("norm_type") || !solver_params["norm_type"].is_string())
+                return fallback;
+            const std::string s = solver_params["norm_type"];
+            return s == "L2" ? NormType::L2 : s == "Linf" ? NormType::Linf : NormType::EUCLIDEAN;
+        }
+
         /// One segment of the path (nonsmooth_segment_begin / end).
         struct SegmentScope
         {
@@ -152,6 +162,8 @@ namespace polysolve::nonlinear
 
         const Options &opts;
         spdlog::logger &logger;
+        /// norm of the handoff test on a small gradient: the line search's (solver_params/norm_type), so that the handoff
+        /// happens where the line search would switch to comparing gradient norms
         const NormType norm_type;
         double res_tol = 1e-5;
         double use_grad_norm_tol = -1; ///< line_search/use_grad_norm_tol of the solver (handoff on a small gradient)
@@ -179,7 +191,7 @@ namespace polysolve::nonlinear
         bool noise_stop = false; ///< the last path stopped at the noise floor or below the resolution of the true energy
 
         Impl(const Options &o, const json &solver_params, const json &linear_solver_params, spdlog::logger &l, const NormType nt)
-            : opts(o), logger(l), norm_type(nt)
+            : opts(o), logger(l), norm_type(line_search_norm(solver_params, nt))
         {
             res_tol = extract_param("Newton", "residual_tolerance", solver_params);
             if (solver_params.contains("line_search") && solver_params["line_search"].contains("use_grad_norm_tol"))

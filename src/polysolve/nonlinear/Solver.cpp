@@ -10,7 +10,6 @@
 #include "descent_strategies/ADAM.hpp"
 #include "descent_strategies/GradientDescent.hpp"
 #include "descent_strategies/LBFGS.hpp"
-#include "descent_strategies/NonlinearCG.hpp"
 
 #include <polysolve/Utils.hpp>
 
@@ -81,10 +80,6 @@ namespace polysolve::nonlinear
             {
                 return std::make_shared<RegularizedNewton>(true, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
             }
-            else if (solver_name == "NewtonCG")
-            {
-                return std::make_shared<NewtonCG>(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
-            }
 
             else if (solver_name == "LBFGS" || solver_name == "L-BFGS")
             {
@@ -98,11 +93,6 @@ namespace polysolve::nonlinear
             else if (solver_name == "GradientDescent" || solver_name == "gradient_descent")
             {
                 return std::make_shared<GradientDescent>(solver_params, false, characteristic_length, logger);
-            }
-
-            else if (solver_name == "NonlinearCG" || solver_name == "nonlinear_cg")
-            {
-                return std::make_shared<NonlinearCG>(solver_params, characteristic_length, logger);
             }
 
             else if (solver_name == "ADAM" || solver_name == "adam")
@@ -206,7 +196,6 @@ namespace polysolve::nonlinear
                 "StochasticADAM",
                 "GradientDescent",
                 "StochasticGradientDescent",
-                "NonlinearCG",
                 "L-BFGS"};
     }
 

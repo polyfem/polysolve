@@ -45,8 +45,8 @@ endmacro()
 include(CPM)
 CPMAddPackage(
     NAME hypre
-    GITHUB_REPOSITORY danielepanozzo/hypre
-    GIT_TAG thread-mpi-backend
+    GITHUB_REPOSITORY hypre-space/hypre
+    GIT_TAG 3fabfe43175f621c17eb215e896b3b699c18baf6
     SOURCE_SUBDIR src
 )
 

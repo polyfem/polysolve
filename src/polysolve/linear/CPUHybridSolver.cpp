@@ -131,10 +131,6 @@ namespace polysolve::linear
             {
                 theta = shared_params["CPUHybrid"]["theta"];
             }
-            if (shared_params["CPUHybrid"].contains("block_dim"))
-            {
-                dimension_ = shared_params["CPUHybrid"]["block_dim"];
-            }
             if (shared_params["CPUHybrid"].contains("decompose_subdomains"))
             {
                 decompose_subdomains = shared_params["CPUHybrid"]["decompose_subdomains"];
@@ -172,6 +168,47 @@ namespace polysolve::linear
                 additive_mode = shared_params["CPUHybrid"]["additive_mode"];
             }
         }
+    }
+
+    // Set block size for multigrid solvers
+    void CPUHybridSolver::set_block_size(int block_size)
+    {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_SET_BLOCK_SIZE;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        }
+
+        // Broadcast the block size itself, so worker ranks (which pass in a
+        // dummy value from run_worker_loop) end up with the root's value.
+        MPI_Bcast(&block_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        dimension_ = block_size;
+    }
+
+    // Set the function (block) assigned to each row for multigrid solvers
+    void CPUHybridSolver::set_block_mapping(const Eigen::VectorXi &block_mapping)
+    {
+        if (myid == 0)
+        {
+            SolverCmd cmd = CMD_SET_BLOCK_MAPPING;
+            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            block_mapping_ = block_mapping;
+        }
+
+        // Broadcast the full (global) mapping to every rank; each rank keeps the
+        // whole thing since the local row range ([starts[myid], ends[myid]]) is
+        // only known once factorize() has partitioned the rows.
+        int size = myid == 0 ? (int)block_mapping_.size() : 0;
+        MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        if (myid != 0)
+            block_mapping_.resize(size);
+
+        if (size > 0)
+            MPI_Bcast(block_mapping_.data(), size, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     void CPUHybridSolver::check_settings() const
@@ -483,6 +520,21 @@ namespace polysolve::linear
                     precond,
                     dimension_,
                     theta);
+
+                if (block_mapping_.size() > 0)
+                {
+                    assert(block_mapping_.size() == problem_size);
+
+                    // HYPRE_IJMatrixCreate for this rank used the global row range
+                    // [starts[myid], ends[myid]], so dof_func must be the matching
+                    // *local* slice of the (globally-indexed) mapping -- each rank
+                    // only reports the function numbers for the rows it owns.
+                    const int n_local = my_size();
+                    HYPRE_Int *dof_func = hypre_CTAlloc(HYPRE_Int, n_local, HYPRE_MEMORY_HOST);
+                    for (int i = 0; i < n_local; ++i)
+                        dof_func[i] = block_mapping_[starts[myid] + i];
+                    HYPRE_BoomerAMGSetDofFunc(precond, dof_func);
+                }
             }
 
             MPI_Barrier(MPI_COMM_WORLD);
@@ -1448,6 +1500,18 @@ namespace polysolve::linear
             {
                 json dummy_params;
                 worker_registry[id]->set_parameters(dummy_params);
+                break;
+            }
+            case CMD_SET_BLOCK_SIZE:
+            {
+                int dummy_block_size = 0;
+                worker_registry[id]->set_block_size(dummy_block_size);
+                break;
+            }
+            case CMD_SET_BLOCK_MAPPING:
+            {
+                Eigen::VectorXi dummy_block_mapping;
+                worker_registry[id]->set_block_mapping(dummy_block_mapping);
                 break;
             }
             case CMD_FACTORIZE:

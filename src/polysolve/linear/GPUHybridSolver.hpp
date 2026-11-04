@@ -19,6 +19,8 @@
 
 extern "C"
 {
+extern "C"
+{
     HYPRE_Int hypre_ParVectorAxpy(HYPRE_Complex alpha, HYPRE_ParVector x, HYPRE_ParVector y);
 }
 
@@ -42,6 +44,12 @@ namespace polysolve::linear
 
         // Set solver parameters
         virtual void set_parameters(const json &params) override;
+
+        // Set block size for multigrid solvers
+        virtual void set_block_size(int block_size) override;
+
+        // Set the function (block) assigned to each row for multigrid solvers
+        virtual void set_block_mapping(const Eigen::VectorXi &block_mapping) override;
 
         // Retrieve solve information
         virtual void get_info(json &params) const override;
@@ -76,6 +84,10 @@ namespace polysolve::linear
 
         // General solver settings
         int dimension_ = 1; // 1 = scalar (Laplace), 2 or 3 = vector (Elasticity)
+
+        // Optional per-row function (block) assignment for HYPRE_BoomerAMGSetDofFunc.
+        // Empty means the default interleaved mapping (row i belongs to function i % dimension_).
+        Eigen::VectorXi block_mapping_;
         int max_iter_ = 10000;
         double rel_conv_tol_ = 1e-10;
         double abs_conv_tol_ = 0.0;
@@ -108,7 +120,6 @@ namespace polysolve::linear
         cudssHandle_t cudss_handle = nullptr;
         cudssConfig_t cudss_config = nullptr;
         cudssData_t cudss_solver_data = nullptr;
-
         cudssMatrix_t batch_A = nullptr;
         cudssMatrix_t batch_x = nullptr;
         cudssMatrix_t batch_b = nullptr;

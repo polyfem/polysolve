@@ -107,11 +107,6 @@ namespace polysolve::linear
     {
         if (params.contains("AMGCL"))
         {
-            // Specially named parameters to match other solvers
-            if (params["AMGCL"].contains("block_size"))
-            {
-                block_size_ = params["AMGCL"]["block_size"];
-            }
             if (block_size_ == 2)
             {
                 block2_solver_.set_parameters(params);
@@ -125,6 +120,11 @@ namespace polysolve::linear
 
             set_params(params, params_);
         }
+    }
+
+    void AMGCL::set_block_size(int block_size)
+    {
+        block_size_ = block_size;
     }
 
     void AMGCL::get_info(json &params) const

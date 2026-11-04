@@ -5,6 +5,9 @@
 
 #include <HYPRE_krylov.h>
 #include <HYPRE_utilities.h>
+// Internal header, needed for hypre_CTAlloc/hypre_TFree so the dof_func array
+// handed to HYPRE_BoomerAMGSetDofFunc uses the allocator HYPRE itself frees it with.
+#include "_hypre_utilities.h"
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace polysolve::linear
@@ -61,11 +64,17 @@ namespace polysolve::linear
             {
                 interp_rbms = params["Hypre"]["interp_rbms"];
             }
-            if (params["Hypre"].contains("dimension"))
-            {
-                dimension_ = params["Hypre"]["dimension"];
-            }
         }
+    }
+
+    void HypreSolver::set_block_size(int block_size)
+    {
+        dimension_ = block_size;
+    }
+
+    void HypreSolver::set_block_mapping(const Eigen::VectorXi &block_mapping)
+    {
+        block_mapping_ = block_mapping;
     }
 
     void HypreSolver::get_info(json &params) const
@@ -308,6 +317,19 @@ namespace polysolve::linear
             Eigen::MatrixXd positions_;
             assert(!interp_rbms);
             HypreBoomerAMG_SetElasticityOptions(precond, dimension_, theta, nodal_coarsening, interp_rbms, positions_, rbms, par_rbms);
+
+            if (block_mapping_.size() > 0)
+            {
+                assert(block_mapping_.size() == rhs.size());
+
+                // HYPRE takes ownership of this array and frees it when the AMG
+                // preconditioner is destroyed, so it must be allocated with
+                // HYPRE's own allocator rather than new[]/malloc.
+                HYPRE_Int *dof_func = hypre_CTAlloc(HYPRE_Int, rhs.size(), HYPRE_MEMORY_HOST);
+                for (HYPRE_Int i = 0; i < rhs.size(); ++i)
+                    dof_func[i] = block_mapping_[i];
+                HYPRE_BoomerAMGSetDofFunc(precond, dof_func);
+            }
         }
 
         /* Set the PCG preconditioner */

@@ -34,6 +34,17 @@ namespace polysolve::nonlinear
 
         virtual bool is_residual() const { return false; }
 
+        /// @brief Number of scalar components per node (e.g., 1 for scalar problems,
+        /// 2 or 3 for vector-valued problems). Used as the block size for
+        /// multigrid-style linear solvers.
+        virtual int dimension() const { return 1; }
+
+        /// @brief Per-row function (block) assignment for multigrid-style linear
+        /// solvers, passed through to Solver::set_block_mapping. An empty vector
+        /// (the default) means the solver should fall back to its own default
+        /// mapping instead of a problem-specific one.
+        virtual Eigen::VectorXi block_mapping() const { return Eigen::VectorXi(); }
+
         /// @brief Initialize the problem.
         /// @param x0 Initial guess.
         virtual void init(const TVector &x0) {}

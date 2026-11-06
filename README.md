@@ -194,6 +194,9 @@ Polysolve uses a json file to provide parameters to the individual solvers. The 
 #### Hypre Only
 
 - `pre_max_iter`, number of pre iterations, default `1`
+- `use_gpu`, solve on the GPU (the current CUDA device, as a single rank), default `false`. Needs `POLYSOLVE_WITH_CUDA=ON`.
+
+When built with `POLYSOLVE_WITH_MPI=ON`, Hypre splits the rows across [nano-mpi](https://github.com/danielepanozzo/nano-mpi) ranks, which are threads of the calling process, so no `mpirun` is needed. `NANOMPI_NUM_RANKS` sets the number of ranks; the default is the number of cores.
 
 #### AMGCL Only
 

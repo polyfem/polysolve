@@ -17,10 +17,47 @@
 #include <vector>
 #include <ctime>
 #include <chrono>
+#include <cstdlib>
+#include <string>
+#include <thread>
 //////////////////////////////////////////////////////////////////////////
 
 using namespace polysolve;
 using namespace polysolve::linear;
+
+#if defined(POLYSOLVE_WITH_MPI) && !defined(_WIN32)
+#define POLYSOLVE_TEST_RANKS
+namespace
+{
+    // Sets NANOMPI_NUM_RANKS, the number of nano-mpi ranks a solver starts,
+    // while it is in scope. It only affects ranks started after it is set.
+    class ScopedNumRanks
+    {
+    public:
+        explicit ScopedNumRanks(const int n)
+        {
+            if (const char *old = std::getenv("NANOMPI_NUM_RANKS"))
+            {
+                had_old_ = true;
+                old_ = old;
+            }
+            setenv("NANOMPI_NUM_RANKS", std::to_string(n).c_str(), 1);
+        }
+
+        ~ScopedNumRanks()
+        {
+            if (had_old_)
+                setenv("NANOMPI_NUM_RANKS", old_.c_str(), 1);
+            else
+                unsetenv("NANOMPI_NUM_RANKS");
+        }
+
+    private:
+        bool had_old_ = false;
+        std::string old_;
+    };
+} // namespace
+#endif
 
 void loadSymmetric(Eigen::SparseMatrix<double> &A, std::string PATH)
 {
@@ -327,7 +364,12 @@ TEST_CASE("block_mapping", "[.][solver]")
     {
         json params;
         if (s == "Hypre")
+        {
             params[s]["tolerance"] = 1e-12;
+            // Plain AMG needs ~700 iterations on this contact matrix on one rank,
+            // and about twice that once the rows are split across ranks.
+            params[s]["max_iter"] = 5000;
+        }
         else
         {
             params[s]["relative_tolerance"] = 0;
@@ -530,6 +572,213 @@ TEST_CASE("hypre_initial_guess", "[solver]")
     const double err = (A * x - b).norm();
     REQUIRE(err < 1e-8);
 }
+
+#if defined(POLYSOLVE_WITH_HYPRE) && defined(POLYSOLVE_TEST_RANKS)
+// Hypre splits the rows across the nano-mpi ranks and must converge the same
+// whatever their number.
+TEST_CASE("hypre_ranks", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+
+    for (const int n : {1, 2, 3, 7})
+    {
+        ScopedNumRanks ranks(n);
+        auto solver = Solver::create("Hypre", "");
+
+        // twice, to check that the solver can be factorized again
+        for (int k = 0; k < 2; ++k)
+        {
+            Eigen::VectorXd x = Eigen::VectorXd::Zero(b.size());
+            solver->analyze_pattern(A, A.rows());
+            solver->factorize(A);
+            solver->solve(b, x);
+
+            json info;
+            solver->get_info(info);
+            INFO("ranks: " << n);
+            CHECK(info["num_ranks"] == n);
+            REQUIRE((A * x - b).norm() < 1e-8);
+        }
+    }
+}
+
+// Ranks with no rows at all.
+TEST_CASE("hypre_more_ranks_than_rows", "[solver]")
+{
+    const int n = 5;
+    std::vector<Eigen::Triplet<double>> triplets;
+    for (int i = 0; i < n; ++i)
+    {
+        triplets.emplace_back(i, i, 2.0);
+        if (i > 0)
+            triplets.emplace_back(i, i - 1, -1.0);
+        if (i + 1 < n)
+            triplets.emplace_back(i, i + 1, -1.0);
+    }
+    Eigen::SparseMatrix<double> A(n, n);
+    A.setFromTriplets(triplets.begin(), triplets.end());
+
+    ScopedNumRanks ranks(8);
+    auto solver = Solver::create("Hypre", "");
+    Eigen::VectorXd b = Eigen::VectorXd::LinSpaced(n, 1, n);
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(n);
+    solver->analyze_pattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+
+    json info;
+    solver->get_info(info);
+    CHECK(info["num_ranks"] == 8);
+    REQUIRE((A * x - b).norm() < 1e-8);
+}
+
+// Only the thread that started the ranks can drive them. A solver used from
+// another thread meanwhile solves on that thread alone, and the ranks keep
+// working for the thread that owns them.
+TEST_CASE("hypre_ranks_other_thread", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+
+    ScopedNumRanks ranks(3);
+    auto on_ranks = Solver::create("Hypre", "");
+    on_ranks->analyze_pattern(A, A.rows());
+    on_ranks->factorize(A);
+
+    // Catch2 assertions are not thread safe: check the results afterwards.
+    json other_info;
+    double other_err = -1;
+    std::thread([&] {
+        auto alone = Solver::create("Hypre", "");
+        Eigen::VectorXd x = Eigen::VectorXd::Zero(b.size());
+        alone->analyze_pattern(A, A.rows());
+        alone->factorize(A);
+        alone->solve(b, x);
+        alone->get_info(other_info);
+        other_err = (A * x - b).norm();
+    }).join();
+
+    CHECK(other_info["num_ranks"] == 1);
+    REQUIRE(other_err >= 0);
+    REQUIRE(other_err < 1e-8);
+
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(b.size());
+    on_ranks->solve(b, x);
+    json info;
+    on_ranks->get_info(info);
+    CHECK(info["num_ranks"] == 3);
+    REQUIRE((A * x - b).norm() < 1e-8);
+}
+
+#ifdef POLYSOLVE_WITH_CPU_HYBRID
+// nano-mpi allows one set of ranks per process, so Hypre and CPUHybrid share
+// it; both must work while the other is alive, in any order.
+TEST_CASE("hypre_and_cpu_hybrid_share_ranks", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+
+    ScopedNumRanks ranks(3);
+    auto hypre = Solver::create("Hypre", "");
+    auto hybrid = Solver::create("CPUHybrid", "");
+    json params;
+    params["CPUHybrid"]["relative_tolerance"] = 0.0;
+    params["CPUHybrid"]["absolute_tolerance"] = 1e-10;
+    hybrid->set_parameters(params);
+
+    hypre->analyze_pattern(A, A.rows());
+    hybrid->analyze_pattern(A, A.rows());
+
+    for (int k = 0; k < 2; ++k)
+    {
+        hypre->factorize(A);
+        hybrid->factorize(A);
+
+        Eigen::VectorXd x_hypre = Eigen::VectorXd::Zero(b.size());
+        Eigen::VectorXd x_hybrid = Eigen::VectorXd::Zero(b.size());
+        hybrid->solve(b, x_hybrid);
+        hypre->solve(b, x_hypre);
+
+        json info;
+        hypre->get_info(info);
+        CHECK(info["num_ranks"] == 3);
+        REQUIRE((A * x_hypre - b).norm() < 1e-8);
+        REQUIRE((A * x_hybrid - b).norm() < 1e-8);
+    }
+
+    // The ranks outlive the solver that started them while another uses them.
+    hybrid.reset();
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(b.size());
+    hypre->factorize(A);
+    hypre->solve(b, x);
+    REQUIRE((A * x - b).norm() < 1e-8);
+}
+#endif
+#endif
+
+#ifdef POLYSOLVE_WITH_HYPRE
+#ifdef POLYSOLVE_WITH_HYPRE_GPU
+TEST_CASE("hypre_gpu", "[solver]")
+{
+    const std::string path = POLYFEM_DATA_DIR;
+    Eigen::SparseMatrix<double> A;
+    const bool ok = loadMarket(A, path + "/A_2.mat");
+    REQUIRE(ok);
+
+    auto solver = Solver::create("Hypre", "");
+    json params;
+    params["Hypre"]["use_gpu"] = true;
+    solver->set_parameters(params);
+
+    Eigen::VectorXd b(A.rows());
+    b.setRandom();
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(b.size());
+    solver->analyze_pattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+
+    json info;
+    solver->get_info(info);
+    CHECK(info["on_gpu"] == true);
+    CHECK(info["num_ranks"] == 1);
+    REQUIRE((A * x - b).norm() < 1e-8);
+
+    // and back to the CPU
+    params["Hypre"]["use_gpu"] = false;
+    solver->set_parameters(params);
+    x.setZero();
+    solver->factorize(A);
+    solver->solve(b, x);
+    solver->get_info(info);
+    CHECK(info["on_gpu"] == false);
+    REQUIRE((A * x - b).norm() < 1e-8);
+}
+#else
+TEST_CASE("hypre_gpu_unavailable", "[solver]")
+{
+    auto solver = Solver::create("Hypre", "");
+    json params;
+    params["Hypre"]["use_gpu"] = true;
+    REQUIRE_THROWS(solver->set_parameters(params));
+}
+#endif
+#endif
 
 TEST_CASE("amgcl_initial_guess", "[solver]")
 {

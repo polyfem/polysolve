@@ -362,6 +362,11 @@ if(POLYSOLVE_WITH_HYPRE)
     if(HYPRE_ENABLE_MPI)
         target_compile_definitions(polysolve_linear PUBLIC HYPRE_ENABLE_MPI)
     endif()
+    # hypre is built with CUDA whenever polysolve is (see the hypre recipe), which
+    # lets the Hypre solver run on the GPU when its "use_gpu" option is set.
+    if(POLYSOLVE_WITH_CUDA)
+        target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_HYPRE_GPU)
+    endif()
 endif()
 
 # CHOLMOD solver

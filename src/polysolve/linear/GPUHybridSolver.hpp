@@ -19,8 +19,6 @@
 
 extern "C"
 {
-extern "C"
-{
     HYPRE_Int hypre_ParVectorAxpy(HYPRE_Complex alpha, HYPRE_ParVector x, HYPRE_ParVector y);
 }
 

@@ -397,7 +397,9 @@ namespace polysolve::linear
         const HYPRE_Int nnz = d_values.size();
 
 #ifdef HYPRE_ENABLE_MPI
-        HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, num_rows - 1, 0, num_rows - 1, &A);
+        // One rank on one GPU. Not MPI_COMM_WORLD: while another solver holds
+        // the nano-mpi ranks, that world has members that take no part here.
+        HYPRE_IJMatrixCreate(MPI_COMM_SELF, 0, num_rows - 1, 0, num_rows - 1, &A);
 #else
         HYPRE_IJMatrixCreate(0, 0, num_rows - 1, 0, num_rows - 1, &A);
 #endif
@@ -438,14 +440,14 @@ namespace polysolve::linear
     void GPUHybridSolver::init_hypre_vectors(const int size)
     {
 #ifdef HYPRE_ENABLE_MPI
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, size - 1, &ij_x);
+        HYPRE_IJVectorCreate(MPI_COMM_SELF, 0, size - 1, &ij_x);
 #else
         HYPRE_IJVectorCreate(0, 0, size - 1, &ij_x);
 #endif
         HYPRE_IJVectorSetObjectType(ij_x, HYPRE_PARCSR);
         HYPRE_IJVectorInitializeShell(ij_x);
 #ifdef HYPRE_ENABLE_MPI
-        HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, size - 1, &ij_b);
+        HYPRE_IJVectorCreate(MPI_COMM_SELF, 0, size - 1, &ij_b);
 #else
         HYPRE_IJVectorCreate(0, 0, size - 1, &ij_b);
 #endif

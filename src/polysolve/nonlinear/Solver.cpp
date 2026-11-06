@@ -10,6 +10,7 @@
 #include "descent_strategies/ADAM.hpp"
 #include "descent_strategies/GradientDescent.hpp"
 #include "descent_strategies/LBFGS.hpp"
+#include "descent_strategies/NonsmoothNewton.hpp"
 
 #include <polysolve/Utils.hpp>
 
@@ -79,6 +80,11 @@ namespace polysolve::nonlinear
             else if (solver_name == "RegularizedProjectedNewton")
             {
                 return std::make_shared<RegularizedNewton>(true, true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
+            }
+
+            else if (solver_name == "NonsmoothNewton")
+            {
+                return std::make_shared<NonsmoothNewton>(solver_params, linear_solver_params, characteristic_length, logger, norm_type);
             }
 
             else if (solver_name == "LBFGS" || solver_name == "L-BFGS")
@@ -170,6 +176,15 @@ namespace polysolve::nonlinear
                 for (auto &s : n)
                     solver->add_strategy(s);
             }
+            else if (solver_name == "NonsmoothNewton")
+            {
+                // NonsmoothNewton first, then the sparse Newton chain (debug/method = false: the Newton chain only)
+                if (solver_params["NonsmoothNewton"]["debug"]["method"])
+                    solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type));
+                auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type);
+                for (auto &s : n)
+                    solver->add_strategy(s);
+            }
             else
             {
                 solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension));
@@ -192,6 +207,7 @@ namespace polysolve::nonlinear
         return {"BFGS",
                 "DenseNewton",
                 "Newton",
+                "NonsmoothNewton",
                 "ADAM",
                 "StochasticADAM",
                 "GradientDescent",
@@ -280,11 +296,12 @@ namespace polysolve::nonlinear
         StopWatch stop_watch("nonlinear solver", total_time, m_logger);
         stop_watch.start();
 
+        const double f_start = objFunc(x);
         m_logger.debug(
             "Starting {} with {} solve {}={:g} (stopping criteria: {})",
-            descent_strategy_name(), m_line_search->name(), log::f0(), objFunc(x), m_stop_rescaled.print_message());
+            descent_strategy_name(), m_line_search->name(), log::f0(), f_start, m_stop_rescaled.print_message());
 
-        update_solver_info(objFunc(x));
+        update_solver_info(f_start);
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
         double initial_grad_norm;
@@ -469,11 +486,16 @@ namespace polysolve::nonlinear
                 descent_strategy_name(), m_line_search->name(),
                 m_current.iterations, energy, log::norm(log::grad("f")), m_current.gradNorm);
 
-            // Perform a line_search to compute step scale
-            double rate;
+            // Perform a line_search to compute step scale, unless the strategy takes a verified step itself
+            double rate = 1;
+            TVector own_step;
+            bool use_own_step;
             {
                 POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
-                rate = m_line_search->line_search(x, delta_x, objFunc);
+                // a strategy's own step would bypass the direction filter, so it is only used without one
+                use_own_step = !m_direction_filter && m_strategies[m_descent_strategy]->take_step(objFunc, x, energy, grad, delta_x, own_step);
+                if (!use_own_step)
+                    rate = m_line_search->line_search(x, delta_x, objFunc);
             }
             m_current.alpha = rate;
 
@@ -495,7 +517,9 @@ namespace polysolve::nonlinear
             }
 
             {
-                TVector x1 = x + rate * delta_x;
+                TVector x1 = use_own_step ? TVector(x + own_step) : TVector(x + rate * delta_x);
+                if (use_own_step)
+                    objFunc.solution_changed(x1); // a line search leaves the problem at its accepted point
                 if (objFunc.after_line_search_custom_operation(x, x1))
                     objFunc.solution_changed(x1);
                 x = x1;
@@ -528,7 +552,7 @@ namespace polysolve::nonlinear
             // -----------
             // Post update
             // -----------
-            const double step = (rate * delta_x).norm();
+            const double step = use_own_step ? own_step.norm() : (rate * delta_x).norm();
             m_current.step = step;
 
             // m_logger.debug("[{}][{}] rate={:g} ‖step‖={:g}",

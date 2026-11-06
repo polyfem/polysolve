@@ -326,6 +326,10 @@ namespace polysolve::linear
         {
             RETURN_DIRECT_SOLVER_PTR(SimplicialLDLT, "Eigen::SimplicialLDLT");
         }
+        else if (solver == "Eigen::SimplicialLLT")
+        {
+            RETURN_DIRECT_SOLVER_PTR(SimplicialLLT, "Eigen::SimplicialLLT");
+        }
         else if (solver == "Eigen::SparseLU")
         {
             RETURN_DIRECT_SOLVER_PTR(SparseLU, "Eigen::SparseLU");
@@ -536,6 +540,7 @@ namespace polysolve::linear
     {
         return {{
             "Eigen::SimplicialLDLT",
+            "Eigen::SimplicialLLT",
             "Eigen::SparseLU",
             "Eigen::SparseQR",
 #ifdef POLYSOLVE_WITH_ACCELERATE

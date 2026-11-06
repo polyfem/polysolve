@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <spdlog/spdlog.h>
+#include <stdexcept>
 #include <thread>
 
 #include "_hypre_IJ_mv.h"
@@ -41,45 +42,39 @@ namespace polysolve::linear
 
     CPUHybridSolver::CPUHybridSolver()
     {
-        // Ranks are threads of this process. The first solver constructed
-        // spawns them; the calling thread becomes rank 0 and drives.
-        ensure_ranks();
+        const bool on_worker = mpi_utils::RankTeam::is_worker();
 
+        // Ranks are threads of this process. The first solver constructed
+        // starts them; the calling thread becomes rank 0 and drives.
+        if (!on_worker && !mpi_utils::RankTeam::acquire())
+        {
+            throw std::runtime_error("CPUHybrid: the nano-mpi ranks are already driven by another thread; "
+                                     "create and use hybrid solvers from that thread");
+        }
+
+        // hypre's state is per thread, so every rank sets up its own.
         if (!HYPRE_Initialized())
         {
             HYPRE_Initialize();
         }
+        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
+        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
 
         // get MPI rank information
         MPI_Comm_rank(MPI_COMM_WORLD, &myid);
         MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
-        if (is_running_worker_loop)
+        // A worker's instance is made by run_worker_command, which sets its id.
+        if (on_worker)
         {
             return;
         }
 
         Eigen::setNbThreads(1);
-        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
-        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
-
-        if (myid != 0)
-        {
-            spdlog::set_level(spdlog::level::off);
-        }
-        else
-        {
-            spdlog::flush_on(spdlog::level::info);
-        }
-
-        // A worker rank never reaches here: it is already inside
-        // run_worker_loop() on its own thread (see ensure_ranks below).
+        spdlog::flush_on(spdlog::level::info);
 
         solver_id = next_id++;
-
-        SolverCmd cmd = CMD_CREATE;
-        MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        send_command(CMD_CREATE);
     }
 
     // Set solver parameters
@@ -87,9 +82,7 @@ namespace polysolve::linear
     {
         if (myid == 0)
         {
-            SolverCmd cmd = CMD_SET_PARAMETERS;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            send_command(CMD_SET_PARAMETERS);
         }
 
         json shared_params;
@@ -175,13 +168,11 @@ namespace polysolve::linear
     {
         if (myid == 0)
         {
-            SolverCmd cmd = CMD_SET_BLOCK_SIZE;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            send_command(CMD_SET_BLOCK_SIZE);
         }
 
         // Broadcast the block size itself, so worker ranks (which pass in a
-        // dummy value from run_worker_loop) end up with the root's value.
+        // dummy value from run_worker_command) end up with the root's value.
         MPI_Bcast(&block_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
         dimension_ = block_size;
     }
@@ -191,9 +182,7 @@ namespace polysolve::linear
     {
         if (myid == 0)
         {
-            SolverCmd cmd = CMD_SET_BLOCK_MAPPING;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            send_command(CMD_SET_BLOCK_MAPPING);
 
             block_mapping_ = block_mapping;
         }
@@ -231,9 +220,7 @@ namespace polysolve::linear
     {
         if (myid == 0)
         {
-            SolverCmd cmd = CMD_FACTORIZE;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            send_command(CMD_FACTORIZE);
         }
 
         check_settings();
@@ -446,9 +433,7 @@ namespace polysolve::linear
     {
         if (myid == 0)
         {
-            SolverCmd cmd = CMD_SOLVE;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            send_command(CMD_SOLVE);
         }
 
         int problem_size = rhs.size();
@@ -1414,124 +1399,59 @@ namespace polysolve::linear
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    // Worker ranks: service the driver's commands until CMD_EXIT, then return
-    // so the thread can be joined. Under mpirun this was the process's whole
-    // life; here it is one thread's.
-    static int rank_worker_entry(void *)
+    void CPUHybridSolver::send_command(SolverCmd cmd) const
     {
-        CPUHybridSolver::worker_loop_flag() = true;
-        if (!HYPRE_Initialized())
-        {
-            HYPRE_Initialize();
-        }
-        Eigen::setNbThreads(1);
-        HYPRE_SetMemoryLocation(HYPRE_MEMORY_HOST);
-        HYPRE_SetExecutionPolicy(HYPRE_EXEC_HOST);
-        spdlog::set_level(spdlog::level::off);
-        CPUHybridSolver::run_worker_loop();
-        return 0;
+        const int id = solver_id;
+        mpi_utils::RankTeam::dispatch([cmd, id] { run_worker_command(cmd, id); });
     }
 
-    void CPUHybridSolver::ensure_ranks()
+    // Runs on a worker rank: repeat rank 0's call on this rank's instance. The
+    // arguments are placeholders; each method broadcasts the real values itself.
+    void CPUHybridSolver::run_worker_command(SolverCmd cmd, int id)
     {
-        if (is_running_worker_loop)
+        switch (cmd)
         {
-            return;
+        case CMD_CREATE:
+        {
+            worker_registry[id] = std::make_unique<CPUHybridSolver>();
+            worker_registry[id]->solver_id = id;
+            break;
         }
-        if (rank_team)
+        case CMD_SET_PARAMETERS:
         {
-            ++live_solvers;
-            return;
+            json dummy_params;
+            worker_registry[id]->set_parameters(dummy_params);
+            break;
         }
-        // 0 means the default: NANOMPI_NUM_RANKS if set, else cores online
-        if (nanompi_team_start(0, rank_worker_entry, nullptr, &rank_team) != 0)
+        case CMD_SET_BLOCK_SIZE:
         {
-            throw std::runtime_error("polysolve: could not start nano-mpi ranks");
+            int dummy_block_size = 0;
+            worker_registry[id]->set_block_size(dummy_block_size);
+            break;
         }
-        ++live_solvers;
-    }
-
-    // Tell the workers to leave their command loop and join them, which tears
-    // the rank universe down and puts COMM_WORLD back to a single rank -- which
-    // matters, because a plain HypreSolver constructed afterwards is a lone
-    // thread and would otherwise be one rank of a world that expects several.
-    void CPUHybridSolver::release_ranks()
-    {
-        if (is_running_worker_loop || !rank_team)
+        case CMD_SET_BLOCK_MAPPING:
         {
-            return;
+            Eigen::VectorXi dummy_block_mapping;
+            worker_registry[id]->set_block_mapping(dummy_block_mapping);
+            break;
         }
-        if (--live_solvers > 0)
+        case CMD_FACTORIZE:
         {
-            return;
+            StiffnessMatrix dummy_A;
+            worker_registry[id]->factorize(dummy_A);
+            break;
         }
-        SolverCmd cmd = CMD_EXIT;
-        MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        nanompi_team_join(rank_team);
-        rank_team = nullptr;
-    }
-
-    void CPUHybridSolver::run_worker_loop()
-    {
-        bool running = true;
-        while (running)
+        case CMD_SOLVE:
         {
-            SolverCmd cmd;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-            if (cmd == CMD_EXIT)
-            {
-                running = false;
-                break;
-            }
-
-            int id;
-            MPI_Bcast(&id, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-            switch (cmd)
-            {
-            case CMD_CREATE:
-            {
-                worker_registry[id] = std::make_unique<CPUHybridSolver>();
-                worker_registry[id]->solver_id = id;
-                break;
-            }
-            case CMD_SET_PARAMETERS:
-            {
-                json dummy_params;
-                worker_registry[id]->set_parameters(dummy_params);
-                break;
-            }
-            case CMD_SET_BLOCK_SIZE:
-            {
-                int dummy_block_size = 0;
-                worker_registry[id]->set_block_size(dummy_block_size);
-                break;
-            }
-            case CMD_SET_BLOCK_MAPPING:
-            {
-                Eigen::VectorXi dummy_block_mapping;
-                worker_registry[id]->set_block_mapping(dummy_block_mapping);
-                break;
-            }
-            case CMD_FACTORIZE:
-            {
-                StiffnessMatrix dummy_A;
-                worker_registry[id]->factorize(dummy_A);
-                break;
-            }
-            case CMD_SOLVE:
-            {
-                Eigen::VectorXd dummy_b, dummy_x;
-                worker_registry[id]->solve(dummy_b, dummy_x);
-                break;
-            }
-            case CMD_DESTROY:
-            {
-                worker_registry.erase(id);
-                break;
-            }
-            }
+            Eigen::VectorXd dummy_b, dummy_x;
+            worker_registry[id]->solve(dummy_b, dummy_x);
+            break;
+        }
+        case CMD_DESTROY:
+        {
+            worker_registry.erase(id);
+            break;
+        }
         }
     }
 
@@ -1539,9 +1459,7 @@ namespace polysolve::linear
     {
         if (myid == 0)
         {
-            SolverCmd cmd = CMD_DESTROY;
-            MPI_Bcast(&cmd, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            send_command(CMD_DESTROY);
         }
 
         if (has_matrix_)
@@ -1551,9 +1469,11 @@ namespace polysolve::linear
             A = nullptr;
         }
 
+        // The last solver using the ranks stops them, so that later code on
+        // this thread sees a one-rank world again.
         if (myid == 0)
         {
-            release_ranks();
+            mpi_utils::RankTeam::release();
         }
     }
 

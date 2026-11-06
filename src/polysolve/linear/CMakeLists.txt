@@ -28,6 +28,13 @@ if(POLYSOLVE_WITH_CUDA)
     )
 endif()
 
+if(POLYSOLVE_WITH_MPI)
+    list(APPEND SOURCES
+        mpi_utils/RankTeam.cpp
+        mpi_utils/RankTeam.hpp
+    )
+endif()
+
 if(POLYSOLVE_WITH_MPI AND NOT POLYSOLVE_LARGE_INDEX)
     list(APPEND SOURCES
         CPUHybridSolver.cpp

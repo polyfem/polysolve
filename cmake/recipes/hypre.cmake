@@ -24,12 +24,19 @@ endif()
 # hypre is built as an ordinary MPI build. What is different is the MPI: with
 # POLYSOLVE_WITH_MPI on, the nanompi recipe has already put a FindMPI shim on the
 # module path, so hypre's own find_package(MPI REQUIRED) resolves to nano-mpi --
-# whose ranks are threads of this process. hypre itself needs no special mode.
+# whose ranks are threads of this process.
+#
+# Because the ranks are threads, hypre's process-wide state (its handle, error
+# flag, random seed, ...) must be per thread, or the ranks race on it.
+# HYPRE_ENABLE_THREAD_LOCAL does that. It means every thread that calls hypre
+# runs HYPRE_Initialize() itself, which the solvers do.
 if (POLYSOLVE_WITH_MPI)
     include(nanompi)
-    set(HYPRE_ENABLE_MPI ON  CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_MPI          ON  CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_THREAD_LOCAL ON  CACHE INTERNAL "" FORCE)
 else()
-    set(HYPRE_ENABLE_MPI OFF CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_MPI          OFF CACHE INTERNAL "" FORCE)
+    set(HYPRE_ENABLE_THREAD_LOCAL OFF CACHE INTERNAL "" FORCE)
 endif()
 
 # HYPRE unconditionally defines an "uninstall" target, which conflicts with other buggy libraries

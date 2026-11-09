@@ -219,6 +219,7 @@ jobs:
         run: |
           for n in 1 2 4; do
             NANOMPI_NUM_RANKS=$n ./build/tests/bench_spmd 32 CPUHybrid | tee -a bench.txt
+            NANOMPI_NUM_RANKS=$n ./build/tests/bench_spmd 32 Hypre | tee -a bench.txt
           done
           # every run must have converged
           awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^relres=/) {

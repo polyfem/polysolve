@@ -148,9 +148,10 @@
             "tolerance",
             "theta",
             "nodal_coarsening",
-            "interp_rbms"
+            "interp_rbms",
+            "use_gpu"
         ],
-        "doc": "Settings for the Hypre solver."
+        "doc": "Settings for the Hypre solver. On the CPU, when built with MPI, the rows are split across the nano-mpi ranks (threads of this process); NANOMPI_NUM_RANKS sets how many, and the default is the number of cores."
     },
     {
         "pointer": "/AMGCL",
@@ -286,6 +287,12 @@
         "default": false,
         "type": "bool",
         "doc": "Whether or not to include nodal coarsening options."
+    },
+    {
+        "pointer": "/Hypre/use_gpu",
+        "default": false,
+        "type": "bool",
+        "doc": "Solve on the GPU: the current CUDA device, as a single rank. Needs POLYSOLVE_WITH_CUDA=ON."
     },
     {
         "pointer": "/AMGCL/solver",

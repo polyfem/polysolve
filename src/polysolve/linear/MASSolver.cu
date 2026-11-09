@@ -141,6 +141,7 @@ namespace polysolve::linear
         double rel_tol_ = 1e-5;
         bool lazy_partitioning_ = false;
         bool use_preconditioned_residual_norm_ = false;
+        int num_threads_ = 0; ///< CPU threads for the graph partition (0 = all hardware threads).
 
         int dim_ = 0;          ///< Input matrix A dim.
         int permuted_dim_ = 0; ///< Dim with block padding.
@@ -207,6 +208,8 @@ namespace polysolve::linear
                 lazy_partitioning_ = params["lazy_partitioning"];
             if (params.contains("use_preconditioned_residual_norm"))
                 use_preconditioned_residual_norm_ = params["use_preconditioned_residual_norm"];
+            if (params.contains("num_threads"))
+                num_threads_ = params["num_threads"];
         }
 
         void set_block_size(int block_size)
@@ -233,7 +236,8 @@ namespace polysolve::linear
                 adj.weights,
                 32,
                 part_num,
-                part_id);
+                part_id,
+                num_threads_);
 
             part_offsets_ = build_part_offsets(part_id, part_num);
             permutation_ = build_permutation(part_id, part_offsets_);

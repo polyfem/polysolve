@@ -15,10 +15,12 @@ namespace polysolve::linear::mas
     /// @param max_part_size[in] Maximum partition size.
     /// @param part_num[out] Total partition num.
     /// @param part_id[out] Partition id of each graph node.
+    /// @param num_threads[in] Threads for KaMinPar; <= 0 uses all hardware threads.
     void graph_partition(ctd::span<int> row_ptr,
                          ctd::span<int> cols,
                          ctd::span<int64_t> weights,
                          int max_part_size,
                          int &part_num,
-                         std::vector<int> &part_id);
+                         std::vector<int> &part_id,
+                         int num_threads = 0);
 } // namespace polysolve::linear::mas

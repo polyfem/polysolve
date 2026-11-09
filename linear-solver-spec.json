@@ -460,7 +460,8 @@
             "relative_tolerance",
             "absolute_tolerance",
             "lazy_partitioning",
-            "use_preconditioned_residual_norm"
+            "use_preconditioned_residual_norm",
+            "num_threads"
         ],
         "doc": "Settings for the MAS solver."
     },
@@ -493,6 +494,12 @@
         "default": false,
         "type": "bool",
         "doc": "Use preconditioned residual norm for termination check."
+    },
+    {
+        "pointer": "/MAS/num_threads",
+        "default": 0,
+        "type": "int",
+        "doc": "CPU threads for the graph partition (KaMinPar) in factorize. 0 uses all hardware threads."
     },
     {
         "pointer": "/CPUHybrid",

@@ -178,7 +178,8 @@ namespace polysolve::linear::mas
                          ctd::span<int64_t> weights,
                          int max_part_size,
                          int &part_num,
-                         std::vector<int> &part_id)
+                         std::vector<int> &part_id,
+                         int num_threads)
     {
 #ifndef NDEBUG
         guard_graph_for_kaminpar(row_ptr, cols, weights);
@@ -237,7 +238,9 @@ namespace polysolve::linear::mas
         kaminpar_context_t *ctx = kaminpar_create_context_by_preset_name("default");
         assert(ctx);
 
-        int thread_num = (std::thread::hardware_concurrency() != 0)
+        int thread_num = num_threads;
+        if (thread_num <= 0)
+            thread_num = (std::thread::hardware_concurrency() != 0)
                              ? std::thread::hardware_concurrency()
                              : 1;
         kaminpar_t *partitioner = kaminpar_create(thread_num, ctx);

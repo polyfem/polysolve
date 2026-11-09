@@ -22,6 +22,8 @@
 #include <thrust/distance.h>
 #include <thrust/binary_search.h>
 #include <thrust/reduce.h>
+#include <thrust/count.h>
+#include <thrust/functional.h>
 
 #include <algorithm>
 #include <cmath>
@@ -39,6 +41,7 @@
 // dof_func array handed to HYPRE_BoomerAMGSetDofFunc uses the allocator HYPRE
 // itself frees it with (and lives in the device memory HYPRE expects here).
 #include "_hypre_utilities.h"
+#include "_hypre_parcsr_ls.h" // hypre_ParAMGData, for the AMG hierarchy statistics
 
 #ifdef HYPRE_ENABLE_MPI
 #include <mpi.h>
@@ -79,6 +82,18 @@
                       << " code " << (int)status << std::endl;            \
             exit(EXIT_FAILURE);                                          \
         }                                                                 \
+    } while (0)
+
+#define CHECK_CUSPARSE(call)                                                 \
+    do                                                                        \
+    {                                                                         \
+        cusparseStatus_t status = call;                                       \
+        if (status != CUSPARSE_STATUS_SUCCESS)                                \
+        {                                                                     \
+            std::cerr << "cuSPARSE Error at " << __FILE__ << ":" << __LINE__ \
+                      << " - " << cusparseGetErrorString(status) << std::endl; \
+            exit(EXIT_FAILURE);                                               \
+        }                                                                     \
     } while (0)
 
     // Per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve,
@@ -128,6 +143,7 @@ namespace polysolve::linear
 
         CHECK_CUDSS(cudssCreate(&cudss_handle));
         CHECK_CUBLAS(cublasCreate(&cublas_handle));
+        CHECK_CUSPARSE(cusparseCreate(&cusparse_handle));
     }
 
     void GPUHybridSolver::set_parameters(const json &params)
@@ -194,6 +210,58 @@ namespace polysolve::linear
             {
                 detailed_log = params["GPUHybrid"]["detailed_log"];
             }
+            if (params["GPUHybrid"].contains("krylov"))
+            {
+                const std::string str = params["GPUHybrid"]["krylov"];
+                if (str == "pcg")
+                    krylov_method = KrylovMethod::PCG;
+                else if (str == "gmres")
+                    krylov_method = KrylovMethod::GMRES;
+                else
+                    throw std::runtime_error("Unknown krylov method: " + str);
+            }
+            if (params["GPUHybrid"].contains("preconditioner"))
+            {
+                const std::string str = params["GPUHybrid"]["preconditioner"];
+                if (str == "hybrid")
+                    preconditioner_type = PreconditionerType::HYBRID;
+                else if (str == "jacobi")
+                    preconditioner_type = PreconditionerType::JACOBI;
+                else if (str == "ilu")
+                    preconditioner_type = PreconditionerType::ILU;
+                else if (str == "ic")
+                    preconditioner_type = PreconditionerType::IC;
+                else
+                    throw std::runtime_error("Unknown preconditioner: " + str);
+            }
+            if (params["GPUHybrid"].contains("direct"))
+            {
+                const std::string str = params["GPUHybrid"]["direct"];
+                if (str == "none")
+                    direct_factorization = DirectFactorization::NONE;
+                else if (str == "lu")
+                    direct_factorization = DirectFactorization::LU;
+                else if (str == "llt")
+                    direct_factorization = DirectFactorization::LLT;
+                else
+                    throw std::runtime_error("Unknown direct factorization: " + str);
+            }
+            if (params["GPUHybrid"].contains("gmres_restart"))
+            {
+                gmres_restart = params["GPUHybrid"]["gmres_restart"];
+            }
+            if (params["GPUHybrid"].contains("ilu_level_of_fill"))
+            {
+                ilu_level_of_fill = params["GPUHybrid"]["ilu_level_of_fill"];
+            }
+            if (params["GPUHybrid"].contains("ic_initial_shift"))
+            {
+                ic_initial_shift = params["GPUHybrid"]["ic_initial_shift"];
+            }
+            if (params["GPUHybrid"].contains("record_residual_history"))
+            {
+                record_residual_history = params["GPUHybrid"]["record_residual_history"];
+            }
             if (params["GPUHybrid"].contains("select_bad_dofs_from_l1_norm"))
             {
                 select_bad_dofs_from_l1_row_norm = params["GPUHybrid"]["select_bad_dofs_from_l1_norm"];
@@ -243,6 +311,16 @@ namespace polysolve::linear
     {
         params["num_iterations"] = num_iterations;
         params["final_res_norm"] = final_res_norm;
+        params["stop_reason"] = stop_reason;
+        for (auto it = info_.begin(); it != info_.end(); ++it)
+        {
+            params[it.key()] = it.value();
+        }
+        if (record_residual_history)
+        {
+            params["residual_history"] = residual_history;
+            params["time_history"] = time_history;
+        }
     }
 
     void GPUHybridSolver::check_settings() const
@@ -251,27 +329,64 @@ namespace polysolve::linear
         {
             throw std::runtime_error("A Posteriori subdomain selection strategy is not yet implemented!");
         }
+        if (gmres_restart < 1)
+        {
+            throw std::runtime_error("gmres_restart must be at least 1!");
+        }
     }
 
     void GPUHybridSolver::factorize(const StiffnessMatrix &Ain)
     {
         check_settings();
+        info_ = json::object();
         SPDLOG_INFO("[{}] [start_solve] [0.000000] [problem_size={}]", name(), Ain.rows());
+
+        // At = A^T in CSC is A in CSR: the row pointers, column indices and
+        // values that hypre, cuDSS and the row-wise kernels below expect, and
+        // its "column k" is row k of A for the host-side subdomain code.
+        // (Ain's own arrays read as CSR would be A^T -- wrong for
+        // nonsymmetric matrices.)
+        const StiffnessMatrix At = Ain.transpose();
+
+        if (direct_factorization != DirectFactorization::NONE)
+        {
+            factorize_direct(At);
+            return;
+        }
 
         {
             auto phase_begin = clock::now();
 
-            d_outer_indices.resize(Ain.rows() + 1);
-            d_inner_indices.resize(Ain.nonZeros());
-            d_values.resize(Ain.nonZeros());
+            d_outer_indices.resize(At.rows() + 1);
+            d_inner_indices.resize(At.nonZeros());
+            d_values.resize(At.nonZeros());
 
-            thrust::copy(Ain.outerIndexPtr(), Ain.outerIndexPtr() + d_outer_indices.size(), d_outer_indices.begin());
-            thrust::copy(Ain.innerIndexPtr(), Ain.innerIndexPtr() + d_inner_indices.size(), d_inner_indices.begin());
-            thrust::copy(Ain.valuePtr(), Ain.valuePtr() + d_values.size(), d_values.begin());
+            thrust::copy(At.outerIndexPtr(), At.outerIndexPtr() + d_outer_indices.size(), d_outer_indices.begin());
+            thrust::copy(At.innerIndexPtr(), At.innerIndexPtr() + d_inner_indices.size(), d_inner_indices.begin());
+            thrust::copy(At.valuePtr(), At.valuePtr() + d_values.size(), d_values.begin());
 
             SPDLOG_INFO("[{}] [copy_matrix_to_gpu] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
+        if (preconditioner_type != PreconditionerType::HYBRID)
+        {
+            // No subdomains: custom_mixed_precond_iter is never called.
+            auto phase_begin = clock::now();
+            free_device_memory();
+            free_contact_patch_dense_memory();
+            bad_indices_arrays.clear();
+            d_all_bad_dofs.clear();
+            h_subdomain_sizes.clear();
+            d_subdomain_sizes.clear();
+            sparse_batch_count = 0;
+
+            if (preconditioner_type == PreconditionerType::JACOBI)
+                setup_jacobi(At);
+            else if (preconditioner_type == PreconditionerType::IC)
+                setup_ic(At);
+            info_["subdomain_or_local_precond_setup_time"] = elapsed_seconds(phase_begin);
+        }
+        else
         {
             auto phase_begin = clock::now();
 
@@ -288,17 +403,17 @@ namespace polysolve::linear
 
             if (decompose_subdomains)
             {
-                filter_subdomains(Ain);
+                filter_subdomains(At);
             }
 
             if (expand_subdomains)
             {
-                expand_subdomains_to_strongly_connected(Ain);
+                expand_subdomains_to_strongly_connected(At);
             }
 
             if (decompose_subdomains)
             {
-                decompose_subdomains_to_disjoint_subsets(Ain);
+                decompose_subdomains_to_disjoint_subsets(At);
             }
             else if (!contact_patch_schwarz)
             {
@@ -307,6 +422,7 @@ namespace polysolve::linear
 
             if (contact_patch_schwarz)
             {
+                // Reads true columns (column-major dense blocks), so it takes Ain.
                 factorize_contact_patches_dense(Ain);
             }
             else
@@ -326,6 +442,12 @@ namespace polysolve::linear
                 factorize_submatrix();
             }
 
+            size_t num_bad = 0;
+            for (const auto &sub : bad_indices_arrays)
+                num_bad += sub.size();
+            info_["num_subdomains"] = bad_indices_arrays.size();
+            info_["num_subdomain_dofs"] = num_bad;
+            info_["subdomain_or_local_precond_setup_time"] = elapsed_seconds(phase_begin);
             SPDLOG_INFO("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
 
@@ -403,11 +525,25 @@ namespace polysolve::linear
 
     void GPUHybridSolver::solve(const Ref<const VectorXd> b, Ref<VectorXd> x)
     {
+        num_iterations = 0;
+        residual_history.clear();
+        time_history.clear();
+
         thrust::device_vector<double> d_x(x.size());
         thrust::device_vector<double> d_b(b.size());
 
         thrust::copy(x.data(), x.data() + x.size(), d_x.begin());
         thrust::copy(b.data(), b.data() + b.size(), d_b.begin());
+
+        if (direct_factorization != DirectFactorization::NONE)
+        {
+            auto phase_begin = clock::now();
+            solve_direct(d_b, d_x);
+            thrust::copy(d_x.begin(), d_x.end(), x.data());
+            stop_reason = "direct";
+            info_["direct_solve_time"] = elapsed_seconds(phase_begin);
+            return;
+        }
 
         HYPRE_ParVector par_b;
         HYPRE_ParVector par_x;
@@ -416,8 +552,29 @@ namespace polysolve::linear
         set_hypre_vec(ij_b, par_b, d_b);
         set_hypre_vec(ij_x, par_x, d_x);
 
-        HYPRE_Solver precond;
+        // BoomerAMG (HYBRID), hypre ILU (ILU), or none here (JACOBI and IC
+        // were set up in factorize)
+        HYPRE_Solver precond = nullptr;
 
+        if (preconditioner_type == PreconditionerType::ILU)
+        {
+            auto phase_begin = clock::now();
+            HYPRE_ILUCreate(&precond);
+            HYPRE_ILUSetType(precond, 0); // block-Jacobi ILU(k); one block on one GPU
+            HYPRE_ILUSetLevelOfFill(precond, ilu_level_of_fill);
+            HYPRE_ILUSetMaxIter(precond, 1);
+            HYPRE_ILUSetTol(precond, 0.0);
+            HYPRE_ILUSetPrintLevel(precond, 0);
+            HYPRE_ILUSetup(precond, parcsr_A, par_b, par_x);
+            CHECK_CUDA(cudaDeviceSynchronize());
+            info_["precond_setup_time"] = elapsed_seconds(phase_begin);
+            SPDLOG_INFO("[{}] [ilu_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        }
+        else if (preconditioner_type != PreconditionerType::HYBRID)
+        {
+            info_["precond_setup_time"] = 0.0;
+        }
+        else
         {
             auto phase_begin = clock::now();
 
@@ -451,13 +608,38 @@ namespace polysolve::linear
 
             HYPRE_BoomerAMGSetup(precond, parcsr_A, par_b, par_x);
             CHECK_CUDA(cudaDeviceSynchronize());
+            info_["precond_setup_time"] = elapsed_seconds(phase_begin);
             SPDLOG_INFO("[{}] [amg_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+
+            // Hierarchy size: levels and operator complexity (sum of nnz over
+            // all levels / nnz of A).
+            {
+                hypre_ParAMGData *amg_data = (hypre_ParAMGData *)precond;
+                const int num_levels = hypre_ParAMGDataNumLevels(amg_data);
+                hypre_ParCSRMatrix **A_array = hypre_ParAMGDataAArray(amg_data);
+                double nnz_total = 0.0, nnz_fine = 0.0;
+                for (int level = 0; level < num_levels; ++level)
+                {
+                    hypre_ParCSRMatrixSetDNumNonzeros(A_array[level]);
+                    const double nnz_level = hypre_ParCSRMatrixDNumNonzeros(A_array[level]);
+                    nnz_total += nnz_level;
+                    if (level == 0)
+                        nnz_fine = nnz_level;
+                }
+                info_["amg_num_levels"] = num_levels;
+                info_["amg_operator_complexity"] = nnz_fine > 0 ? nnz_total / nnz_fine : 0.0;
+            }
         }
 
         {
             auto phase_begin = clock::now();
 
-            pcg_solve(d_b, d_x, par_b, par_x, precond);
+            if (krylov_method == KrylovMethod::GMRES)
+                gmres_solve(d_b, d_x, precond);
+            else
+                pcg_solve(d_b, d_x, par_b, par_x, precond);
+            CHECK_CUDA(cudaDeviceSynchronize());
+            info_["krylov_time"] = elapsed_seconds(phase_begin);
 
             thrust::device_vector<double> buffer(d_x.size());
             matmul(d_x, buffer);
@@ -467,11 +649,17 @@ namespace polysolve::linear
             thrust::copy(d_x.begin(), d_x.end(), x.data());
 
             CHECK_CUDA(cudaDeviceSynchronize());
-            SPDLOG_INFO("[{}] [pcg_solve] [{:.6f}] [pcg_iters={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, final_res_norm);
+            SPDLOG_INFO("[{}] [krylov_solve] [{:.6f}] [iters={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, final_res_norm);
         }
 
         {
-            HYPRE_BoomerAMGDestroy(precond);
+            if (precond != nullptr)
+            {
+                if (preconditioner_type == PreconditionerType::ILU)
+                    HYPRE_ILUDestroy(precond);
+                else
+                    HYPRE_BoomerAMGDestroy(precond);
+            }
             HYPRE_IJVectorDestroy(ij_x);
             HYPRE_IJVectorDestroy(ij_b);
         }
@@ -1596,7 +1784,9 @@ namespace polysolve::linear
             CHECK_CUDSS(cudssMatrixCreateBatchCsr(
                 &batch_A, sparse_batch_count, h_sparse_nrows.data(), h_sparse_ncols.data(), h_sparse_nnz.data(),
                 thrust::raw_pointer_cast(d_sparse_outer_void.data()), nullptr, thrust::raw_pointer_cast(d_sparse_inner_void.data()), thrust::raw_pointer_cast(d_sparse_values_void.data()),
-                CUDA_R_32I, precision, CUDSS_MTYPE_SYMMETRIC,
+                CUDA_R_32I, precision,
+                // GMRES may be given a nonsymmetric matrix: LU on its subdomains.
+                krylov_method == KrylovMethod::GMRES ? CUDSS_MTYPE_GENERAL : CUDSS_MTYPE_SYMMETRIC,
                 CUDSS_MVIEW_FULL, CUDSS_BASE_ZERO));
 
             CHECK_CUDSS(cudssExecute(cudss_handle, CUDSS_PHASE_ANALYSIS, cudss_config, cudss_solver_data, batch_A, nullptr, nullptr));
@@ -1618,6 +1808,10 @@ namespace polysolve::linear
         thrust::device_vector<double> z2(rhs.size());
         thrust::device_vector<double> buffer(rhs.size());
 
+        num_iterations = 0;
+        stop_reason = "max_iter";
+        const auto krylov_begin = clock::now();
+
         {
             auto phase_begin = clock::now();
 
@@ -1633,6 +1827,7 @@ namespace polysolve::linear
                 thrust::fill(result.begin(), result.end(), 0.0);
                 num_iterations = 0;
                 final_res_norm = 0;
+                stop_reason = "zero_rhs";
                 return;
             }
 
@@ -1640,8 +1835,9 @@ namespace polysolve::linear
 
             vector_copy(rhs, r);
             vector_add(-1.0, buffer, r);
+            record_iteration(std::sqrt(dot(r, r) / bi_prod), krylov_begin);
 
-            custom_mixed_precond_iter(precond, r, z, buffer, z2);
+            apply_precond(precond, r, z, buffer, z2);
 
             vector_copy(z, p);
 
@@ -1658,9 +1854,16 @@ namespace polysolve::linear
             matmul(p, buffer);
             double sdotp = dot(p, buffer);
 
+            if (!std::isfinite(sdotp) || !std::isfinite(gamma))
+            {
+                stop_reason = "nan";
+                break;
+            }
+
             if (sdotp == 0.0)
             {
                 SPDLOG_INFO("[{}] [err_zero_sdotp] [0.000000]", name());
+                stop_reason = "zero_sdotp";
                 break;
             }
 
@@ -1669,32 +1872,43 @@ namespace polysolve::linear
             if (alpha <= 0.0)
             {
                 SPDLOG_INFO("[{}] [err_negative_alpha] [0.000000]", name());
+                stop_reason = "negative_alpha";
                 break;
             }
             else if (alpha < __DBL_MIN__)
             {
                 SPDLOG_INFO("[{}] [err_subnormal_alpha] [0.000000]", name());
+                stop_reason = "subnormal_alpha";
                 break;
             }
 
             vector_add(alpha, p, result);
             vector_add(-1.0 * alpha, buffer, r);
             double i_prod = dot(r, r);
+            record_iteration(std::sqrt(i_prod / bi_prod), krylov_begin);
+
+            if (!std::isfinite(i_prod))
+            {
+                stop_reason = "nan";
+                break;
+            }
 
             if (rel_eps > 0 && (i_prod / bi_prod) < rel_eps)
             {
                 SPDLOG_INFO("[{}] [converged_rel] [0.000000]", name());
+                stop_reason = "converged";
                 break;
             }
 
             if (abs_eps > 0 && i_prod < abs_eps)
             {
                 SPDLOG_INFO("[{}] [converged_abs] [0.000000]", name());
+                stop_reason = "converged";
                 break;
             }
 
             thrust::fill(z.begin(), z.end(), 0.0);
-            custom_mixed_precond_iter(precond, r, z, buffer, z2);
+            apply_precond(precond, r, z, buffer, z2);
 
             gamma = dot(r, z);
 
@@ -1709,6 +1923,456 @@ namespace polysolve::linear
         }
     }
 
+    void GPUHybridSolver::record_iteration(double rel_res, const std::chrono::steady_clock::time_point &begin)
+    {
+        if (record_residual_history)
+        {
+            residual_history.push_back(rel_res);
+            time_history.push_back(elapsed_seconds(begin));
+        }
+    }
+
+    void GPUHybridSolver::apply_precond(const HYPRE_Solver &precond, thrust::device_vector<double> &r, thrust::device_vector<double> &z, thrust::device_vector<double> &buffer, thrust::device_vector<double> &z2)
+    {
+        switch (preconditioner_type)
+        {
+        case PreconditionerType::HYBRID:
+            custom_mixed_precond_iter(precond, r, z, buffer, z2);
+            break;
+        case PreconditionerType::JACOBI:
+            thrust::transform(thrust::device, r.begin(), r.end(), d_inv_diag.begin(), z.begin(), thrust::multiplies<double>());
+            break;
+        case PreconditionerType::IC:
+            ic_precond_iter(r, z);
+            break;
+        case PreconditionerType::ILU:
+            thrust::fill(z.begin(), z.end(), 0.0);
+            ilu_precond_iter(precond, r, z);
+            break;
+        }
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    // HYPRE_ILUSolve is a Richardson step; with x = 0 on entry it returns
+    // M^{-1} b (plus one matvec for the initial residual, as in hypre's own
+    // Krylov solvers).
+    void GPUHybridSolver::ilu_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double> &b, thrust::device_vector<double> &x)
+    {
+        HYPRE_ParVector par_x;
+        HYPRE_ParVector par_b;
+
+        set_hypre_vec(ij_x, par_x, x);
+        set_hypre_vec(ij_b, par_b, b);
+
+        HYPRE_ILUSolve(precond, parcsr_A, par_b, par_x);
+    }
+
+    void GPUHybridSolver::setup_jacobi(const StiffnessMatrix &At)
+    {
+        // Column k of At is row k of A.
+        const int n = At.rows();
+        std::vector<double> inv_diag(n, 1.0);
+        int zero_diag = 0;
+        for (int k = 0; k < n; ++k)
+        {
+            double d = 0.0;
+            for (StiffnessMatrix::InnerIterator it(At, k); it; ++it)
+            {
+                if (it.row() == k)
+                {
+                    d = it.value();
+                    break;
+                }
+            }
+            if (d == 0.0)
+                ++zero_diag; // left unscaled (saddle-point blocks)
+            else
+                inv_diag[k] = 1.0 / d;
+        }
+        d_inv_diag = inv_diag;
+        info_["jacobi_zero_diagonals"] = zero_diag;
+    }
+
+    // IC(0) of A's lower triangle with cuSPARSE csric02. A pivot that breaks
+    // down (zero, negative or not finite) restarts the factorization with the
+    // diagonal shifted by shift * |a_ii|, shift = ic_initial_shift doubling up
+    // to 10 times -- the same strategy as Eigen's IncompleteCholesky on the CPU.
+    void GPUHybridSolver::setup_ic(const StiffnessMatrix &At)
+    {
+        free_ic_memory();
+        const int n = At.rows();
+
+        // Lower triangle in CSR: row k of A is column k of At; keep j <= k.
+        std::vector<int> outer(n + 1, 0), inner, diag_pos(n, -1);
+        std::vector<double> values;
+        for (int k = 0; k < n; ++k)
+        {
+            outer[k] = inner.size();
+            for (StiffnessMatrix::InnerIterator it(At, k); it; ++it)
+            {
+                const int j = it.row();
+                if (j > k)
+                    continue;
+                if (j == k)
+                    diag_pos[k] = inner.size();
+                inner.push_back(j);
+                values.push_back(it.value());
+            }
+        }
+        outer[n] = inner.size();
+        const int nnz = inner.size();
+        for (int k = 0; k < n; ++k)
+        {
+            if (diag_pos[k] < 0)
+                throw std::runtime_error("[GPUHybrid] IC: row " + std::to_string(k) + " has no diagonal entry");
+        }
+
+        d_ic_outer = outer;
+        d_ic_inner = inner;
+        d_ic_values.resize(nnz);
+        int *raw_outer = thrust::raw_pointer_cast(d_ic_outer.data());
+        int *raw_inner = thrust::raw_pointer_cast(d_ic_inner.data());
+        double *raw_values = thrust::raw_pointer_cast(d_ic_values.data());
+
+        cusparseMatDescr_t descr;
+        CHECK_CUSPARSE(cusparseCreateMatDescr(&descr));
+        CHECK_CUSPARSE(cusparseSetMatIndexBase(descr, CUSPARSE_INDEX_BASE_ZERO));
+        CHECK_CUSPARSE(cusparseSetMatType(descr, CUSPARSE_MATRIX_TYPE_GENERAL));
+        csric02Info_t ic_info;
+        CHECK_CUSPARSE(cusparseCreateCsric02Info(&ic_info));
+
+        thrust::copy(values.begin(), values.end(), d_ic_values.begin());
+        int buffer_size = 0;
+        CHECK_CUSPARSE(cusparseDcsric02_bufferSize(cusparse_handle, n, nnz, descr, raw_values, raw_outer, raw_inner, ic_info, &buffer_size));
+        thrust::device_vector<char> buffer(std::max(buffer_size, 1));
+        void *raw_buffer = thrust::raw_pointer_cast(buffer.data());
+
+        double shift = 0.0;
+        bool ok = false;
+        for (int attempt = 0; attempt <= 10 && !ok; ++attempt)
+        {
+            std::vector<double> shifted = values;
+            for (int k = 0; k < n; ++k)
+                shifted[diag_pos[k]] += shift * std::abs(values[diag_pos[k]]);
+            thrust::copy(shifted.begin(), shifted.end(), d_ic_values.begin());
+
+            CHECK_CUSPARSE(cusparseDcsric02_analysis(cusparse_handle, n, nnz, descr, raw_values, raw_outer, raw_inner, ic_info, CUSPARSE_SOLVE_POLICY_USE_LEVEL, raw_buffer));
+            int position = -1;
+            if (cusparseXcsric02_zeroPivot(cusparse_handle, ic_info, &position) == CUSPARSE_STATUS_ZERO_PIVOT)
+                break; // structural zero: no shift helps
+
+            CHECK_CUSPARSE(cusparseDcsric02(cusparse_handle, n, nnz, descr, raw_values, raw_outer, raw_inner, ic_info, CUSPARSE_SOLVE_POLICY_USE_LEVEL, raw_buffer));
+            const bool zero_pivot = cusparseXcsric02_zeroPivot(cusparse_handle, ic_info, &position) == CUSPARSE_STATUS_ZERO_PIVOT;
+            CHECK_CUDA(cudaDeviceSynchronize());
+
+            // A negative pivot shows up as a NaN on L's diagonal.
+            const int bad = thrust::count_if(thrust::device, d_ic_values.begin(), d_ic_values.end(),
+                                             [] __device__(double v) { return !isfinite(v); });
+            ok = !zero_pivot && bad == 0;
+            if (!ok)
+                shift = shift == 0.0 ? ic_initial_shift : 2.0 * shift;
+        }
+
+        CHECK_CUSPARSE(cusparseDestroyCsric02Info(ic_info));
+        CHECK_CUSPARSE(cusparseDestroyMatDescr(descr));
+        info_["ic_shift"] = shift;
+        if (!ok)
+        {
+            free_ic_memory();
+            throw std::runtime_error("[GPUHybrid] ic_factorization_failed");
+        }
+
+        // Triangular-solve plans: L t = r, then L^T z = t.
+        CHECK_CUSPARSE(cusparseCreateCsr(&ic_L, n, n, nnz, raw_outer, raw_inner, raw_values,
+                                         CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_64F));
+        cusparseFillMode_t fill = CUSPARSE_FILL_MODE_LOWER;
+        cusparseDiagType_t diag = CUSPARSE_DIAG_TYPE_NON_UNIT;
+        CHECK_CUSPARSE(cusparseSpMatSetAttribute(ic_L, CUSPARSE_SPMAT_FILL_MODE, &fill, sizeof(fill)));
+        CHECK_CUSPARSE(cusparseSpMatSetAttribute(ic_L, CUSPARSE_SPMAT_DIAG_TYPE, &diag, sizeof(diag)));
+
+        d_ic_tmp.resize(n);
+        thrust::device_vector<double> tmp2(n);
+        cusparseDnVecDescr_t vx, vy;
+        CHECK_CUSPARSE(cusparseCreateDnVec(&vx, n, thrust::raw_pointer_cast(d_ic_tmp.data()), CUDA_R_64F));
+        CHECK_CUSPARSE(cusparseCreateDnVec(&vy, n, thrust::raw_pointer_cast(tmp2.data()), CUDA_R_64F));
+        const double one = 1.0;
+        size_t size_L = 0, size_Lt = 0;
+        CHECK_CUSPARSE(cusparseSpSV_createDescr(&ic_spsv_L));
+        CHECK_CUSPARSE(cusparseSpSV_createDescr(&ic_spsv_Lt));
+        CHECK_CUSPARSE(cusparseSpSV_bufferSize(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &one, ic_L, vx, vy, CUDA_R_64F, CUSPARSE_SPSV_ALG_DEFAULT, ic_spsv_L, &size_L));
+        CHECK_CUSPARSE(cusparseSpSV_bufferSize(cusparse_handle, CUSPARSE_OPERATION_TRANSPOSE, &one, ic_L, vx, vy, CUDA_R_64F, CUSPARSE_SPSV_ALG_DEFAULT, ic_spsv_Lt, &size_Lt));
+        d_ic_buffer_L.resize(std::max<size_t>(size_L, 1));
+        d_ic_buffer_Lt.resize(std::max<size_t>(size_Lt, 1));
+        CHECK_CUSPARSE(cusparseSpSV_analysis(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &one, ic_L, vx, vy, CUDA_R_64F, CUSPARSE_SPSV_ALG_DEFAULT, ic_spsv_L, thrust::raw_pointer_cast(d_ic_buffer_L.data())));
+        CHECK_CUSPARSE(cusparseSpSV_analysis(cusparse_handle, CUSPARSE_OPERATION_TRANSPOSE, &one, ic_L, vx, vy, CUDA_R_64F, CUSPARSE_SPSV_ALG_DEFAULT, ic_spsv_Lt, thrust::raw_pointer_cast(d_ic_buffer_Lt.data())));
+        CHECK_CUSPARSE(cusparseDestroyDnVec(vx));
+        CHECK_CUSPARSE(cusparseDestroyDnVec(vy));
+        CHECK_CUDA(cudaDeviceSynchronize());
+    }
+
+    void GPUHybridSolver::ic_precond_iter(thrust::device_vector<double> &r, thrust::device_vector<double> &z)
+    {
+        const int n = r.size();
+        const double one = 1.0;
+        cusparseDnVecDescr_t vr, vt, vz;
+        CHECK_CUSPARSE(cusparseCreateDnVec(&vr, n, thrust::raw_pointer_cast(r.data()), CUDA_R_64F));
+        CHECK_CUSPARSE(cusparseCreateDnVec(&vt, n, thrust::raw_pointer_cast(d_ic_tmp.data()), CUDA_R_64F));
+        CHECK_CUSPARSE(cusparseCreateDnVec(&vz, n, thrust::raw_pointer_cast(z.data()), CUDA_R_64F));
+        CHECK_CUSPARSE(cusparseSpSV_solve(cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &one, ic_L, vr, vt, CUDA_R_64F, CUSPARSE_SPSV_ALG_DEFAULT, ic_spsv_L));
+        CHECK_CUSPARSE(cusparseSpSV_solve(cusparse_handle, CUSPARSE_OPERATION_TRANSPOSE, &one, ic_L, vt, vz, CUDA_R_64F, CUSPARSE_SPSV_ALG_DEFAULT, ic_spsv_Lt));
+        CHECK_CUSPARSE(cusparseDestroyDnVec(vr));
+        CHECK_CUSPARSE(cusparseDestroyDnVec(vt));
+        CHECK_CUSPARSE(cusparseDestroyDnVec(vz));
+    }
+
+    void GPUHybridSolver::free_ic_memory()
+    {
+        if (ic_spsv_L)
+        {
+            cusparseSpSV_destroyDescr(ic_spsv_L);
+            ic_spsv_L = nullptr;
+        }
+        if (ic_spsv_Lt)
+        {
+            cusparseSpSV_destroyDescr(ic_spsv_Lt);
+            ic_spsv_Lt = nullptr;
+        }
+        if (ic_L)
+        {
+            cusparseDestroySpMat(ic_L);
+            ic_L = nullptr;
+        }
+        d_ic_outer.clear();
+        d_ic_inner.clear();
+        d_ic_values.clear();
+        d_ic_tmp.clear();
+        d_ic_buffer_L.clear();
+        d_ic_buffer_Lt.clear();
+    }
+
+    // Whole-matrix cuDSS factorization (direct mode). At's arrays are A in CSR.
+    void GPUHybridSolver::factorize_direct(const StiffnessMatrix &At)
+    {
+        auto phase_begin = clock::now();
+        free_direct_memory();
+
+        const int n = At.rows();
+        const int nnz = At.nonZeros();
+        d_direct_outer.assign(At.outerIndexPtr(), At.outerIndexPtr() + n + 1);
+        d_direct_inner.assign(At.innerIndexPtr(), At.innerIndexPtr() + nnz);
+        d_direct_values.assign(At.valuePtr(), At.valuePtr() + nnz);
+
+        const bool lu = direct_factorization == DirectFactorization::LU;
+        CHECK_CUDSS(cudssConfigCreate(&direct_config));
+        CHECK_CUDSS(cudssDataCreate(cudss_handle, &direct_data));
+        CHECK_CUDSS(cudssMatrixCreateCsr(
+            &direct_A, n, n, nnz,
+            thrust::raw_pointer_cast(d_direct_outer.data()), nullptr,
+            thrust::raw_pointer_cast(d_direct_inner.data()),
+            thrust::raw_pointer_cast(d_direct_values.data()),
+            CUDA_R_32I, CUDA_R_64F, lu ? CUDSS_MTYPE_GENERAL : CUDSS_MTYPE_SPD,
+            CUDSS_MVIEW_FULL, CUDSS_BASE_ZERO));
+
+        CHECK_CUDSS(cudssExecute(cudss_handle, CUDSS_PHASE_ANALYSIS, direct_config, direct_data, direct_A, nullptr, nullptr));
+        CHECK_CUDSS(cudssExecute(cudss_handle, CUDSS_PHASE_FACTORIZATION, direct_config, direct_data, direct_A, nullptr, nullptr));
+        CHECK_CUDA(cudaDeviceSynchronize());
+
+        // info != 0: zero pivot (LU) or a matrix that is not positive definite (LLT)
+        int status = 0;
+        size_t written = 0;
+        CHECK_CUDSS(cudssDataGet(cudss_handle, direct_data, CUDSS_DATA_INFO, &status, sizeof(status), &written));
+        int64_t factor_nnz = 0;
+        CHECK_CUDSS(cudssDataGet(cudss_handle, direct_data, CUDSS_DATA_LU_NNZ, &factor_nnz, sizeof(factor_nnz), &written));
+
+        info_["direct_backend"] = lu ? "cuDSS_LU" : "cuDSS_LLT";
+        info_["factor_nnz"] = factor_nnz;
+        info_["direct_factorize_time"] = elapsed_seconds(phase_begin);
+        SPDLOG_INFO("[{}] [direct_factorize] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        if (status != 0)
+        {
+            free_direct_memory();
+            throw std::runtime_error("[GPUHybrid] cuDSS factorization failed (info " + std::to_string(status) + ")");
+        }
+    }
+
+    void GPUHybridSolver::solve_direct(thrust::device_vector<double> &b, thrust::device_vector<double> &x)
+    {
+        if (!direct_A)
+            throw std::runtime_error("[GPUHybrid] solve called before factorize");
+        const int n = b.size();
+        cudssMatrix_t mb, mx;
+        CHECK_CUDSS(cudssMatrixCreateDn(&mb, n, 1, n, thrust::raw_pointer_cast(b.data()), CUDA_R_64F, CUDSS_LAYOUT_COL_MAJOR));
+        CHECK_CUDSS(cudssMatrixCreateDn(&mx, n, 1, n, thrust::raw_pointer_cast(x.data()), CUDA_R_64F, CUDSS_LAYOUT_COL_MAJOR));
+        CHECK_CUDSS(cudssExecute(cudss_handle, CUDSS_PHASE_SOLVE, direct_config, direct_data, direct_A, mx, mb));
+        CHECK_CUDA(cudaDeviceSynchronize());
+        CHECK_CUDSS(cudssMatrixDestroy(mb));
+        CHECK_CUDSS(cudssMatrixDestroy(mx));
+    }
+
+    void GPUHybridSolver::free_direct_memory()
+    {
+        if (direct_A)
+        {
+            CHECK_CUDSS(cudssMatrixDestroy(direct_A));
+            direct_A = nullptr;
+        }
+        if (direct_data)
+        {
+            CHECK_CUDSS(cudssDataDestroy(cudss_handle, direct_data));
+            direct_data = nullptr;
+        }
+        if (direct_config)
+        {
+            CHECK_CUDSS(cudssConfigDestroy(direct_config));
+            direct_config = nullptr;
+        }
+        d_direct_outer.clear();
+        d_direct_inner.clear();
+        d_direct_values.clear();
+    }
+
+    // Restarted, right-preconditioned GMRES(m), as in CPUHybridSolver::gmres_solve:
+    // x = x0 + M^{-1} V y, CGS2 orthogonalization, each cycle starting from the
+    // recomputed true residual. The basis V (n x (m+1), column-major) lives on
+    // the device and is projected with cuBLAS gemv; the small Hessenberg
+    // least-squares problem is solved on the host.
+    void GPUHybridSolver::gmres_solve(thrust::device_vector<double> &rhs, thrust::device_vector<double> &result, HYPRE_Solver &precond)
+    {
+        num_iterations = 0;
+        stop_reason = "max_iter";
+        const auto krylov_begin = clock::now();
+
+        const int n = rhs.size();
+        const int m = gmres_restart;
+
+        const double b_norm = std::sqrt(dot(rhs, rhs));
+        if (!(b_norm > 0.0))
+        {
+            thrust::fill(result.begin(), result.end(), 0.0);
+            stop_reason = b_norm == 0.0 ? "zero_rhs" : "nan";
+            return;
+        }
+        const double target = std::max(rel_conv_tol_ * b_norm, abs_conv_tol_);
+
+        thrust::device_vector<double> V((size_t)n * (m + 1));
+        thrust::device_vector<double> res(n), v(n), z(n), w(n), buffer(n), z2(n), d_h(m + 1), d_y(m);
+        double *raw_V = thrust::raw_pointer_cast(V.data());
+        double *raw_w = thrust::raw_pointer_cast(w.data());
+        double *raw_h = thrust::raw_pointer_cast(d_h.data());
+
+        Eigen::MatrixXd H(m + 1, m);
+        Eigen::VectorXd cs(m), sn(m), g(m + 1), h(m + 1);
+        const double one = 1.0, zero = 0.0, minus_one = -1.0;
+
+        bool first_cycle = true;
+        while (true)
+        {
+            matmul(result, w);
+            vector_copy(rhs, res);
+            vector_add(-1.0, w, res);
+            const double beta = std::sqrt(dot(res, res));
+            if (first_cycle)
+            {
+                record_iteration(beta / b_norm, krylov_begin);
+                first_cycle = false;
+            }
+            if (!std::isfinite(beta))
+            {
+                stop_reason = "nan";
+                break;
+            }
+            if (beta <= target)
+            {
+                stop_reason = "converged";
+                break;
+            }
+            if (num_iterations >= max_iter_)
+            {
+                break;
+            }
+
+            thrust::transform(thrust::device, res.begin(), res.end(), V.begin(), [beta] __device__(double a) { return a / beta; });
+            H.setZero();
+            g.setZero();
+            g(0) = beta;
+
+            int k = 0;
+            bool broke_down = false;
+            for (int j = 0; j < m && num_iterations < max_iter_; ++j)
+            {
+                auto phase_begin = clock::now();
+
+                // w = A M^{-1} v_j
+                thrust::copy(thrust::device, V.begin() + (size_t)j * n, V.begin() + (size_t)(j + 1) * n, v.begin());
+                thrust::fill(z.begin(), z.end(), 0.0);
+                CHECK_CUDA(cudaDeviceSynchronize());
+                apply_precond(precond, v, z, buffer, z2);
+                matmul(z, w);
+
+                for (int pass = 0; pass < 2; ++pass)
+                {
+                    CHECK_CUBLAS(cublasDgemv(cublas_handle, CUBLAS_OP_T, n, j + 1, &one, raw_V, n, raw_w, 1, &zero, raw_h, 1));
+                    CHECK_CUBLAS(cublasDgemv(cublas_handle, CUBLAS_OP_N, n, j + 1, &minus_one, raw_V, n, raw_h, 1, &one, raw_w, 1));
+                    CHECK_CUDA(cudaDeviceSynchronize());
+                    thrust::copy(d_h.begin(), d_h.begin() + j + 1, h.data());
+                    H.col(j).head(j + 1) += h.head(j + 1);
+                }
+                const double h_next = std::sqrt(dot(w, w));
+                H(j + 1, j) = h_next;
+
+                for (int i = 0; i < j; ++i)
+                {
+                    const double t = cs(i) * H(i, j) + sn(i) * H(i + 1, j);
+                    H(i + 1, j) = -sn(i) * H(i, j) + cs(i) * H(i + 1, j);
+                    H(i, j) = t;
+                }
+                const double rho = std::hypot(H(j, j), H(j + 1, j));
+                cs(j) = rho > 0.0 ? H(j, j) / rho : 1.0;
+                sn(j) = rho > 0.0 ? H(j + 1, j) / rho : 0.0;
+                H(j, j) = rho;
+                H(j + 1, j) = 0.0;
+                g(j + 1) = -sn(j) * g(j);
+                g(j) = cs(j) * g(j);
+
+                ++num_iterations;
+                k = j + 1;
+                const double res_estimate = std::abs(g(j + 1));
+                record_iteration(res_estimate / b_norm, krylov_begin);
+                GPUHYBRID_LOG_ITER("[{}] [gmres_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, res_estimate);
+
+                if (!std::isfinite(res_estimate) || !std::isfinite(h_next))
+                {
+                    broke_down = true;
+                    break;
+                }
+                if (res_estimate <= target)
+                {
+                    break; // confirmed by the true residual at the top of the loop
+                }
+                if (h_next == 0.0)
+                {
+                    break; // invariant subspace: the update below is exact
+                }
+                thrust::transform(thrust::device, w.begin(), w.end(), V.begin() + (size_t)(j + 1) * n, [h_next] __device__(double a) { return a / h_next; });
+            }
+
+            if (broke_down)
+            {
+                stop_reason = "nan";
+                break;
+            }
+
+            // x += M^{-1} V_k y, with R_k y = g_k
+            const Eigen::VectorXd y = H.topLeftCorner(k, k).triangularView<Eigen::Upper>().solve(g.head(k));
+            thrust::copy(y.data(), y.data() + k, d_y.begin());
+            CHECK_CUBLAS(cublasDgemv(cublas_handle, CUBLAS_OP_N, n, k, &one, raw_V, n, thrust::raw_pointer_cast(d_y.data()), 1, &zero, thrust::raw_pointer_cast(v.data()), 1));
+            thrust::fill(z.begin(), z.end(), 0.0);
+            CHECK_CUDA(cudaDeviceSynchronize());
+            apply_precond(precond, v, z, buffer, z2);
+            vector_add(1.0, z, result);
+        }
+    }
+
     GPUHybridSolver::~GPUHybridSolver()
     {
         if (has_matrix_)
@@ -1720,7 +2384,14 @@ namespace polysolve::linear
 
         free_device_memory();
         free_contact_patch_dense_memory();
+        free_direct_memory();
+        free_ic_memory();
 
+        if (cusparse_handle)
+        {
+            cusparseDestroy(cusparse_handle);
+            cusparse_handle = nullptr;
+        }
         if (cudss_handle)
         {
             cudssDestroy(cudss_handle);

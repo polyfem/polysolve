@@ -520,7 +520,14 @@
             "use_strumpack",
             "strumpack_compression",
             "strumpack_compression_rel_tol",
-            "detailed_log"
+            "detailed_log",
+            "krylov",
+            "preconditioner",
+            "direct",
+            "gmres_restart",
+            "ilu_level_of_fill",
+            "ic_initial_shift",
+            "record_residual_history"
         ],
         "doc": "Settings for the CPUHybrid solver."
     },
@@ -669,6 +676,63 @@
         "doc": "If false, skip the per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve, pcg_iter) so a long solve doesn't flood the log; every other log line is unaffected."
     },
     {
+        "pointer": "/CPUHybrid/krylov",
+        "default": "pcg",
+        "type": "string",
+        "options": [
+            "pcg",
+            "gmres"
+        ],
+        "doc": "Krylov method: pcg (SPD matrices, symmetric preconditioner) or gmres (restarted, right-preconditioned; any matrix). Ignored when direct is not none."
+    },
+    {
+        "pointer": "/CPUHybrid/preconditioner",
+        "default": "hybrid",
+        "type": "string",
+        "options": [
+            "hybrid",
+            "jacobi",
+            "ilu",
+            "ic"
+        ],
+        "doc": "Preconditioner: hybrid (AMG plus the direct subdomain correction; with gmm_jump_threshold set to the largest double no subdomain is selected and it is plain BoomerAMG), jacobi (1/diag), ilu (hypre ILU(k), block-Jacobi across ranks), or ic (incomplete Cholesky; on the CPU Eigen's IncompleteCholesky of each rank's diagonal block, on the GPU cuSPARSE IC(0))."
+    },
+    {
+        "pointer": "/CPUHybrid/direct",
+        "default": "none",
+        "type": "string",
+        "options": [
+            "none",
+            "lu",
+            "llt"
+        ],
+        "doc": "Direct mode: lu or llt factorizes the whole matrix (CPU: Pardiso with MKL, otherwise Eigen; GPU: cuDSS) and skips the Krylov solver. On the CPU only rank 0 works, so run with one rank and set threads through MKL_NUM_THREADS."
+    },
+    {
+        "pointer": "/CPUHybrid/gmres_restart",
+        "default": 30,
+        "type": "int",
+        "doc": "Restart length of GMRES (Krylov basis size)."
+    },
+    {
+        "pointer": "/CPUHybrid/ilu_level_of_fill",
+        "default": 0,
+        "type": "int",
+        "doc": "Level of fill k of the ILU(k) preconditioner."
+    },
+    {
+        "pointer": "/CPUHybrid/ic_initial_shift",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Initial diagonal shift of the incomplete Cholesky preconditioner (CPU only; doubled until the factorization succeeds)."
+    },
+    {
+        "pointer": "/CPUHybrid/record_residual_history",
+        "default": true,
+        "type": "bool",
+        "doc": "Keep the relative residual and elapsed time of every Krylov iteration; get_info returns them as residual_history and time_history."
+    },
+    {
         "pointer": "/GPUHybrid",
         "default": null,
         "type": "object",
@@ -689,7 +753,14 @@
             "select_bad_dofs_from_l1_norm",
             "subdomain_selection_strategy",
             "contact_patch_schwarz",
-            "detailed_log"
+            "detailed_log",
+            "krylov",
+            "preconditioner",
+            "direct",
+            "gmres_restart",
+            "ilu_level_of_fill",
+            "ic_initial_shift",
+            "record_residual_history"
         ],
         "doc": "Settings for the GPUHybrid solver."
     },
@@ -801,6 +872,63 @@
         "default": true,
         "type": "bool",
         "doc": "If false, skip the per-PCG-iteration timing logs (matmul, amg_v_cycle, subdomain_solve, contact_patch_dense_subdomain_solve, pcg_iter) so a long solve doesn't flood the log; every other log line is unaffected."
+    },
+    {
+        "pointer": "/GPUHybrid/krylov",
+        "default": "pcg",
+        "type": "string",
+        "options": [
+            "pcg",
+            "gmres"
+        ],
+        "doc": "Krylov method: pcg (SPD matrices, symmetric preconditioner) or gmres (restarted, right-preconditioned; any matrix). Ignored when direct is not none."
+    },
+    {
+        "pointer": "/GPUHybrid/preconditioner",
+        "default": "hybrid",
+        "type": "string",
+        "options": [
+            "hybrid",
+            "jacobi",
+            "ilu",
+            "ic"
+        ],
+        "doc": "Preconditioner: hybrid (AMG plus the direct subdomain correction; with gmm_jump_threshold set to the largest double no subdomain is selected and it is plain BoomerAMG), jacobi (1/diag), ilu (hypre ILU(k), block-Jacobi across ranks), or ic (incomplete Cholesky; on the CPU Eigen's IncompleteCholesky of each rank's diagonal block, on the GPU cuSPARSE IC(0))."
+    },
+    {
+        "pointer": "/GPUHybrid/direct",
+        "default": "none",
+        "type": "string",
+        "options": [
+            "none",
+            "lu",
+            "llt"
+        ],
+        "doc": "Direct mode: lu or llt factorizes the whole matrix (CPU: Pardiso with MKL, otherwise Eigen; GPU: cuDSS) and skips the Krylov solver. On the CPU only rank 0 works, so run with one rank and set threads through MKL_NUM_THREADS."
+    },
+    {
+        "pointer": "/GPUHybrid/gmres_restart",
+        "default": 30,
+        "type": "int",
+        "doc": "Restart length of GMRES (Krylov basis size)."
+    },
+    {
+        "pointer": "/GPUHybrid/ilu_level_of_fill",
+        "default": 0,
+        "type": "int",
+        "doc": "Level of fill k of the ILU(k) preconditioner."
+    },
+    {
+        "pointer": "/GPUHybrid/ic_initial_shift",
+        "default": 0.001,
+        "type": "float",
+        "doc": "Initial diagonal shift of the incomplete Cholesky preconditioner (CPU only; doubled until the factorization succeeds)."
+    },
+    {
+        "pointer": "/GPUHybrid/record_residual_history",
+        "default": true,
+        "type": "bool",
+        "doc": "Keep the relative residual and elapsed time of every Krylov iteration; get_info returns them as residual_history and time_history."
     },
     {
         "pointer": "/RestartedAMGPCG",

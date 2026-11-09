@@ -14,9 +14,12 @@
 
 #include <cudss.h>
 #include <cublas_v2.h>
+#include <cusparse.h>
 #include <thrust/device_vector.h>
 
+#include <chrono>
 #include <set>
+#include <string>
 
 extern "C"
 {
@@ -80,7 +83,46 @@ namespace polysolve::linear
             APOSTERIORI
         };
 
+        // Solver selection; same options as CPUHybridSolver. On the GPU:
+        //   PCG / GMRES      as on the CPU (GMRES: restarted, right-preconditioned,
+        //                    CGS2 with cuBLAS gemv on the device-resident basis)
+        //   HYBRID           AMG (+ cuDSS subdomain correction); plain AMG with
+        //                    gmm_jump_threshold = DBL_MAX
+        //   JACOBI           1 / diag(A)
+        //   ILU              hypre ILU(k) (ilu_type 0) on the device
+        //   IC               cuSPARSE IC(0) (csric02) of the lower triangle, with
+        //                    the diagonal shifted by ic_initial_shift * |a_ii|
+        //                    (doubled up to 10 times) if a pivot breaks down;
+        //                    triangular solves with cusparseSpSV
+        //   direct LU / LLT  cuDSS on the whole matrix (GENERAL / SPD)
+        enum class KrylovMethod
+        {
+            PCG,
+            GMRES
+        };
+        enum class PreconditionerType
+        {
+            HYBRID,
+            JACOBI,
+            ILU,
+            IC
+        };
+        enum class DirectFactorization
+        {
+            NONE,
+            LU,
+            LLT
+        };
+
     protected:
+        KrylovMethod krylov_method = KrylovMethod::PCG;
+        PreconditionerType preconditioner_type = PreconditionerType::HYBRID;
+        DirectFactorization direct_factorization = DirectFactorization::NONE;
+        int gmres_restart = 30;
+        int ilu_level_of_fill = 0;
+        double ic_initial_shift = 1e-3;
+        bool record_residual_history = true;
+
         // AMG settings
         double theta = 0.5;
 
@@ -124,8 +166,12 @@ namespace polysolve::linear
         bool detailed_log = true;
 
         // solve information
-        HYPRE_Int num_iterations;
-        HYPRE_Complex final_res_norm;
+        HYPRE_Int num_iterations = 0;
+        HYPRE_Complex final_res_norm = 0;
+        std::string stop_reason;
+        std::vector<double> residual_history;
+        std::vector<double> time_history;
+        json info_;
 
     private:
         bool has_matrix_ = false;
@@ -155,6 +201,25 @@ namespace polysolve::linear
         cudssMatrix_t batch_b = nullptr;
 
         cublasHandle_t cublas_handle = nullptr;
+        cusparseHandle_t cusparse_handle = nullptr;
+
+        // direct mode: cuDSS on the whole matrix
+        cudssConfig_t direct_config = nullptr;
+        cudssData_t direct_data = nullptr;
+        cudssMatrix_t direct_A = nullptr;
+        thrust::device_vector<int> d_direct_outer, d_direct_inner;
+        thrust::device_vector<double> d_direct_values;
+
+        // JACOBI
+        thrust::device_vector<double> d_inv_diag;
+
+        // IC: L (lower triangle, CSR) and the two triangular-solve plans
+        thrust::device_vector<int> d_ic_outer, d_ic_inner;
+        thrust::device_vector<double> d_ic_values;
+        thrust::device_vector<double> d_ic_tmp;
+        cusparseSpMatDescr_t ic_L = nullptr;
+        cusparseSpSVDescr_t ic_spsv_L = nullptr, ic_spsv_Lt = nullptr;
+        thrust::device_vector<char> d_ic_buffer_L, d_ic_buffer_Lt;
 
         int sparse_batch_count = 0;
 
@@ -243,6 +308,18 @@ namespace polysolve::linear
 
         // Krylov solve methods
         void pcg_solve(thrust::device_vector<double> &rhs, thrust::device_vector<double> &result, HYPRE_ParVector &par_b, HYPRE_ParVector &par_x, HYPRE_Solver &precond);
+        void gmres_solve(thrust::device_vector<double> &rhs, thrust::device_vector<double> &result, HYPRE_Solver &precond);
+
+        void factorize_direct(const StiffnessMatrix &At);
+        void solve_direct(thrust::device_vector<double> &b, thrust::device_vector<double> &x);
+        void free_direct_memory();
+        void setup_jacobi(const StiffnessMatrix &At);
+        void setup_ic(const StiffnessMatrix &At);
+        void free_ic_memory();
+        void apply_precond(const HYPRE_Solver &precond, thrust::device_vector<double> &r, thrust::device_vector<double> &z, thrust::device_vector<double> &buffer, thrust::device_vector<double> &z2);
+        void ilu_precond_iter(const HYPRE_Solver &precond, thrust::device_vector<double> &b, thrust::device_vector<double> &x);
+        void ic_precond_iter(thrust::device_vector<double> &r, thrust::device_vector<double> &z);
+        void record_iteration(double rel_res, const std::chrono::steady_clock::time_point &begin);
     };
 
 } // namespace polysolve::linear

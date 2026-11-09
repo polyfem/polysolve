@@ -14,6 +14,8 @@
 
 #include <HYPRE_utilities.h>
 #include <Eigen/SparseCholesky>
+#include <Eigen/SparseLU>
+#include <cstring>
 
 #if POLYSOLVE_WITH_ACCELERATE
 #include <Eigen/AccelerateSupport>
@@ -33,6 +35,7 @@
 
 #include "_hypre_IJ_mv.h"
 #include "_hypre_parcsr_mv.h"
+#include "_hypre_parcsr_ls.h" // hypre_ParAMGData, for the AMG hierarchy statistics
 
 namespace polysolve::linear
 {
@@ -356,6 +359,58 @@ namespace polysolve::linear
             {
                 detailed_log = shared_params["CPUHybrid"]["detailed_log"];
             }
+            if (shared_params["CPUHybrid"].contains("krylov"))
+            {
+                const std::string s = shared_params["CPUHybrid"]["krylov"];
+                if (s == "pcg")
+                    krylov_method = KrylovMethod::PCG;
+                else if (s == "gmres")
+                    krylov_method = KrylovMethod::GMRES;
+                else
+                    throw std::runtime_error("Unknown krylov method: " + s);
+            }
+            if (shared_params["CPUHybrid"].contains("preconditioner"))
+            {
+                const std::string s = shared_params["CPUHybrid"]["preconditioner"];
+                if (s == "hybrid")
+                    preconditioner_type = PreconditionerType::HYBRID;
+                else if (s == "jacobi")
+                    preconditioner_type = PreconditionerType::JACOBI;
+                else if (s == "ilu")
+                    preconditioner_type = PreconditionerType::ILU;
+                else if (s == "ic")
+                    preconditioner_type = PreconditionerType::IC;
+                else
+                    throw std::runtime_error("Unknown preconditioner: " + s);
+            }
+            if (shared_params["CPUHybrid"].contains("direct"))
+            {
+                const std::string s = shared_params["CPUHybrid"]["direct"];
+                if (s == "none")
+                    direct_factorization = DirectFactorization::NONE;
+                else if (s == "lu")
+                    direct_factorization = DirectFactorization::LU;
+                else if (s == "llt")
+                    direct_factorization = DirectFactorization::LLT;
+                else
+                    throw std::runtime_error("Unknown direct factorization: " + s);
+            }
+            if (shared_params["CPUHybrid"].contains("gmres_restart"))
+            {
+                gmres_restart = shared_params["CPUHybrid"]["gmres_restart"];
+            }
+            if (shared_params["CPUHybrid"].contains("ilu_level_of_fill"))
+            {
+                ilu_level_of_fill = shared_params["CPUHybrid"]["ilu_level_of_fill"];
+            }
+            if (shared_params["CPUHybrid"].contains("ic_initial_shift"))
+            {
+                ic_initial_shift = shared_params["CPUHybrid"]["ic_initial_shift"];
+            }
+            if (shared_params["CPUHybrid"].contains("record_residual_history"))
+            {
+                record_residual_history = shared_params["CPUHybrid"]["record_residual_history"];
+            }
         }
     }
 
@@ -423,12 +478,28 @@ namespace polysolve::linear
             throw std::runtime_error("use_strumpack requires polysolve to be built with POLYSOLVE_WITH_STRUMPACK=ON!");
         }
 #endif
+
+        if (gmres_restart < 1)
+        {
+            throw std::runtime_error("gmres_restart must be at least 1!");
+        }
     }
 
     void CPUHybridSolver::get_info(json &params) const
     {
         params["num_iterations"] = num_iterations;
         params["final_res_norm"] = final_res_norm;
+        params["stop_reason"] = stop_reason;
+        params["num_ranks"] = num_procs;
+        for (auto it = info_.begin(); it != info_.end(); ++it)
+        {
+            params[it.key()] = it.value();
+        }
+        if (record_residual_history)
+        {
+            params["residual_history"] = residual_history;
+            params["time_history"] = time_history;
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -443,6 +514,20 @@ namespace polysolve::linear
         }
 
         check_settings();
+
+        info_ = json::object();
+        setup_error_.clear();
+
+        if (direct_factorization != DirectFactorization::NONE)
+        {
+            // Rank 0 alone; the other ranks go straight back to waiting for
+            // the next command.
+            if (myid == 0)
+            {
+                factorize_direct(Ain);
+            }
+            return;
+        }
 
         int rows, cols, nnz;
         if (myid == 0)
@@ -490,9 +575,28 @@ namespace polysolve::linear
 
             if (myid == 0)
             {
-                std::memcpy(values, Ain.valuePtr(), val_bytes);
-                std::memcpy(inner_indices, Ain.innerIndexPtr(), inner_bytes);
-                std::memcpy(outer_pointers, Ain.outerIndexPtr(), outer_bytes);
+                // Store A's rows (CSR), which read as the columns of a
+                // column-major map. Everything below walks "column k" as row k
+                // of A -- the copy into hypre, the row norms, the subdomain
+                // rows -- so this keeps nonsymmetric matrices right (copying
+                // Ain's CSC arrays as-is would hand hypre A^T). Built straight
+                // into the window by a counting sort, so no extra copy of A.
+                std::fill(outer_pointers, outer_pointers + rows + 1, 0);
+                for (int k = 0; k < Ain.outerSize(); ++k)
+                    for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
+                        ++outer_pointers[it.row() + 1];
+                for (int i = 0; i < rows; ++i)
+                    outer_pointers[i + 1] += outer_pointers[i];
+                std::vector<int> next(outer_pointers, outer_pointers + rows);
+                for (int k = 0; k < Ain.outerSize(); ++k)
+                {
+                    for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
+                    {
+                        const int pos = next[it.row()]++;
+                        inner_indices[pos] = k;
+                        values[pos] = it.value();
+                    }
+                }
             }
 
             MPI_Win_fence(0, A_win);
@@ -507,65 +611,85 @@ namespace polysolve::linear
         bad_indices_sets.clear();
         bad_indices_arrays.clear();
         ras_target_dofs.clear();
-        select_bad_dofs(shared_A);
 
-        if (myid == 0 && contact_patch_schwarz)
+        if (preconditioner_type != PreconditionerType::HYBRID)
         {
-            for (const auto &patch : contact_patches)
-            {
-                bad_indices_sets.emplace_back(patch.begin(), patch.end());
-                bad_indices_arrays.emplace_back(patch.begin(), patch.end());
-            }
-
-            if (contact_patch_remove_covered)
-            {
-                remove_covered_contact_patches();
-            }
+            // No subdomains: custom_mixed_precond_iter is never called.
+            bad_subdomain_assignments.assign(num_procs, {});
+            D_solvers.clear();
+            setup_local_preconditioner(shared_A);
         }
-
-        if (myid == 0 && ras_correction)
+        else
         {
-            // Snapshot all_bad_dofs into per-dof RAS subdomains now, before
-            // the filter/expand/decompose block below can mutate or replace
-            // all_bad_dofs -- the same reason contact_patch_schwarz builds
-            // its subdomains up front instead of going through that block.
-            build_ras_subdomains(shared_A);
+            select_bad_dofs(shared_A);
+
+            if (myid == 0 && contact_patch_schwarz)
+            {
+                for (const auto &patch : contact_patches)
+                {
+                    bad_indices_sets.emplace_back(patch.begin(), patch.end());
+                    bad_indices_arrays.emplace_back(patch.begin(), patch.end());
+                }
+
+                if (contact_patch_remove_covered)
+                {
+                    remove_covered_contact_patches();
+                }
+            }
+
+            if (myid == 0 && ras_correction)
+            {
+                // Snapshot all_bad_dofs into per-dof RAS subdomains now, before
+                // the filter/expand/decompose block below can mutate or replace
+                // all_bad_dofs -- the same reason contact_patch_schwarz builds
+                // its subdomains up front instead of going through that block.
+                build_ras_subdomains(shared_A);
+            }
+
+            if (myid == 0)
+            {
+                if (decompose_subdomains && !ras_correction)
+                {
+                    filter_subdomains(shared_A);
+                }
+
+                if (expand_subdomains && !ras_correction)
+                {
+                    expand_subdomains_to_strongly_connected(shared_A);
+                }
+
+                if (decompose_subdomains && !ras_correction)
+                {
+                    decompose_subdomains_to_disjoint_subsets(shared_A);
+                }
+                else if (!contact_patch_schwarz && !ras_correction)
+                {
+                    bad_indices_sets.emplace_back(all_bad_dofs.begin(), all_bad_dofs.end());
+                }
+
+                load_balance_subdomains();
+            }
+
+            share_bad_subdomains();
+
+            if (contact_patch_schwarz)
+            {
+                compute_overlap_scale();
+            }
+
+            factorize_submatrix(shared_A);
+
+            {
+                size_t num_bad = 0;
+                for (const auto &s : bad_indices_sets)
+                    num_bad += s.size();
+                info_["num_subdomains"] = bad_indices_sets.size();
+                info_["num_subdomain_dofs"] = num_bad;
+            }
+
+            CPUHYBRID_LOG_INFO("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
         }
-
-        if (myid == 0)
-        {
-            if (decompose_subdomains && !ras_correction)
-            {
-                filter_subdomains(shared_A);
-            }
-
-            if (expand_subdomains && !ras_correction)
-            {
-                expand_subdomains_to_strongly_connected(shared_A);
-            }
-
-            if (decompose_subdomains && !ras_correction)
-            {
-                decompose_subdomains_to_disjoint_subsets(shared_A);
-            }
-            else if (!contact_patch_schwarz && !ras_correction)
-            {
-                bad_indices_sets.emplace_back(all_bad_dofs.begin(), all_bad_dofs.end());
-            }
-
-            load_balance_subdomains();
-        }
-
-        share_bad_subdomains();
-
-        if (contact_patch_schwarz)
-        {
-            compute_overlap_scale();
-        }
-
-        factorize_submatrix(shared_A);
-
-        CPUHYBRID_LOG_INFO("[{}] [setup_problematic_dof_precond] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        info_["subdomain_or_local_precond_setup_time"] = elapsed_seconds(phase_begin);
 
         if (has_matrix_)
         {
@@ -579,9 +703,182 @@ namespace polysolve::linear
             copy_matrix_to_hypre(shared_A);
             has_matrix_ = true;
             CPUHYBRID_LOG_INFO("[{}] [copy_matrix_to_hypre] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+            info_["copy_to_hypre_time"] = elapsed_seconds(phase_begin);
         }
 
         MPI_Win_free(&A_win);
+
+        // Report a failed setup only now, after the last collective, so the
+        // other ranks are never left waiting in one.
+        if (myid == 0 && !setup_error_.empty())
+        {
+            throw std::runtime_error("[CPUHybrid] " + setup_error_);
+        }
+    }
+
+    void CPUHybridSolver::setup_local_preconditioner(SharedSparseMatrix &sparse_A)
+    {
+        // Column k of sparse_A is row k of A (see factorize), so this rank's
+        // rows are columns starts[myid]..ends[myid].
+        const int s = starts[myid];
+        const int e = ends[myid];
+        const int m = my_size();
+
+        int ok = 1;
+        if (preconditioner_type == PreconditionerType::JACOBI)
+        {
+            int zero_diag = 0;
+            inv_diag_local_.resize(m);
+            for (int i = 0; i < m; ++i)
+            {
+                double d = 0.0;
+                for (SharedSparseMatrix::InnerIterator it(sparse_A, s + i); it; ++it)
+                {
+                    if (it.row() == s + i)
+                    {
+                        d = it.value();
+                        break;
+                    }
+                }
+                // A zero diagonal (saddle-point blocks) is left unscaled.
+                if (d == 0.0)
+                    ++zero_diag;
+                inv_diag_local_(i) = d != 0.0 ? 1.0 / d : 1.0;
+            }
+            MPI_Allreduce(MPI_IN_PLACE, &zero_diag, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            if (myid == 0)
+                info_["jacobi_zero_diagonals"] = zero_diag;
+        }
+        else if (preconditioner_type == PreconditionerType::IC)
+        {
+            std::vector<Eigen::Triplet<double>> triplets;
+            for (int i = 0; i < m; ++i)
+            {
+                for (SharedSparseMatrix::InnerIterator it(sparse_A, s + i); it; ++it)
+                {
+                    const int j = it.row();
+                    if (j >= s && j <= e)
+                        triplets.emplace_back(i, j - s, it.value()); // A(s+i, j)
+                }
+            }
+            Eigen::SparseMatrix<double> A_local(m, m);
+            A_local.setFromTriplets(triplets.begin(), triplets.end());
+            triplets.clear();
+            triplets.shrink_to_fit();
+
+            ic_local_ = std::make_unique<Eigen::IncompleteCholesky<double, Eigen::Lower, Eigen::AMDOrdering<int>>>();
+            ic_local_->setInitialShift(ic_initial_shift);
+            ic_local_->compute(A_local);
+            ok = ic_local_->info() == Eigen::Success ? 1 : 0;
+
+            double shift = ok ? ic_local_->shift() : 0.0;
+            MPI_Allreduce(MPI_IN_PLACE, &shift, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            if (myid == 0)
+                info_["ic_max_shift"] = shift;
+        }
+
+        MPI_Allreduce(MPI_IN_PLACE, &ok, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+        if (!ok)
+        {
+            setup_error_ = "ic_factorization_failed";
+        }
+    }
+
+    namespace
+    {
+        // Whole-matrix factorization for direct mode; reports failures (the
+        // EigenWrapper used for subdomains does not check info()).
+        template <typename EigenSolverT>
+        class DirectWrapper : public AbstractSolver
+        {
+        public:
+            EigenSolverT solver;
+
+            void compute(const Eigen::SparseMatrix<double> &A) override
+            {
+                solver.compute(A);
+                if (solver.info() != Eigen::Success)
+                    throw std::runtime_error("direct factorization failed (Eigen info " + std::to_string(int(solver.info())) + ")");
+            }
+
+            Eigen::VectorXd solve(const Eigen::VectorXd &b) override
+            {
+                Eigen::VectorXd x = solver.solve(b);
+                if (solver.info() != Eigen::Success)
+                    throw std::runtime_error("direct solve failed (Eigen info " + std::to_string(int(solver.info())) + ")");
+                return x;
+            }
+        };
+    } // namespace
+
+    void CPUHybridSolver::factorize_direct(const StiffnessMatrix &Ain)
+    {
+        auto phase_begin = clock::now();
+        const bool lu = direct_factorization == DirectFactorization::LU;
+        direct_solver_.reset();
+
+#if POLYSOLVE_WITH_MKL
+        if (lu)
+        {
+            auto d = std::make_unique<DirectWrapper<Eigen::PardisoLU<StiffnessMatrix>>>();
+            d->solver.pardisoParameterArray()[17] = -1; // report nnz(factors) in iparm[17]
+            d->compute(Ain);
+            info_["direct_backend"] = "PardisoLU";
+            info_["factor_nnz"] = d->solver.pardisoParameterArray()[17];
+            info_["pardiso_peak_kb"] = std::max(d->solver.pardisoParameterArray()[14], d->solver.pardisoParameterArray()[15] + d->solver.pardisoParameterArray()[16]);
+            direct_solver_ = std::move(d);
+        }
+        else
+        {
+            // Pardiso's symmetric modes need every diagonal entry in the
+            // pattern, even when it is zero; without them its METIS reordering
+            // can loop forever (seen on saddle-point matrices whose second
+            // block has no stored diagonal). Add the missing ones as explicit
+            // zeros -- the factorization then fails cleanly on such a matrix.
+            int missing = 0;
+            for (int k = 0; k < Ain.outerSize(); ++k)
+            {
+                bool found = false;
+                for (StiffnessMatrix::InnerIterator it(Ain, k); it; ++it)
+                    found = found || it.row() == k;
+                missing += !found;
+            }
+            StiffnessMatrix A_diag;
+            if (missing > 0)
+            {
+                StiffnessMatrix zero_diag(Ain.rows(), Ain.cols());
+                zero_diag.setIdentity();
+                zero_diag.coeffs().setZero();
+                A_diag = Ain + zero_diag; // sparse sums keep the union pattern, zeros included
+            }
+            info_["missing_diagonal_entries"] = missing;
+
+            auto d = std::make_unique<DirectWrapper<Eigen::PardisoLLT<StiffnessMatrix, Eigen::Lower>>>();
+            d->solver.pardisoParameterArray()[17] = -1;
+            d->compute(missing > 0 ? A_diag : Ain);
+            info_["direct_backend"] = "PardisoLLT";
+            info_["factor_nnz"] = d->solver.pardisoParameterArray()[17];
+            info_["pardiso_peak_kb"] = std::max(d->solver.pardisoParameterArray()[14], d->solver.pardisoParameterArray()[15] + d->solver.pardisoParameterArray()[16]);
+            direct_solver_ = std::move(d);
+        }
+#else
+        if (lu)
+        {
+            auto d = std::make_unique<DirectWrapper<Eigen::SparseLU<StiffnessMatrix>>>();
+            d->compute(Ain);
+            info_["direct_backend"] = "Eigen::SparseLU";
+            direct_solver_ = std::move(d);
+        }
+        else
+        {
+            auto d = std::make_unique<DirectWrapper<Eigen::SimplicialLLT<StiffnessMatrix>>>();
+            d->compute(Ain);
+            info_["direct_backend"] = "Eigen::SimplicialLLT";
+            direct_solver_ = std::move(d);
+        }
+#endif
+        info_["direct_factorize_time"] = elapsed_seconds(phase_begin);
+        CPUHYBRID_LOG_INFO("[{}] [direct_factorize] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -687,6 +984,36 @@ namespace polysolve::linear
             MPI_Bcast(&solver_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
         }
 
+        num_iterations = 0;
+        residual_history.clear();
+        time_history.clear();
+
+        // setup_error_ and direct_factorization are the same on every rank,
+        // so these early returns are collective.
+        if (!setup_error_.empty())
+        {
+            if (myid == 0)
+            {
+                result.setZero();
+                stop_reason = setup_error_;
+            }
+            return;
+        }
+
+        if (direct_factorization != DirectFactorization::NONE)
+        {
+            if (myid == 0)
+            {
+                if (!direct_solver_)
+                    throw std::runtime_error("[CPUHybrid] solve called before factorize");
+                auto phase_begin = clock::now();
+                result = direct_solver_->solve(rhs);
+                stop_reason = "direct";
+                info_["direct_solve_time"] = elapsed_seconds(phase_begin);
+            }
+            return;
+        }
+
         int problem_size = rhs.size();
         MPI_Bcast(&problem_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -741,10 +1068,40 @@ namespace polysolve::linear
         HYPRE_ParVector par_x;
         init_hypre_vectors();
 
-        /* AMG preconditioner */
-        HYPRE_Solver precond;
+        /* Preconditioner: BoomerAMG (HYBRID), hypre ILU (ILU), or none
+           here (JACOBI and IC were set up in factorize) */
+        HYPRE_Solver precond = nullptr;
 
-        /* Now set up the AMG preconditioner and specify any parameters */
+        if (preconditioner_type == PreconditionerType::ILU)
+        {
+            auto phase_begin = clock::now();
+            HYPRE_ILUCreate(&precond);
+            HYPRE_ILUSetType(precond, 0); // block-Jacobi ILU(k)
+            HYPRE_ILUSetLevelOfFill(precond, ilu_level_of_fill);
+            HYPRE_ILUSetMaxIter(precond, 1);
+            HYPRE_ILUSetTol(precond, 0.0);
+            HYPRE_ILUSetPrintLevel(precond, 0);
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            HYPRE_IJVectorSetData(ij_b, shared_rhs.data());
+            HYPRE_IJVectorAssemble(ij_b);
+            HYPRE_IJVectorGetObject(ij_b, (void **)&par_b);
+
+            HYPRE_IJVectorSetData(ij_x, shared_result.data());
+            HYPRE_IJVectorAssemble(ij_x);
+            HYPRE_IJVectorGetObject(ij_x, (void **)&par_x);
+
+            HYPRE_ILUSetup(precond, parcsr_A, par_b, par_x);
+            MPI_Barrier(MPI_COMM_WORLD);
+            info_["precond_setup_time"] = elapsed_seconds(phase_begin);
+            CPUHYBRID_LOG_INFO("[{}] [ilu_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        }
+        else if (preconditioner_type != PreconditionerType::HYBRID)
+        {
+            info_["precond_setup_time"] = 0.0;
+        }
+        else
         {
             auto phase_begin = clock::now();
             HYPRE_BoomerAMGCreate(&precond);
@@ -784,14 +1141,39 @@ namespace polysolve::linear
             HYPRE_IJVectorGetObject(ij_x, (void **)&par_x);
 
             HYPRE_BoomerAMGSetup(precond, parcsr_A, par_b, par_x);
+            MPI_Barrier(MPI_COMM_WORLD);
+            info_["precond_setup_time"] = elapsed_seconds(phase_begin);
             CPUHYBRID_LOG_INFO("[{}] [amg_setup] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+
+            // Hierarchy size: levels and operator complexity (sum of nnz over
+            // all levels / nnz of A). SetNumNonzeros is collective.
+            {
+                hypre_ParAMGData *amg_data = (hypre_ParAMGData *)precond;
+                const int num_levels = hypre_ParAMGDataNumLevels(amg_data);
+                hypre_ParCSRMatrix **A_array = hypre_ParAMGDataAArray(amg_data);
+                double nnz_total = 0.0, nnz_fine = 0.0;
+                for (int level = 0; level < num_levels; ++level)
+                {
+                    hypre_ParCSRMatrixSetDNumNonzeros(A_array[level]);
+                    const double nnz_level = hypre_ParCSRMatrixDNumNonzeros(A_array[level]);
+                    nnz_total += nnz_level;
+                    if (level == 0)
+                        nnz_fine = nnz_level;
+                }
+                info_["amg_num_levels"] = num_levels;
+                info_["amg_operator_complexity"] = nnz_fine > 0 ? nnz_total / nnz_fine : 0.0;
+            }
         }
 
         /* Now setup and solve! */
         {
             auto phase_begin = clock::now();
 
-            pcg_solve(shared_rhs, shared_result, par_b, par_x, precond, shared_vec, vec_win);
+            if (krylov_method == KrylovMethod::GMRES)
+                gmres_solve(shared_rhs, shared_result, precond, shared_vec, vec_win);
+            else
+                pcg_solve(shared_rhs, shared_result, par_b, par_x, precond, shared_vec, vec_win);
+            info_["krylov_time"] = elapsed_seconds(phase_begin);
 
             MPI_Gatherv(
                 shared_result.data(),
@@ -813,21 +1195,76 @@ namespace polysolve::linear
 
         /* Destroy preconditioner */
         {
-            HYPRE_BoomerAMGDestroy(precond);
+            if (precond != nullptr)
+            {
+                if (preconditioner_type == PreconditionerType::ILU)
+                    HYPRE_ILUDestroy(precond);
+                else
+                    HYPRE_BoomerAMGDestroy(precond);
+            }
             HYPRE_IJVectorDestroy(ij_x);
             HYPRE_IJVectorDestroy(ij_b);
             MPI_Win_free(&vec_win);
         }
     }
 
+    void CPUHybridSolver::record_iteration(double rel_res, const std::chrono::steady_clock::time_point &begin)
+    {
+        if (record_residual_history && myid == 0)
+        {
+            residual_history.push_back(rel_res);
+            time_history.push_back(elapsed_seconds(begin));
+        }
+    }
+
+    void CPUHybridSolver::apply_precond(const HYPRE_Solver &precond, Eigen::VectorXd &in, Eigen::VectorXd &out, SharedVector &vec, MPI_Win &vec_win)
+    {
+        switch (preconditioner_type)
+        {
+        case PreconditionerType::HYBRID:
+            custom_mixed_precond_iter(precond, in, out, vec, vec_win);
+            break;
+        case PreconditionerType::JACOBI:
+            out = inv_diag_local_.cwiseProduct(in);
+            break;
+        case PreconditionerType::IC:
+            out = ic_local_->solve(in);
+            break;
+        case PreconditionerType::ILU:
+            out.setZero();
+            ilu_precond_iter(precond, in, out);
+            break;
+        }
+    }
+
+    // One application of hypre's ILU. HYPRE_ILUSolve is a Richardson step, so
+    // with out = 0 on entry it returns M^{-1} in, at the price of one extra
+    // matvec for the (here trivial) initial residual -- the same cost as
+    // hypre's own Krylov solvers pay when they use ILU as a preconditioner.
+    void CPUHybridSolver::ilu_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &eigen_b, Eigen::VectorXd &eigen_x)
+    {
+        HYPRE_ParVector par_x;
+        HYPRE_ParVector par_b;
+
+        HYPRE_IJVectorSetData(ij_x, eigen_x.data());
+        HYPRE_IJVectorSetData(ij_b, eigen_b.data());
+        HYPRE_IJVectorAssemble(ij_x);
+        HYPRE_IJVectorGetObject(ij_x, (void **)&par_x);
+        HYPRE_IJVectorAssemble(ij_b);
+        HYPRE_IJVectorGetObject(ij_b, (void **)&par_b);
+
+        HYPRE_ILUSolve(precond, parcsr_A, par_b, par_x);
+    }
+
     void CPUHybridSolver::pcg_solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result, HYPRE_ParVector &par_b, HYPRE_ParVector &par_x, HYPRE_Solver &precond, SharedVector &vec, MPI_Win &vec_win)
     {
         MPI_Barrier(MPI_COMM_WORLD);
 
-        double pre_loop_time;
         double bi_prod, rel_eps, abs_eps, gamma, old_gamma;
 
         num_iterations = 0;
+        stop_reason = "max_iter";
+        const auto krylov_begin = clock::now();
 
         r.setZero();
         {
@@ -842,19 +1279,19 @@ namespace polysolve::linear
             else
             {
                 result.setZero();
+                stop_reason = "zero_rhs";
                 MPI_Barrier(MPI_COMM_WORLD);
                 return;
             }
 
             matmul(result, buffer);
             r += rhs - buffer;
+            record_iteration(std::sqrt(dot(r, r) / bi_prod), krylov_begin);
 
             p.setZero();
             z1.setZero();
 
-            {
-                custom_mixed_precond_iter(precond, r, z1, vec, vec_win);
-            }
+            apply_precond(precond, r, z1, vec, vec_win);
 
             p = z1;
 
@@ -871,9 +1308,16 @@ namespace polysolve::linear
             matmul(p, buffer);
             double sdotp = dot(p, buffer);
 
+            if (!std::isfinite(sdotp) || !std::isfinite(gamma))
+            {
+                stop_reason = "nan";
+                break;
+            }
+
             if (sdotp == 0.0)
             {
                 CPUHYBRID_LOG_INFO("[{}] [err_zero_sdotp] [0.000000]", name());
+                stop_reason = "zero_sdotp";
                 break;
             }
 
@@ -882,11 +1326,13 @@ namespace polysolve::linear
             if (alpha <= 0.0)
             {
                 CPUHYBRID_LOG_INFO("[{}] [err_negative_alpha] [0.000000]", name());
+                stop_reason = "negative_alpha";
                 break;
             }
             else if (alpha < __DBL_MIN__)
             {
                 CPUHYBRID_LOG_INFO("[{}] [err_subnormal_alpha] [0.000000]", name());
+                stop_reason = "subnormal_alpha";
                 break;
             }
 
@@ -894,21 +1340,31 @@ namespace polysolve::linear
             r -= alpha * buffer;
 
             double i_prod = dot(r, r);
+            record_iteration(std::sqrt(i_prod / bi_prod), krylov_begin);
+
+            if (!std::isfinite(i_prod))
+            {
+                stop_reason = "nan";
+                break;
+            }
+
             if (rel_eps > 0 && (i_prod / bi_prod) < rel_eps)
             {
                 CPUHYBRID_LOG_INFO("[{}] [converged_rel] [0.000000]", name());
+                stop_reason = "converged";
                 break;
             }
 
             if (abs_eps > 0 && i_prod < abs_eps)
             {
                 CPUHYBRID_LOG_INFO("[{}] [converged_abs] [0.000000]", name());
+                stop_reason = "converged";
                 break;
             }
 
             z1.setZero();
 
-            custom_mixed_precond_iter(precond, r, z1, vec, vec_win);
+            apply_precond(precond, r, z1, vec, vec_win);
 
             gamma = dot(r, z1);
             double beta = gamma / old_gamma;
@@ -917,6 +1373,148 @@ namespace polysolve::linear
             p = z1 + beta * p;
             CPUHYBRID_LOG_ITER("[{}] [pcg_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), k, sqrt(i_prod));
         }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    // Restarted, right-preconditioned GMRES(m), m = gmres_restart:
+    // x = x0 + M^{-1} V y. Right preconditioning makes the Arnoldi residual
+    // the true (unpreconditioned) residual, so the stopping test is the same
+    // ||b - Ax|| <= rel_tol ||b|| as PCG's. Orthogonalization is classical
+    // Gram-Schmidt run twice (CGS2): as stable as modified Gram-Schmidt in
+    // practice, but each pass is one local matrix-vector product and a single
+    // Allreduce rather than one per basis vector. Each restart cycle begins
+    // from the explicitly recomputed residual, so a stale estimate never ends
+    // the solve on its own.
+    void CPUHybridSolver::gmres_solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result, HYPRE_Solver &precond, SharedVector &vec, MPI_Win &vec_win)
+    {
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        num_iterations = 0;
+        stop_reason = "max_iter";
+        const auto krylov_begin = clock::now();
+
+        const int m = gmres_restart;
+        const int n_local = my_size();
+
+        const double b_norm = std::sqrt(dot(rhs, rhs));
+        if (!(b_norm > 0.0))
+        {
+            result.setZero();
+            stop_reason = b_norm == 0.0 ? "zero_rhs" : "nan";
+            MPI_Barrier(MPI_COMM_WORLD);
+            return;
+        }
+        const double target = std::max(rel_conv_tol_ * b_norm, abs_conv_tol_);
+
+        Eigen::MatrixXd V(n_local, m + 1); // Krylov basis, this rank's rows
+        Eigen::MatrixXd H(m + 1, m);       // Hessenberg matrix, reduced to R in place
+        Eigen::VectorXd cs(m), sn(m), g(m + 1), h(m + 1);
+        Eigen::VectorXd res(n_local), v(n_local), z(n_local), w(n_local);
+
+        bool first_cycle = true;
+        while (true)
+        {
+            matmul(result, w);
+            res = rhs - w;
+            const double beta = std::sqrt(dot(res, res));
+            if (first_cycle)
+            {
+                record_iteration(beta / b_norm, krylov_begin);
+                first_cycle = false;
+            }
+            if (!std::isfinite(beta))
+            {
+                stop_reason = "nan";
+                break;
+            }
+            if (beta <= target)
+            {
+                stop_reason = "converged";
+                break;
+            }
+            if (num_iterations >= max_iter_)
+            {
+                break;
+            }
+
+            V.col(0) = res / beta;
+            H.setZero();
+            g.setZero();
+            g(0) = beta;
+
+            int k = 0; // columns of V used for the update
+            bool broke_down = false;
+            for (int j = 0; j < m && num_iterations < max_iter_; ++j)
+            {
+                auto phase_begin = clock::now();
+
+                // w = A M^{-1} v_j
+                v = V.col(j);
+                z.setZero();
+                apply_precond(precond, v, z, vec, vec_win);
+                matmul(z, w);
+
+                for (int pass = 0; pass < 2; ++pass)
+                {
+                    h.head(j + 1).noalias() = V.leftCols(j + 1).transpose() * w;
+                    MPI_Allreduce(MPI_IN_PLACE, h.data(), j + 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    w.noalias() -= V.leftCols(j + 1) * h.head(j + 1);
+                    H.col(j).head(j + 1) += h.head(j + 1);
+                }
+                const double h_next = std::sqrt(dot(w, w));
+                H(j + 1, j) = h_next;
+
+                // Previous Givens rotations, then a new one zeroing H(j+1, j).
+                for (int i = 0; i < j; ++i)
+                {
+                    const double t = cs(i) * H(i, j) + sn(i) * H(i + 1, j);
+                    H(i + 1, j) = -sn(i) * H(i, j) + cs(i) * H(i + 1, j);
+                    H(i, j) = t;
+                }
+                const double rho = std::hypot(H(j, j), H(j + 1, j));
+                cs(j) = rho > 0.0 ? H(j, j) / rho : 1.0;
+                sn(j) = rho > 0.0 ? H(j + 1, j) / rho : 0.0;
+                H(j, j) = rho;
+                H(j + 1, j) = 0.0;
+                g(j + 1) = -sn(j) * g(j);
+                g(j) = cs(j) * g(j);
+
+                ++num_iterations;
+                k = j + 1;
+                const double res_estimate = std::abs(g(j + 1));
+                record_iteration(res_estimate / b_norm, krylov_begin);
+                CPUHYBRID_LOG_ITER("[{}] [gmres_iter] [{:.6f}] [iter={}] [residual={}]", name(), elapsed_seconds(phase_begin), num_iterations, res_estimate);
+
+                if (!std::isfinite(res_estimate) || !std::isfinite(h_next))
+                {
+                    broke_down = true;
+                    break;
+                }
+                if (res_estimate <= target)
+                {
+                    break; // confirmed by the true residual at the top of the loop
+                }
+                if (h_next == 0.0)
+                {
+                    break; // invariant subspace: the update below is exact
+                }
+                V.col(j + 1) = w / h_next;
+            }
+
+            if (broke_down)
+            {
+                stop_reason = "nan";
+                break;
+            }
+
+            // x += M^{-1} V_k y, with R_k y = g_k
+            Eigen::VectorXd y = H.topLeftCorner(k, k).triangularView<Eigen::Upper>().solve(g.head(k));
+            v.noalias() = V.leftCols(k) * y;
+            z.setZero();
+            apply_precond(precond, v, z, vec, vec_win);
+            result += z;
+        }
+
         MPI_Barrier(MPI_COMM_WORLD);
     }
 
@@ -967,7 +1565,7 @@ namespace polysolve::linear
 
         HYPRE_BoomerAMGSolve(precond, parcsr_A, par_b, par_x);
         MPI_Barrier(MPI_COMM_WORLD);
-        CPUHYBRID_LOG_INFO("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
+        CPUHYBRID_LOG_ITER("[{}] [amg_v_cycle] [{:.6f}]", name(), elapsed_seconds(phase_begin));
     }
 
     void CPUHybridSolver::dss_precond_iter(Eigen::VectorXd &z, Eigen::VectorXd &r, Eigen::VectorXd &next_z, SharedVector &vec, MPI_Win &vec_win)
@@ -1329,8 +1927,24 @@ namespace polysolve::linear
         auto phase_begin = clock::now();
         D_solvers.clear();
 
+        // GMRES may be given a nonsymmetric matrix, whose subdomain blocks
+        // need LU; PCG keeps the (cheaper) LDLT.
+        const bool use_lu = krylov_method == KrylovMethod::GMRES;
+
         for (int i : bad_subdomain_assignments[myid])
         {
+            if (use_lu)
+            {
+#if POLYSOLVE_WITH_MKL
+                if (bad_indices_sets[i].size() > 1000)
+                {
+                    D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::PardisoLU<Eigen::SparseMatrix<double>>>>());
+                    continue;
+                }
+#endif
+                D_solvers.push_back(std::make_unique<EigenWrapper<Eigen::SparseLU<Eigen::SparseMatrix<double>>>>());
+                continue;
+            }
             if (bad_indices_sets[i].size() > 1000)
             {
 #ifdef POLYSOLVE_WITH_STRUMPACK
@@ -1532,7 +2146,9 @@ namespace polysolve::linear
                 auto ind_it = index_mappings[bad_i].find(it.row());
                 if (ind_it != index_mappings[bad_i].end())
                 {
-                    triplets.push_back(Eigen::Triplet<double>(index_mappings[bad_i][it.row()], index_mappings[bad_i][it.col()], it.value()));
+                    // sparse_A holds A's rows as columns (see factorize):
+                    // this entry is A(k, it.row()).
+                    triplets.push_back(Eigen::Triplet<double>(index_mappings[bad_i][it.col()], index_mappings[bad_i][it.row()], it.value()));
                 }
             }
         }

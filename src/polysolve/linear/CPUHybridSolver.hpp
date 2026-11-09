@@ -11,6 +11,11 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
+
+#include <chrono>
+#include <memory>
+#include <string>
 
 #include <HYPRE.h>
 #include <HYPRE_parcsr_ls.h>
@@ -151,7 +156,54 @@ namespace polysolve::linear
             HSS
         };
 
+        // Outer iteration ("krylov"): PCG needs an SPD matrix and a symmetric
+        // preconditioner; GMRES (right-preconditioned, restarted) takes any.
+        enum class KrylovMethod
+        {
+            PCG,
+            GMRES
+        };
+
+        // Preconditioner ("preconditioner"). HYBRID is AMG plus the direct
+        // subdomain correction; with gmm_jump_threshold at DBL_MAX no
+        // subdomain is ever selected and it is plain BoomerAMG. JACOBI, ILU
+        // and IC are block-Jacobi across ranks: each rank works on its own
+        // diagonal block, so iteration counts can grow with the rank count.
+        //   JACOBI: 1 / diag(A)
+        //   ILU:    hypre ILU(k), ilu_type 0 (block-Jacobi ILU), k = ilu_level_of_fill
+        //   IC:     Eigen::IncompleteCholesky (Lin-More, AMD ordering, diagonal
+        //           scaling, shifted until it succeeds) of each rank's block
+        enum class PreconditionerType
+        {
+            HYBRID,
+            JACOBI,
+            ILU,
+            IC
+        };
+
+        // Direct mode ("direct"): skip the Krylov solver and factorize the
+        // whole matrix on rank 0 (Pardiso with MKL, otherwise Eigen). The other
+        // ranks sit idle, so run direct solves with one rank and set the
+        // factorization's threads with MKL_NUM_THREADS.
+        enum class DirectFactorization
+        {
+            NONE,
+            LU,
+            LLT
+        };
+
     protected:
+        // Solver selection (see the enums above)
+        KrylovMethod krylov_method = KrylovMethod::PCG;
+        PreconditionerType preconditioner_type = PreconditionerType::HYBRID;
+        DirectFactorization direct_factorization = DirectFactorization::NONE;
+        int gmres_restart = 30;
+        int ilu_level_of_fill = 0;
+        double ic_initial_shift = 1e-3;
+        // Keep the relative residual and elapsed time of every Krylov
+        // iteration, returned by get_info as residual_history/time_history.
+        bool record_residual_history = true;
+
         // AMG settings
         double theta = 0.5;
 
@@ -215,9 +267,30 @@ namespace polysolve::linear
         // solve information
         HYPRE_Int num_iterations = 0;
         HYPRE_Complex final_res_norm = 0;
+        // Why the last solve stopped: converged, max_iter, nan, a PCG
+        // breakdown (negative_alpha, ...), direct, or a setup failure.
+        std::string stop_reason;
+        // Relative residual (recursive estimate) after iteration k; entry 0 is
+        // the initial residual. time_history[k] is seconds since the Krylov
+        // loop started.
+        std::vector<double> residual_history;
+        std::vector<double> time_history;
+        // Phase timings and preconditioner statistics, merged into get_info.
+        json info_;
 
     private:
         bool has_matrix_ = false;
+
+        // Set (identically on every rank) when a preconditioner or direct
+        // setup fails; solve() then returns x = 0 with this as stop_reason.
+        std::string setup_error_;
+
+        // direct mode, rank 0 only
+        std::unique_ptr<AbstractSolver> direct_solver_;
+
+        // rank-local preconditioners (JACOBI, IC)
+        Eigen::VectorXd inv_diag_local_;
+        std::unique_ptr<Eigen::IncompleteCholesky<double, Eigen::Lower, Eigen::AMDOrdering<int>>> ic_local_;
 
         // MPI rank distribution
         int myid = 0;
@@ -287,6 +360,13 @@ namespace polysolve::linear
         void matmul(Eigen::VectorXd &x, Eigen::VectorXd &result);
         double dot(Eigen::VectorXd &x, Eigen::VectorXd &y);
 
+        // non-hybrid preconditioners and direct mode
+        void setup_local_preconditioner(SharedSparseMatrix &sparse_A);
+        void factorize_direct(const StiffnessMatrix &A);
+        void apply_precond(const HYPRE_Solver &precond, Eigen::VectorXd &r, Eigen::VectorXd &z, SharedVector &vec, MPI_Win &vec_win);
+        void ilu_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &b, Eigen::VectorXd &x);
+        void record_iteration(double rel_res, const std::chrono::steady_clock::time_point &begin);
+
         // preconditioning functions
         void custom_mixed_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &r, Eigen::VectorXd &z, SharedVector &vec, MPI_Win &vec_win);
         void amg_precond_iter(const HYPRE_Solver &precond, Eigen::VectorXd &b, Eigen::VectorXd &x);
@@ -298,6 +378,7 @@ namespace polysolve::linear
 
         // Krylov solve methods
         void pcg_solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result, HYPRE_ParVector &par_b, HYPRE_ParVector &par_x, HYPRE_Solver &precond, SharedVector &vec, MPI_Win &vec_win);
+        void gmres_solve(Eigen::VectorXd &rhs, Eigen::VectorXd &result, HYPRE_Solver &precond, SharedVector &vec, MPI_Win &vec_win);
     };
 
 } // namespace polysolve::linear

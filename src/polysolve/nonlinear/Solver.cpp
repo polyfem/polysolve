@@ -121,8 +121,63 @@ namespace polysolve::nonlinear
          {NormType::L2, "L2"},
          {NormType::Linf, "Linf"}})
 
+    namespace
+    {
+        /// @brief Check the parameters against the solver spec and fill in the defaults
+        json validate_solver_params(const json &solver_params, spdlog::logger &logger, const bool strict_validation)
+        {
+            jse::JSE jse;
+
+            jse.strict = strict_validation;
+            const json rules = jse::embed::non_linear_spec::solver_spec::spec();
+            const bool valid_input = jse.verify_json(solver_params, rules);
+
+            if (!valid_input)
+            {
+                log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
+            }
+
+            return jse.inject_defaults(solver_params, rules);
+        }
+    } // namespace
+
     // Static constructor
     std::unique_ptr<Solver> Solver::create(
+        const json &solver_params,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const bool strict_validation,
+        const NormType norm_type,
+        const int dimension)
+    {
+        return create(
+            solver_params,
+            create_strategies(solver_params, linear_solver_params, characteristic_length, logger, strict_validation, norm_type, dimension),
+            characteristic_length, logger, strict_validation);
+    }
+
+    std::unique_ptr<Solver> Solver::create(
+        const json &solver_params_in,
+        const std::vector<std::shared_ptr<DescentStrategy>> &strategies,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const bool strict_validation)
+    {
+        const json solver_params = validate_solver_params(solver_params_in, logger, strict_validation);
+
+        auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
+
+        for (const auto &s : strategies)
+        {
+            solver->add_strategy(s);
+        }
+
+        solver->set_strategies_iterations(solver_params);
+        return solver;
+    }
+
+    std::vector<std::shared_ptr<DescentStrategy>> Solver::create_strategies(
         const json &solver_params_in,
         const json &linear_solver_params,
         const double characteristic_length,
@@ -131,27 +186,16 @@ namespace polysolve::nonlinear
         const NormType norm_type,
         const int dimension)
     {
-        json solver_params = solver_params_in; // mutable copy
+        const json solver_params = validate_solver_params(solver_params_in, logger, strict_validation);
 
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        json rules = jse::embed::non_linear_spec::solver_spec::spec();
-        const bool valid_input = jse.verify_json(solver_params, rules);
-
-        if (!valid_input)
-            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
-
-        solver_params = jse.inject_defaults(solver_params, rules);
-
-        auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
+        std::vector<std::shared_ptr<DescentStrategy>> strategies;
 
         if (solver_params["solver"].is_array())
         {
             for (const auto &j : solver_params["solver"])
             {
                 const std::string solver_name = j["type"];
-                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type, dimension));
+                strategies.push_back(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type, dimension));
             }
         }
         else
@@ -161,30 +205,26 @@ namespace polysolve::nonlinear
             if (solver_name == "DenseNewton" || solver_name == "dense_newton")
             {
                 auto n = Newton::create_solver(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
-                for (auto &s : n)
-                    solver->add_strategy(s);
+                strategies.insert(strategies.end(), n.begin(), n.end());
             }
             else if (solver_name == "Newton" || solver_name == "SparseNewton" || solver_name == "sparse_newton")
             {
                 auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
-                for (auto &s : n)
-                    solver->add_strategy(s);
+                strategies.insert(strategies.end(), n.begin(), n.end());
             }
             else
             {
-                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension));
+                strategies.push_back(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension));
             }
 
             if (solver_name != "GradientDescent" && solver_name != "gradient_descent")
             {
-
-                solver->add_strategy(std::make_unique<GradientDescent>(
+                strategies.push_back(std::make_shared<GradientDescent>(
                     solver_params, false, characteristic_length, logger));
             }
         }
 
-        solver->set_strategies_iterations(solver_params);
-        return solver;
+        return strategies;
     }
 
     std::vector<std::string> Solver::available_solvers()
@@ -218,6 +258,7 @@ namespace polysolve::nonlinear
         m_stop.iterations = solver_params["max_iterations"];
         allow_out_of_iterations = solver_params["allow_out_of_iterations"];
         allow_non_grad_convergence = solver_params["allow_non_grad_convergence"];
+        x_delta_tol_try_step = solver_params["advanced"]["x_delta_tol_try_step"];
 
         m_stop.fDeltaCount = solver_params["advanced"]["f_delta_step_tol"];
 
@@ -289,6 +330,24 @@ namespace polysolve::nonlinear
 
         double initial_grad_norm;
         double initial_delta_x_norm;
+
+        // Strategies that stop their linear solve early use this to find out if a rough direction is small enough to
+        // end the solve, in which case they finish their solve first (see DescentStrategy::is_direction_exact). It
+        // applies the same step-size tests as checkConvergence.
+        const auto step_size_would_converge = [&](const TVector &direction) {
+            const double norm = objFunc.step_norm(direction, m_norm_type);
+            return (m_stop_rescaled.xDelta > 0 && norm < m_stop_rescaled.xDelta)
+                   || (m_stop_rescaled.relXDelta > 0 && m_current.iterations > 0
+                       && norm / initial_delta_x_norm < m_stop_rescaled.relXDelta);
+        };
+        for (auto &s : m_strategies)
+        {
+            s->set_step_size_convergence_test(step_size_would_converge);
+        }
+
+        // Whether the direction behind the most recent update of x was exact, i.e. not stopped early. It has no meaning
+        // until the first update.
+        bool applied_direction_was_exact = false;
 
         do
         {
@@ -362,6 +421,9 @@ namespace polysolve::nonlinear
             // floor) applied before the direction is vetted and searched.
             if (m_direction_filter && update_direction_successful)
                 m_direction_filter(x, delta_x);
+
+            // We ask now because a failure below can switch strategies before this direction is applied.
+            const bool direction_is_exact = m_strategies[m_descent_strategy]->is_direction_exact();
 
             m_current.xDelta = objFunc.step_norm(delta_x, m_norm_type);
             if (m_current.iterations == 0)
@@ -457,7 +519,35 @@ namespace polysolve::nonlinear
 
             // --- Check convergence -------------------------------------------
 
-            m_status = checkConvergence(m_stop_rescaled, m_current);
+            // The step-size criteria test a direction before we apply it, so the direction that ends the solve is
+            // discarded. That is fine when it is the negligible remainder after an exact step. After an early-stopped
+            // step it is not: the direction can be small only because the linear solve was cut short, and discarding it
+            // throws away everything that solve had not reached yet. So we only let the step size end the solve once an
+            // exact direction has been applied, at the cost of one more iteration for inexact strategies. Before the
+            // first update there is nothing to look back on, so we go by the proposed direction itself, which keeps the
+            // behavior of exact strategies unchanged.
+            const bool step_size_is_meaningful = m_current.iterations == 0 ? direction_is_exact : applied_direction_was_exact;
+            if (step_size_is_meaningful)
+            {
+                m_status = checkConvergence(m_stop_rescaled, m_current);
+            }
+            else
+            {
+                // NaN never satisfies a criterion.
+                Criteria without_step_size = m_current;
+                without_step_size.xDelta = NaN;
+                without_step_size.relXDelta = NaN;
+                m_status = checkConvergence(m_stop_rescaled, without_step_size);
+            }
+
+            // With x_delta_tol_try_step we apply a direction that is small enough to stop before stopping, instead of
+            // discarding it. We remember why we are stopping and finish the iteration first.
+            Status status_after_step = Status::Continue;
+            if (x_delta_tol_try_step && (m_status == Status::XDeltaTolerance || m_status == Status::RelXDeltaTolerance))
+            {
+                status_after_step = m_status;
+                m_status = Status::Continue;
+            }
 
             if (m_status != Status::Continue)
                 break;
@@ -476,6 +566,17 @@ namespace polysolve::nonlinear
                 rate = m_line_search->line_search(x, delta_x, objFunc);
             }
             m_current.alpha = rate;
+
+            if (std::isnan(rate) && status_after_step != Status::Continue)
+            {
+                // The direction is already below the tolerance, so a line search that cannot decrease the energy
+                // along it is expected (e.g. we started at the minimum). We stop as converged at the current x.
+                m_logger.debug(
+                    "[{}][{}] Line search on a direction below the step tolerance failed; stopping at the current x",
+                    descent_strategy_name(), m_line_search->name());
+                m_status = status_after_step;
+                break;
+            }
 
             if (std::isnan(rate))
             {
@@ -500,6 +601,7 @@ namespace polysolve::nonlinear
                     objFunc.solution_changed(x1);
                 x = x1;
             }
+            applied_direction_was_exact = direction_is_exact;
 
             old_energy = energy;
 
@@ -557,9 +659,22 @@ namespace polysolve::nonlinear
 
             if (++m_current.iterations >= m_stop_rescaled.iterations)
                 m_status = Status::IterationLimit;
+
+            // We took the step that was small enough to stop, so we stop now. We report convergence even if this was
+            // also the last allowed iteration, since the solve did converge.
+            if (status_after_step != Status::Continue && (m_status == Status::Continue || m_status == Status::IterationLimit))
+            {
+                m_status = status_after_step;
+            }
         } while (objFunc.callback(m_current, x) && (m_status == Status::Continue));
 
         stop_watch.stop();
+
+        // The test refers to objFunc and to our locals, so we take it back before they go away.
+        for (auto &s : m_strategies)
+        {
+            s->set_step_size_convergence_test(nullptr);
+        }
 
         // -----------
         // Log results

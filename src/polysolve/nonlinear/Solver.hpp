@@ -29,12 +29,55 @@ namespace polysolve::nonlinear
     public:
         // --- Static methods -------------------------------------------------
 
-        // Static constructor
-        //
-        // @param[in]  solver   Solver type
-        // @param[in]  precond  Preconditioner for iterative solvers
-        //
+        /// @brief Create a solver with the descent strategies named in the parameters
+        /// @param solver_params JSON of solver parameters (validated against the solver spec)
+        /// @param linear_solver_params JSON of linear solver parameters
+        /// @param characteristic_length used to scale tolerances
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        /// @param norm_type Norm used by the stopping criteria
+        /// @param dimension
         static std::unique_ptr<Solver> create(
+            const json &solver_params,
+            const json &linear_solver_params,
+            const double characteristic_length,
+            spdlog::logger &logger,
+            const bool strict_validation = true,
+            const NormType norm_type = NormType::EUCLIDEAN,
+            const int dimension = 1);
+
+        /// @brief Create a solver that uses the given descent strategies
+        ///
+        /// The parameters can only name the strategies PolySolve implements, so this is how we get a user-defined
+        /// DescentStrategy into a solver. To keep PolySolve's strategies as fallbacks, build them with
+        /// create_strategies() and put the custom ones in front.
+        ///
+        /// @param solver_params JSON of solver parameters (validated against the solver spec). Its "solver" entry is ignored.
+        /// @param strategies Strategies in the order the solver tries them. If "iterations_per_strategy" is an array,
+        ///                   it needs one more entry than there are strategies here.
+        /// @param characteristic_length used to scale tolerances
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        static std::unique_ptr<Solver> create(
+            const json &solver_params,
+            const std::vector<std::shared_ptr<DescentStrategy>> &strategies,
+            const double characteristic_length,
+            spdlog::logger &logger,
+            const bool strict_validation = true);
+
+        /// @brief Create the descent strategies named in the parameters, in the order the solver would try them
+        ///
+        /// This is the list create() builds for itself, including the gradient descent fallback it appends when
+        /// "solver" is a single name.
+        ///
+        /// @param solver_params JSON of solver parameters (validated against the solver spec)
+        /// @param linear_solver_params JSON of linear solver parameters
+        /// @param characteristic_length used to scale tolerances
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        /// @param norm_type Norm used by the stopping criteria
+        /// @param dimension
+        static std::vector<std::shared_ptr<DescentStrategy>> create_strategies(
             const json &solver_params,
             const json &linear_solver_params,
             const double characteristic_length,
@@ -92,6 +135,19 @@ namespace polysolve::nonlinear
         /// @brief If true, converging via a non-gradient criterion (e.g., x/f delta tolerance) is logged as a success instead of an error
         bool allow_non_grad_convergence = false;
 
+        /// @brief If true, a direction small enough to end the solve by its step size is applied before we stop
+        ///
+        /// We test the step size of a direction before applying it, so by default the direction that ends the solve
+        /// is discarded. We already paid for that direction, though, and applying it costs only one more line search,
+        /// so with this on we line search it and take the step before stopping. This also keeps a time-stepping
+        /// simulation from freezing: when the motion of a time step is below the tolerance, discarding it leaves the
+        /// state unchanged, the integrator derives zero velocity, and the next time step proposes the same tiny step.
+        ///
+        /// The line search on such a direction may well fail, for instance when the solve starts at its minimum and no
+        /// step decreases the energy. Since the direction is already below the tolerance, we treat that as expected and
+        /// stop as converged instead of falling back to the next strategy.
+        bool x_delta_tol_try_step = false;
+
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 
@@ -146,7 +202,7 @@ namespace polysolve::nonlinear
 
         /// @brief Logger to use
         spdlog::logger &m_logger;
-        
+
         NormType m_norm_type;
 
         // ====================================================================

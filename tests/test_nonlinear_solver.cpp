@@ -752,3 +752,198 @@ TEST_CASE("iteration-callback", "[solver][callback]")
     problem.gradient(x, g);
     CHECK(g.norm() > 1e-7);
 }
+
+namespace
+{
+    /// A Newton step for QuadraticProblem (whose Hessian is 2I) that we can
+    /// cut short, the way an early-stopped iterative linear solve would.
+    class PartialNewton : public DescentStrategy
+    {
+    public:
+        PartialNewton(const double fraction, const bool finish_small_steps, const bool fail, spdlog::logger &logger)
+            : DescentStrategy(json(), 1, logger), fraction_(fraction), finish_small_steps_(finish_small_steps), fail_(fail)
+        {
+        }
+
+        std::string name() const override { return "PartialNewton"; }
+
+        bool is_direction_exact() const override { return exact_; }
+
+        bool compute_update_direction(Problem &, const TVector &, const TVector &grad, TVector &direction) override
+        {
+            ++n_directions;
+            if (fail_)
+                return false;
+
+            const TVector newton = -grad / 2;
+            direction = fraction_ * newton;
+            exact_ = fraction_ == 1;
+            if (!exact_ && finish_small_steps_ && step_size_would_converge(direction))
+            {
+                direction = newton;
+                exact_ = true;
+            }
+            return true;
+        }
+
+        int n_directions = 0;
+
+    private:
+        const double fraction_;
+        const bool finish_small_steps_;
+        const bool fail_;
+        bool exact_ = true;
+    };
+} // namespace
+
+TEST_CASE("user-defined strategies can be combined with the built-in ones", "[solver]")
+{
+    // When the custom strategy cannot produce a direction, the solver should fall back to the strategy named in the
+    // parameters.
+    const bool custom_fails = GENERATE(false, true);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("custom-strategy-test");
+    logger->set_level(spdlog::level::warn);
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "Newton";
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    // We put our strategy in front of the ones PolySolve builds from the parameters, which then act as its fallbacks.
+    const auto custom = std::make_shared<PartialNewton>(1, false, custom_fails, *logger);
+    auto strategies = Solver::create_strategies(solver_params, linear_solver_params, 1, *logger);
+    strategies.insert(strategies.begin(), custom);
+    auto solver = Solver::create(solver_params, strategies, 1, *logger);
+
+    QuadraticProblem problem;
+    TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+    solver->minimize(problem, x);
+
+    CAPTURE(custom_fails);
+    CHECK(custom->n_directions > 0);
+    CHECK((x - problem.solutions()[0]).norm() < 1e-7);
+}
+
+TEST_CASE("a small early-stopped direction does not end the solve", "[solver]")
+{
+    // Every direction is half a Newton step, so its length falls below the step tolerance while x is still a tolerance
+    // away from the minimum. A strategy can either leave it at that (and the solver must carry on until the gradient
+    // vanishes) or finish the Newton step once the half step would pass the step-size criterion.
+    const bool finish_small_steps = GENERATE(false, true);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("inexact-strategy-test");
+    logger->set_level(spdlog::level::off);
+
+    const double x_delta_tol = 1e-2;
+    json solver_params;
+    solver_params["x_delta_tol"] = x_delta_tol;
+    solver_params["max_iterations"] = 200;
+
+    const std::vector<std::shared_ptr<DescentStrategy>> strategies = {
+        std::make_shared<PartialNewton>(0.5, finish_small_steps, false, *logger)};
+    auto solver = Solver::create(solver_params, strategies, 1, *logger);
+
+    QuadraticProblem problem;
+    TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+    solver->minimize(problem, x);
+
+    CAPTURE(finish_small_steps);
+    CHECK(is_converged_status(solver->status()));
+    // Far closer than the step tolerance: the step that would have ended the solve early was applied instead of
+    // discarded.
+    CHECK((x - problem.solutions()[0]).norm() < 1e-6 * x_delta_tol);
+}
+
+namespace
+{
+    /// Minimize with Newton, stopping on a step-size tolerance only, and return the status the solve ended with.
+    Status minimize_to_step_tolerance(Problem &problem, TestProblem::TVector &x, const bool try_step)
+    {
+        static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("try-step-test");
+        logger->set_level(spdlog::level::off);
+
+        json solver_params, linear_solver_params;
+        solver_params["solver"] = "Newton";
+        solver_params["x_delta_tol"] = 1e-3;
+        solver_params["grad_norm_tol"] = 1e-14;
+        solver_params["rel_grad_norm_tol"] = 0;
+        // Backtracking only accepts a strict decrease of the energy, so it fails when no step can decrease it.
+        solver_params["line_search"]["method"] = "Backtracking";
+        solver_params["advanced"]["x_delta_tol_try_step"] = try_step;
+        linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+        auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+        solver->minimize(problem, x);
+        return solver->status();
+    }
+
+    /// An energy that no step can decrease, although its gradient says otherwise. This is what a solve sees when it
+    /// starts at its minimum and the decrease along the tiny Newton direction is lost to rounding. The large Hessian
+    /// makes the Newton direction smaller than the step tolerance.
+    class FlatProblem : public Problem
+    {
+    public:
+        double value(const TVector &) override { return 1; }
+        void gradient(const TVector &x, TVector &grad) override { grad = TVector::Ones(x.size()); }
+        void hessian(const TVector &x, THessian &hessian) override
+        {
+            hessian = sparse_identity(x.size(), x.size());
+            hessian *= 1e8;
+        }
+    };
+} // namespace
+
+TEST_CASE("x_delta_tol_try_step applies a direction small enough to stop instead of discarding it", "[solver]")
+{
+    const bool try_step = GENERATE(false, true);
+    CAPTURE(try_step);
+
+    SECTION("on the first iteration")
+    {
+        // We start so close to the minimum that the very first Newton step is smaller than the step tolerance. This is
+        // what freezes a time-stepping simulation whose motion per time step is below the tolerance.
+        QuadraticProblem problem;
+        const TestProblem::TVector minimum = problem.solutions()[0];
+        const TestProblem::TVector x0 = minimum + TestProblem::TVector::Constant(problem.size(), 1e-4);
+
+        TestProblem::TVector x = x0;
+        CHECK(is_converged_status(minimize_to_step_tolerance(problem, x, try_step)));
+        if (try_step)
+            CHECK((x - minimum).norm() < 1e-10); // the small step was taken
+        else
+            CHECK(x == x0); // the small step ended the solve and was discarded
+    }
+
+    SECTION("after earlier steps")
+    {
+        // Newton converges quadratically on Rosenbrock, so the step that is small enough to stop takes us much closer
+        // to the minimum than where we stood when it was proposed.
+        Rosenbrock problem;
+        const TestProblem::TVector minimum = problem.solutions()[0];
+
+        TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+        CHECK(is_converged_status(minimize_to_step_tolerance(problem, x, try_step)));
+
+        TestProblem::TVector x_discarded = TestProblem::TVector::Zero(problem.size());
+        minimize_to_step_tolerance(problem, x_discarded, false);
+
+        if (try_step)
+            CHECK((x - minimum).norm() < 0.1 * (x_discarded - minimum).norm());
+        else
+            CHECK(x == x_discarded); // the option is off by default, so nothing changes
+    }
+
+    SECTION("when no step can decrease the energy")
+    {
+        // The line search on the small direction fails. Since the direction was already below the tolerance, the
+        // solve still ends as converged at the starting point instead of failing.
+        FlatProblem problem;
+        const TestProblem::TVector x0 = TestProblem::TVector::Zero(3);
+
+        TestProblem::TVector x = x0;
+        Status status = Status::NotStarted;
+        REQUIRE_NOTHROW(status = minimize_to_step_tolerance(problem, x, try_step));
+        CHECK(is_converged_status(status));
+        CHECK(x == x0);
+    }
+}

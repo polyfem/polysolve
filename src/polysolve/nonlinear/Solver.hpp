@@ -135,6 +135,16 @@ namespace polysolve::nonlinear
         /// @brief If true, converging via a non-gradient criterion (e.g., x/f delta tolerance) is logged as a success instead of an error
         bool allow_non_grad_convergence = false;
 
+        /// @brief If true, the step-size criteria cannot end a solve before the solver has taken a step
+        ///
+        /// We test the step size of a direction before applying it, so when the first direction is already smaller
+        /// than x_delta_tol the solve ends at the initial guess. That is what we want when minimizing from a guess that
+        /// is already at the minimum. In a time-stepping simulation, though, the first direction is the motion of the
+        /// time step: if it is below the tolerance the step is never taken, the integrator derives zero velocity, and
+        /// the next time step proposes the same tiny step again, so a slowly accelerating object stays frozen. The
+        /// tradeoff of turning this on is one extra step and iteration for solves that start at the minimum.
+        bool x_delta_tol_requires_step = false;
+
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
 

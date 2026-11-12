@@ -258,6 +258,7 @@ namespace polysolve::nonlinear
         m_stop.iterations = solver_params["max_iterations"];
         allow_out_of_iterations = solver_params["allow_out_of_iterations"];
         allow_non_grad_convergence = solver_params["allow_non_grad_convergence"];
+        x_delta_tol_requires_step = solver_params["advanced"]["x_delta_tol_requires_step"];
 
         m_stop.fDeltaCount = solver_params["advanced"]["f_delta_step_tol"];
 
@@ -524,9 +525,12 @@ namespace polysolve::nonlinear
             // throws away everything that solve had not reached yet. So we only let the step size end the solve once an
             // exact direction has been applied, at the cost of one more iteration for inexact strategies. Before the
             // first update there is nothing to look back on, so we go by the proposed direction itself, which keeps the
-            // behavior of exact strategies unchanged.
+            // behavior of exact strategies unchanged. The caller can also ask us to always take that first step (see
+            // x_delta_tol_requires_step).
             const bool step_size_is_meaningful =
-                m_current.iterations == 0 ? direction_is_exact : applied_direction_was_exact;
+                m_current.iterations == 0
+                    ? direction_is_exact && !x_delta_tol_requires_step
+                    : applied_direction_was_exact;
             if (step_size_is_meaningful)
             {
                 m_status = checkConvergence(m_stop_rescaled, m_current);

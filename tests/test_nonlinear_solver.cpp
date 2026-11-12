@@ -853,3 +853,34 @@ TEST_CASE("a small early-stopped direction does not end the solve", "[solver]")
     // discarded.
     CHECK((x - problem.solutions()[0]).norm() < 1e-6 * x_delta_tol);
 }
+
+TEST_CASE("the first step can be required before the step size ends a solve", "[solver]")
+{
+    const bool require_step = GENERATE(false, true);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("first-step-test");
+    logger->set_level(spdlog::level::off);
+
+    // We start so close to the minimum that the very first Newton step is smaller than the step tolerance.
+    QuadraticProblem problem;
+    const TestProblem::TVector minimum = problem.solutions()[0];
+    const TestProblem::TVector x0 = minimum + TestProblem::TVector::Constant(problem.size(), 1e-3);
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "Newton";
+    solver_params["x_delta_tol"] = 1e-1;
+    solver_params["advanced"]["x_delta_tol_requires_step"] = require_step;
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+
+    TestProblem::TVector x = x0;
+    solver->minimize(problem, x);
+
+    CAPTURE(require_step);
+    CHECK(is_converged_status(solver->status()));
+    if (require_step)
+        CHECK((x - minimum).norm() < 1e-10); // the small step was taken
+    else
+        CHECK(x == x0); // the small step ended the solve and was discarded
+}

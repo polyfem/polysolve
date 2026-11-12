@@ -747,7 +747,7 @@
             "f_delta_tol",
             "f_delta_step_tol",
             "derivative_along_delta_x_tol",
-            "x_delta_tol_requires_step",
+            "x_delta_tol_try_step",
             "apply_gradient_fd",
             "gradient_fd_eps"
         ],
@@ -774,10 +774,10 @@
         "doc": "Quit the optimization if the directional derivative along the descent direction is smaller than this tolerance."
     },
     {
-        "pointer": "/advanced/x_delta_tol_requires_step",
+        "pointer": "/advanced/x_delta_tol_try_step",
         "default": false,
         "type": "bool",
-        "doc": "If true, x_delta_tol cannot stop the optimization before the solver has taken a step. By default a first direction smaller than x_delta_tol stops the optimization at the initial guess; a time-stepping simulation whose motion per step is below the tolerance then never moves."
+        "doc": "If true, a direction small enough to stop the optimization by x_delta_tol or rel_x_delta_tol is line searched and applied before stopping, instead of being discarded. If that line search fails, the optimization still stops as converged. Costs one extra line search per solve."
     },
     {
         "pointer": "/advanced/apply_gradient_fd",

@@ -258,7 +258,7 @@ namespace polysolve::nonlinear
         m_stop.iterations = solver_params["max_iterations"];
         allow_out_of_iterations = solver_params["allow_out_of_iterations"];
         allow_non_grad_convergence = solver_params["allow_non_grad_convergence"];
-        x_delta_tol_requires_step = solver_params["advanced"]["x_delta_tol_requires_step"];
+        x_delta_tol_try_step = solver_params["advanced"]["x_delta_tol_try_step"];
 
         m_stop.fDeltaCount = solver_params["advanced"]["f_delta_step_tol"];
 
@@ -525,12 +525,8 @@ namespace polysolve::nonlinear
             // throws away everything that solve had not reached yet. So we only let the step size end the solve once an
             // exact direction has been applied, at the cost of one more iteration for inexact strategies. Before the
             // first update there is nothing to look back on, so we go by the proposed direction itself, which keeps the
-            // behavior of exact strategies unchanged. The caller can also ask us to always take that first step (see
-            // x_delta_tol_requires_step).
-            const bool step_size_is_meaningful =
-                m_current.iterations == 0
-                    ? direction_is_exact && !x_delta_tol_requires_step
-                    : applied_direction_was_exact;
+            // behavior of exact strategies unchanged.
+            const bool step_size_is_meaningful = m_current.iterations == 0 ? direction_is_exact : applied_direction_was_exact;
             if (step_size_is_meaningful)
             {
                 m_status = checkConvergence(m_stop_rescaled, m_current);
@@ -542,6 +538,15 @@ namespace polysolve::nonlinear
                 without_step_size.xDelta = NaN;
                 without_step_size.relXDelta = NaN;
                 m_status = checkConvergence(m_stop_rescaled, without_step_size);
+            }
+
+            // With x_delta_tol_try_step we apply a direction that is small enough to stop before stopping, instead of
+            // discarding it. We remember why we are stopping and finish the iteration first.
+            Status status_after_step = Status::Continue;
+            if (x_delta_tol_try_step && (m_status == Status::XDeltaTolerance || m_status == Status::RelXDeltaTolerance))
+            {
+                status_after_step = m_status;
+                m_status = Status::Continue;
             }
 
             if (m_status != Status::Continue)
@@ -561,6 +566,17 @@ namespace polysolve::nonlinear
                 rate = m_line_search->line_search(x, delta_x, objFunc);
             }
             m_current.alpha = rate;
+
+            if (std::isnan(rate) && status_after_step != Status::Continue)
+            {
+                // The direction is already below the tolerance, so a line search that cannot decrease the energy
+                // along it is expected (e.g. we started at the minimum). We stop as converged at the current x.
+                m_logger.debug(
+                    "[{}][{}] Line search on a direction below the step tolerance failed; stopping at the current x",
+                    descent_strategy_name(), m_line_search->name());
+                m_status = status_after_step;
+                break;
+            }
 
             if (std::isnan(rate))
             {
@@ -643,6 +659,13 @@ namespace polysolve::nonlinear
 
             if (++m_current.iterations >= m_stop_rescaled.iterations)
                 m_status = Status::IterationLimit;
+
+            // We took the step that was small enough to stop, so we stop now. We report convergence even if this was
+            // also the last allowed iteration, since the solve did converge.
+            if (status_after_step != Status::Continue && (m_status == Status::Continue || m_status == Status::IterationLimit))
+            {
+                m_status = status_after_step;
+            }
         } while (objFunc.callback(m_current, x) && (m_status == Status::Continue));
 
         stop_watch.stop();

@@ -854,33 +854,96 @@ TEST_CASE("a small early-stopped direction does not end the solve", "[solver]")
     CHECK((x - problem.solutions()[0]).norm() < 1e-6 * x_delta_tol);
 }
 
-TEST_CASE("the first step can be required before the step size ends a solve", "[solver]")
+namespace
 {
-    const bool require_step = GENERATE(false, true);
+    /// Minimize with Newton, stopping on a step-size tolerance only, and return the status the solve ended with.
+    Status minimize_to_step_tolerance(Problem &problem, TestProblem::TVector &x, const bool try_step)
+    {
+        static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("try-step-test");
+        logger->set_level(spdlog::level::off);
 
-    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("first-step-test");
-    logger->set_level(spdlog::level::off);
+        json solver_params, linear_solver_params;
+        solver_params["solver"] = "Newton";
+        solver_params["x_delta_tol"] = 1e-3;
+        solver_params["grad_norm_tol"] = 1e-14;
+        solver_params["rel_grad_norm_tol"] = 0;
+        // Backtracking only accepts a strict decrease of the energy, so it fails when no step can decrease it.
+        solver_params["line_search"]["method"] = "Backtracking";
+        solver_params["advanced"]["x_delta_tol_try_step"] = try_step;
+        linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
 
-    // We start so close to the minimum that the very first Newton step is smaller than the step tolerance.
-    QuadraticProblem problem;
-    const TestProblem::TVector minimum = problem.solutions()[0];
-    const TestProblem::TVector x0 = minimum + TestProblem::TVector::Constant(problem.size(), 1e-3);
+        auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+        solver->minimize(problem, x);
+        return solver->status();
+    }
 
-    json solver_params, linear_solver_params;
-    solver_params["solver"] = "Newton";
-    solver_params["x_delta_tol"] = 1e-1;
-    solver_params["advanced"]["x_delta_tol_requires_step"] = require_step;
-    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+    /// An energy that no step can decrease, although its gradient says otherwise. This is what a solve sees when it
+    /// starts at its minimum and the decrease along the tiny Newton direction is lost to rounding. The large Hessian
+    /// makes the Newton direction smaller than the step tolerance.
+    class FlatProblem : public Problem
+    {
+    public:
+        double value(const TVector &) override { return 1; }
+        void gradient(const TVector &x, TVector &grad) override { grad = TVector::Ones(x.size()); }
+        void hessian(const TVector &x, THessian &hessian) override
+        {
+            hessian = sparse_identity(x.size(), x.size());
+            hessian *= 1e8;
+        }
+    };
+} // namespace
 
-    auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+TEST_CASE("x_delta_tol_try_step applies a direction small enough to stop instead of discarding it", "[solver]")
+{
+    const bool try_step = GENERATE(false, true);
+    CAPTURE(try_step);
 
-    TestProblem::TVector x = x0;
-    solver->minimize(problem, x);
+    SECTION("on the first iteration")
+    {
+        // We start so close to the minimum that the very first Newton step is smaller than the step tolerance. This is
+        // what freezes a time-stepping simulation whose motion per time step is below the tolerance.
+        QuadraticProblem problem;
+        const TestProblem::TVector minimum = problem.solutions()[0];
+        const TestProblem::TVector x0 = minimum + TestProblem::TVector::Constant(problem.size(), 1e-4);
 
-    CAPTURE(require_step);
-    CHECK(is_converged_status(solver->status()));
-    if (require_step)
-        CHECK((x - minimum).norm() < 1e-10); // the small step was taken
-    else
-        CHECK(x == x0); // the small step ended the solve and was discarded
+        TestProblem::TVector x = x0;
+        CHECK(is_converged_status(minimize_to_step_tolerance(problem, x, try_step)));
+        if (try_step)
+            CHECK((x - minimum).norm() < 1e-10); // the small step was taken
+        else
+            CHECK(x == x0); // the small step ended the solve and was discarded
+    }
+
+    SECTION("after earlier steps")
+    {
+        // Newton converges quadratically on Rosenbrock, so the step that is small enough to stop takes us much closer
+        // to the minimum than where we stood when it was proposed.
+        Rosenbrock problem;
+        const TestProblem::TVector minimum = problem.solutions()[0];
+
+        TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+        CHECK(is_converged_status(minimize_to_step_tolerance(problem, x, try_step)));
+
+        TestProblem::TVector x_discarded = TestProblem::TVector::Zero(problem.size());
+        minimize_to_step_tolerance(problem, x_discarded, false);
+
+        if (try_step)
+            CHECK((x - minimum).norm() < 0.1 * (x_discarded - minimum).norm());
+        else
+            CHECK(x == x_discarded); // the option is off by default, so nothing changes
+    }
+
+    SECTION("when no step can decrease the energy")
+    {
+        // The line search on the small direction fails. Since the direction was already below the tolerance, the
+        // solve still ends as converged at the starting point instead of failing.
+        FlatProblem problem;
+        const TestProblem::TVector x0 = TestProblem::TVector::Zero(3);
+
+        TestProblem::TVector x = x0;
+        Status status = Status::NotStarted;
+        REQUIRE_NOTHROW(status = minimize_to_step_tolerance(problem, x, try_step));
+        CHECK(is_converged_status(status));
+        CHECK(x == x0);
+    }
 }

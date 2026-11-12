@@ -135,15 +135,18 @@ namespace polysolve::nonlinear
         /// @brief If true, converging via a non-gradient criterion (e.g., x/f delta tolerance) is logged as a success instead of an error
         bool allow_non_grad_convergence = false;
 
-        /// @brief If true, the step-size criteria cannot end a solve before the solver has taken a step
+        /// @brief If true, a direction small enough to end the solve by its step size is applied before we stop
         ///
-        /// We test the step size of a direction before applying it, so when the first direction is already smaller
-        /// than x_delta_tol the solve ends at the initial guess. That is what we want when minimizing from a guess that
-        /// is already at the minimum. In a time-stepping simulation, though, the first direction is the motion of the
-        /// time step: if it is below the tolerance the step is never taken, the integrator derives zero velocity, and
-        /// the next time step proposes the same tiny step again, so a slowly accelerating object stays frozen. The
-        /// tradeoff of turning this on is one extra step and iteration for solves that start at the minimum.
-        bool x_delta_tol_requires_step = false;
+        /// We test the step size of a direction before applying it, so by default the direction that ends the solve
+        /// is discarded. We already paid for that direction, though, and applying it costs only one more line search,
+        /// so with this on we line search it and take the step before stopping. This also keeps a time-stepping
+        /// simulation from freezing: when the motion of a time step is below the tolerance, discarding it leaves the
+        /// state unchanged, the integrator derives zero velocity, and the next time step proposes the same tiny step.
+        ///
+        /// The line search on such a direction may well fail, for instance when the solve starts at its minimum and no
+        /// step decreases the energy. Since the direction is already below the tolerance, we treat that as expected and
+        /// stop as converged instead of falling back to the next strategy.
+        bool x_delta_tol_try_step = false;
 
         /// @brief Get the line search object
         const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };

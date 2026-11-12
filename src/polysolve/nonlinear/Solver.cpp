@@ -330,6 +330,24 @@ namespace polysolve::nonlinear
         double initial_grad_norm;
         double initial_delta_x_norm;
 
+        // Strategies that stop their linear solve early use this to find out if a rough direction is small enough to
+        // end the solve, in which case they finish their solve first (see DescentStrategy::is_direction_exact). It
+        // applies the same step-size tests as checkConvergence.
+        const auto step_size_would_converge = [&](const TVector &direction) {
+            const double norm = objFunc.step_norm(direction, m_norm_type);
+            return (m_stop_rescaled.xDelta > 0 && norm < m_stop_rescaled.xDelta)
+                   || (m_stop_rescaled.relXDelta > 0 && m_current.iterations > 0
+                       && norm / initial_delta_x_norm < m_stop_rescaled.relXDelta);
+        };
+        for (auto &s : m_strategies)
+        {
+            s->set_step_size_convergence_test(step_size_would_converge);
+        }
+
+        // Whether the direction behind the most recent update of x was exact, i.e. not stopped early. It has no meaning
+        // until the first update.
+        bool applied_direction_was_exact = false;
+
         do
         {
             m_line_search->set_is_final_strategy(m_descent_strategy == m_strategies.size() - 1);
@@ -402,6 +420,9 @@ namespace polysolve::nonlinear
             // floor) applied before the direction is vetted and searched.
             if (m_direction_filter && update_direction_successful)
                 m_direction_filter(x, delta_x);
+
+            // We ask now because a failure below can switch strategies before this direction is applied.
+            const bool direction_is_exact = m_strategies[m_descent_strategy]->is_direction_exact();
 
             m_current.xDelta = objFunc.step_norm(delta_x, m_norm_type);
             if (m_current.iterations == 0)
@@ -497,7 +518,27 @@ namespace polysolve::nonlinear
 
             // --- Check convergence -------------------------------------------
 
-            m_status = checkConvergence(m_stop_rescaled, m_current);
+            // The step-size criteria test a direction before we apply it, so the direction that ends the solve is
+            // discarded. That is fine when it is the negligible remainder after an exact step. After an early-stopped
+            // step it is not: the direction can be small only because the linear solve was cut short, and discarding it
+            // throws away everything that solve had not reached yet. So we only let the step size end the solve once an
+            // exact direction has been applied, at the cost of one more iteration for inexact strategies. Before the
+            // first update there is nothing to look back on, so we go by the proposed direction itself, which keeps the
+            // behavior of exact strategies unchanged.
+            const bool step_size_is_meaningful =
+                m_current.iterations == 0 ? direction_is_exact : applied_direction_was_exact;
+            if (step_size_is_meaningful)
+            {
+                m_status = checkConvergence(m_stop_rescaled, m_current);
+            }
+            else
+            {
+                // NaN never satisfies a criterion.
+                Criteria without_step_size = m_current;
+                without_step_size.xDelta = NaN;
+                without_step_size.relXDelta = NaN;
+                m_status = checkConvergence(m_stop_rescaled, without_step_size);
+            }
 
             if (m_status != Status::Continue)
                 break;
@@ -540,6 +581,7 @@ namespace polysolve::nonlinear
                     objFunc.solution_changed(x1);
                 x = x1;
             }
+            applied_direction_was_exact = direction_is_exact;
 
             old_energy = energy;
 
@@ -600,6 +642,12 @@ namespace polysolve::nonlinear
         } while (objFunc.callback(m_current, x) && (m_status == Status::Continue));
 
         stop_watch.stop();
+
+        // The test refers to objFunc and to our locals, so we take it back before they go away.
+        for (auto &s : m_strategies)
+        {
+            s->set_step_size_convergence_test(nullptr);
+        }
 
         // -----------
         // Log results

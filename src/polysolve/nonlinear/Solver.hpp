@@ -59,7 +59,11 @@ namespace polysolve::nonlinear
 
         /// @brief Add a descent strategy to the solver
         /// @param s Descent strategy
-        void add_strategy(const std::shared_ptr<DescentStrategy> &s) { m_strategies.push_back(s); }
+        void add_strategy(const std::shared_ptr<DescentStrategy> &s)
+        {
+            s->track_info = m_track_info;
+            m_strategies.push_back(s);
+        }
 
         /// @brief Minimize the objective function
         /// @param objFunc Objective function
@@ -202,6 +206,9 @@ namespace polysolve::nonlinear
         void log_times() const;
 
         json solver_info;
+        /// /advanced/track_info: keep solver_info and the timings up to date. Off, info() and the
+        /// PostStepData's info are not updated, and nothing is timed.
+        bool m_track_info = true;
 
         // Timers
         double total_time;

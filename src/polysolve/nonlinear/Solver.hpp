@@ -29,12 +29,55 @@ namespace polysolve::nonlinear
     public:
         // --- Static methods -------------------------------------------------
 
-        // Static constructor
-        //
-        // @param[in]  solver   Solver type
-        // @param[in]  precond  Preconditioner for iterative solvers
-        //
+        /// @brief Create a solver with the descent strategies named in the parameters
+        /// @param solver_params JSON of solver parameters (validated against the solver spec)
+        /// @param linear_solver_params JSON of linear solver parameters
+        /// @param characteristic_length used to scale tolerances
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        /// @param norm_type Norm used by the stopping criteria
+        /// @param dimension
         static std::unique_ptr<Solver> create(
+            const json &solver_params,
+            const json &linear_solver_params,
+            const double characteristic_length,
+            spdlog::logger &logger,
+            const bool strict_validation = true,
+            const NormType norm_type = NormType::EUCLIDEAN,
+            const int dimension = 1);
+
+        /// @brief Create a solver that uses the given descent strategies
+        ///
+        /// The parameters can only name the strategies PolySolve implements, so this is how we get a user-defined
+        /// DescentStrategy into a solver. To keep PolySolve's strategies as fallbacks, build them with
+        /// create_strategies() and put the custom ones in front.
+        ///
+        /// @param solver_params JSON of solver parameters (validated against the solver spec). Its "solver" entry is ignored.
+        /// @param strategies Strategies in the order the solver tries them. If "iterations_per_strategy" is an array,
+        ///                   it needs one more entry than there are strategies here.
+        /// @param characteristic_length used to scale tolerances
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        static std::unique_ptr<Solver> create(
+            const json &solver_params,
+            const std::vector<std::shared_ptr<DescentStrategy>> &strategies,
+            const double characteristic_length,
+            spdlog::logger &logger,
+            const bool strict_validation = true);
+
+        /// @brief Create the descent strategies named in the parameters, in the order the solver would try them
+        ///
+        /// This is the list create() builds for itself, including the gradient descent fallback it appends when
+        /// "solver" is a single name.
+        ///
+        /// @param solver_params JSON of solver parameters (validated against the solver spec)
+        /// @param linear_solver_params JSON of linear solver parameters
+        /// @param characteristic_length used to scale tolerances
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        /// @param norm_type Norm used by the stopping criteria
+        /// @param dimension
+        static std::vector<std::shared_ptr<DescentStrategy>> create_strategies(
             const json &solver_params,
             const json &linear_solver_params,
             const double characteristic_length,
@@ -146,7 +189,7 @@ namespace polysolve::nonlinear
 
         /// @brief Logger to use
         spdlog::logger &m_logger;
-        
+
         NormType m_norm_type;
 
         // ====================================================================

@@ -121,8 +121,63 @@ namespace polysolve::nonlinear
          {NormType::L2, "L2"},
          {NormType::Linf, "Linf"}})
 
+    namespace
+    {
+        /// @brief Check the parameters against the solver spec and fill in the defaults
+        json validate_solver_params(const json &solver_params, spdlog::logger &logger, const bool strict_validation)
+        {
+            jse::JSE jse;
+
+            jse.strict = strict_validation;
+            const json rules = jse::embed::non_linear_spec::solver_spec::spec();
+            const bool valid_input = jse.verify_json(solver_params, rules);
+
+            if (!valid_input)
+            {
+                log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
+            }
+
+            return jse.inject_defaults(solver_params, rules);
+        }
+    } // namespace
+
     // Static constructor
     std::unique_ptr<Solver> Solver::create(
+        const json &solver_params,
+        const json &linear_solver_params,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const bool strict_validation,
+        const NormType norm_type,
+        const int dimension)
+    {
+        return create(
+            solver_params,
+            create_strategies(solver_params, linear_solver_params, characteristic_length, logger, strict_validation, norm_type, dimension),
+            characteristic_length, logger, strict_validation);
+    }
+
+    std::unique_ptr<Solver> Solver::create(
+        const json &solver_params_in,
+        const std::vector<std::shared_ptr<DescentStrategy>> &strategies,
+        const double characteristic_length,
+        spdlog::logger &logger,
+        const bool strict_validation)
+    {
+        const json solver_params = validate_solver_params(solver_params_in, logger, strict_validation);
+
+        auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
+
+        for (const auto &s : strategies)
+        {
+            solver->add_strategy(s);
+        }
+
+        solver->set_strategies_iterations(solver_params);
+        return solver;
+    }
+
+    std::vector<std::shared_ptr<DescentStrategy>> Solver::create_strategies(
         const json &solver_params_in,
         const json &linear_solver_params,
         const double characteristic_length,
@@ -131,27 +186,16 @@ namespace polysolve::nonlinear
         const NormType norm_type,
         const int dimension)
     {
-        json solver_params = solver_params_in; // mutable copy
+        const json solver_params = validate_solver_params(solver_params_in, logger, strict_validation);
 
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        json rules = jse::embed::non_linear_spec::solver_spec::spec();
-        const bool valid_input = jse.verify_json(solver_params, rules);
-
-        if (!valid_input)
-            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
-
-        solver_params = jse.inject_defaults(solver_params, rules);
-
-        auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
+        std::vector<std::shared_ptr<DescentStrategy>> strategies;
 
         if (solver_params["solver"].is_array())
         {
             for (const auto &j : solver_params["solver"])
             {
                 const std::string solver_name = j["type"];
-                solver->add_strategy(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type, dimension));
+                strategies.push_back(create_solver(solver_name, j, linear_solver_params, characteristic_length, logger, norm_type, dimension));
             }
         }
         else
@@ -161,30 +205,26 @@ namespace polysolve::nonlinear
             if (solver_name == "DenseNewton" || solver_name == "dense_newton")
             {
                 auto n = Newton::create_solver(false, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
-                for (auto &s : n)
-                    solver->add_strategy(s);
+                strategies.insert(strategies.end(), n.begin(), n.end());
             }
             else if (solver_name == "Newton" || solver_name == "SparseNewton" || solver_name == "sparse_newton")
             {
                 auto n = Newton::create_solver(true, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension);
-                for (auto &s : n)
-                    solver->add_strategy(s);
+                strategies.insert(strategies.end(), n.begin(), n.end());
             }
             else
             {
-                solver->add_strategy(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension));
+                strategies.push_back(create_solver(solver_name, solver_params, linear_solver_params, characteristic_length, logger, norm_type, dimension));
             }
 
             if (solver_name != "GradientDescent" && solver_name != "gradient_descent")
             {
-
-                solver->add_strategy(std::make_unique<GradientDescent>(
+                strategies.push_back(std::make_shared<GradientDescent>(
                     solver_params, false, characteristic_length, logger));
             }
         }
 
-        solver->set_strategies_iterations(solver_params);
-        return solver;
+        return strategies;
     }
 
     std::vector<std::string> Solver::available_solvers()

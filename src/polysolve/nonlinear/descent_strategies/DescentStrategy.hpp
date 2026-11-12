@@ -50,6 +50,10 @@ namespace polysolve::nonlinear
             const TVector &grad,
             TVector &direction) = 0;
 
+        /// Keep timings and per-iteration info for update_solver_info (set by the Solver from
+        /// /advanced/track_info).
+        bool track_info = true;
+
     protected:
         spdlog::logger &m_logger;
     };

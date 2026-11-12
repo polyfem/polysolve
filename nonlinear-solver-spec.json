@@ -748,7 +748,8 @@
             "f_delta_step_tol",
             "derivative_along_delta_x_tol",
             "apply_gradient_fd",
-            "gradient_fd_eps"
+            "gradient_fd_eps",
+            "track_info"
         ],
         "doc": "Nonlinear solver advanced options"
     },
@@ -788,5 +789,11 @@
         "default": 1e-7,
         "type": "float",
         "doc": "Expensive Option: Eps for finite difference to verify gradient of energy."
+    },
+    {
+        "pointer": "/advanced/track_info",
+        "default": true,
+        "type": "bool",
+        "doc": "Keep the solver info (info(), and the info handed to Problem::post_step) and the phase timings up to date. Turn off for many small solves whose info nobody reads: the iterates are the same either way."
     }
 ]

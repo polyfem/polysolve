@@ -137,7 +137,8 @@ namespace polysolve::nonlinear
     void Newton::reset(const int ndof)
     {
         Superclass::reset(ndof);
-        internal_solver_info = json::array();
+        if (track_info)
+            internal_solver_info = json::array();
     }
 
     void RegularizedNewton::reset(const int ndof)
@@ -185,12 +186,12 @@ namespace polysolve::nonlinear
         polysolve::StiffnessMatrix hessian;
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "assembly time", this->assembly_time, m_logger);
             compute_hessian(objFunc, x, hessian);
         }
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "linear solve", this->inverting_time, m_logger);
 
             const Eigen::VectorXi block_mapping = objFunc.block_mapping();
             if (block_mapping.size() > 0)
@@ -217,9 +218,12 @@ namespace polysolve::nonlinear
 
         const double residual = objFunc.grad_norm(hessian * direction + grad, norm_type); // H Δx + g = 0
 
-        json info;
-        linear_solver->get_info(info);
-        internal_solver_info.push_back(info);
+        if (track_info)
+        {
+            json info;
+            linear_solver->get_info(info);
+            internal_solver_info.push_back(info);
+        }
 
         return residual;
     }
@@ -232,12 +236,12 @@ namespace polysolve::nonlinear
         Eigen::MatrixXd hessian;
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("assembly time", this->assembly_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "assembly time", this->assembly_time, m_logger);
             compute_hessian(objFunc, x, hessian);
         }
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("linear solve", this->inverting_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "linear solve", this->inverting_time, m_logger);
 
             const Eigen::VectorXi block_mapping = objFunc.block_mapping();
             if (block_mapping.size() > 0)
@@ -261,9 +265,12 @@ namespace polysolve::nonlinear
 
         const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
 
-        json info;
-        linear_solver->get_info(info);
-        internal_solver_info.push_back(info);
+        if (track_info)
+        {
+            json info;
+            linear_solver->get_info(info);
+            internal_solver_info.push_back(info);
+        }
 
         return residual;
     }

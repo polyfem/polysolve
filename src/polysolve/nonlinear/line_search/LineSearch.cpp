@@ -84,7 +84,7 @@ namespace polysolve::nonlinear::line_search
         double initial_energy, step_size;
         TVector initial_grad;
         {
-            POLYSOLVE_SCOPED_STOPWATCH("LS begin", m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "LS begin", m_logger);
 
             cur_iter = 0;
 
@@ -112,7 +112,7 @@ namespace polysolve::nonlinear::line_search
         // Find finite energy step size
         // ----------------------------
         {
-            POLYSOLVE_SCOPED_STOPWATCH("LS compute finite energy step size", checking_for_nan_inf_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "LS compute finite energy step size", checking_for_nan_inf_time, m_logger);
             step_size = compute_nan_free_step_size(x, delta_x, objFunc, step_size, step_ratio);
             if (std::isnan(step_size))
                 return NaN;
@@ -123,13 +123,13 @@ namespace polysolve::nonlinear::line_search
         // Find collision-free step size
         // -----------------------------
         {
-            POLYSOLVE_SCOPED_STOPWATCH("Line Search Begin - CCD broad-phase", broad_phase_ccd_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "Line Search Begin - CCD broad-phase", broad_phase_ccd_time, m_logger);
             TVector new_x = x + step_size * delta_x;
             objFunc.line_search_begin(x, new_x);
         }
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("CCD narrow-phase", narrow_phase_ccd_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "CCD narrow-phase", narrow_phase_ccd_time, m_logger);
             m_logger.trace("Performing narrow-phase CCD");
             step_size = compute_max_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
@@ -149,7 +149,7 @@ namespace polysolve::nonlinear::line_search
         // Find descent step size
         // ----------------------
         {
-            POLYSOLVE_SCOPED_STOPWATCH("energy min in LS", classical_line_search_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "energy min in LS", classical_line_search_time, m_logger);
             step_size = compute_descent_step_size(x, delta_x, objFunc, use_grad_norm, initial_energy, initial_grad, step_size);
             if (std::isnan(step_size))
             {
@@ -178,7 +178,7 @@ namespace polysolve::nonlinear::line_search
         }
 
         {
-            POLYSOLVE_SCOPED_STOPWATCH("LS end", m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "LS end", m_logger);
             objFunc.line_search_end();
         }
 

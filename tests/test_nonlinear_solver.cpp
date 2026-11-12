@@ -752,3 +752,56 @@ TEST_CASE("iteration-callback", "[solver][callback]")
     problem.gradient(x, g);
     CHECK(g.norm() > 1e-7);
 }
+
+TEST_CASE("track-info-off", "[solver]")
+{
+    // Turning /advanced/track_info off skips the bookkeeping (solver info, timings) and nothing
+    // else: the iterates, the status and the iteration count are the same, bit for bit.
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("track-info-test");
+    logger->set_level(spdlog::level::warn);
+
+    for (const std::string solver_name : {"DenseNewton", "Newton", "L-BFGS", "GradientDescent"})
+    {
+        json linear_solver_params;
+        linear_solver_params["solver"] = solver_name == "Newton" ? "Eigen::SimplicialLDLT" : "Eigen::LDLT";
+
+        for (const std::string line_search : {"Backtracking", "RobustArmijo"})
+        {
+            Rosenbrock problem;
+            TestProblem::TVector x_start(problem.size());
+            x_start.setLinSpaced(problem.size(), -1.2, 1.0);
+
+            std::vector<TestProblem::TVector> x(2, x_start);
+            std::vector<int> iterations(2), status(2);
+            for (int track = 0; track < 2; ++track)
+            {
+                json solver_params;
+                solver_params["solver"] = solver_name;
+                solver_params["line_search"]["method"] = line_search;
+                solver_params["max_iterations"] = 50;
+                solver_params["allow_out_of_iterations"] = true;
+                solver_params["advanced"]["track_info"] = bool(track);
+
+                auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+                try
+                {
+                    solver->minimize(problem, x[track]);
+                }
+                catch (const std::exception &)
+                {
+                    // A failed line search throws either way; compare where it stopped.
+                }
+                iterations[track] = solver->current_criteria().iterations;
+                status[track] = int(solver->status());
+                if (!track)
+                    CHECK(!solver->info().contains("energy"));
+                else
+                    CHECK(solver->info().contains("energy"));
+            }
+            INFO(solver_name << " + " << line_search);
+            CHECK(x[0] == x[1]);
+            CHECK(iterations[0] == iterations[1]);
+            CHECK(status[0] == status[1]);
+        }
+    }
+}

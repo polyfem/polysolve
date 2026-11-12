@@ -752,3 +752,104 @@ TEST_CASE("iteration-callback", "[solver][callback]")
     problem.gradient(x, g);
     CHECK(g.norm() > 1e-7);
 }
+
+namespace
+{
+    /// A Newton step for QuadraticProblem (whose Hessian is 2I) that we can
+    /// cut short, the way an early-stopped iterative linear solve would.
+    class PartialNewton : public DescentStrategy
+    {
+    public:
+        PartialNewton(const double fraction, const bool finish_small_steps, const bool fail, spdlog::logger &logger)
+            : DescentStrategy(json(), 1, logger), fraction_(fraction), finish_small_steps_(finish_small_steps), fail_(fail)
+        {
+        }
+
+        std::string name() const override { return "PartialNewton"; }
+
+        bool is_direction_exact() const override { return exact_; }
+
+        bool compute_update_direction(Problem &, const TVector &, const TVector &grad, TVector &direction) override
+        {
+            ++n_directions;
+            if (fail_)
+                return false;
+
+            const TVector newton = -grad / 2;
+            direction = fraction_ * newton;
+            exact_ = fraction_ == 1;
+            if (!exact_ && finish_small_steps_ && step_size_would_converge(direction))
+            {
+                direction = newton;
+                exact_ = true;
+            }
+            return true;
+        }
+
+        int n_directions = 0;
+
+    private:
+        const double fraction_;
+        const bool finish_small_steps_;
+        const bool fail_;
+        bool exact_ = true;
+    };
+} // namespace
+
+TEST_CASE("user-defined strategies can be combined with the built-in ones", "[solver]")
+{
+    // When the custom strategy cannot produce a direction, the solver should fall back to the strategy named in the
+    // parameters.
+    const bool custom_fails = GENERATE(false, true);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("custom-strategy-test");
+    logger->set_level(spdlog::level::warn);
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "Newton";
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    // We put our strategy in front of the ones PolySolve builds from the parameters, which then act as its fallbacks.
+    const auto custom = std::make_shared<PartialNewton>(1, false, custom_fails, *logger);
+    auto strategies = Solver::create_strategies(solver_params, linear_solver_params, 1, *logger);
+    strategies.insert(strategies.begin(), custom);
+    auto solver = Solver::create(solver_params, strategies, 1, *logger);
+
+    QuadraticProblem problem;
+    TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+    solver->minimize(problem, x);
+
+    CAPTURE(custom_fails);
+    CHECK(custom->n_directions > 0);
+    CHECK((x - problem.solutions()[0]).norm() < 1e-7);
+}
+
+TEST_CASE("a small early-stopped direction does not end the solve", "[solver]")
+{
+    // Every direction is half a Newton step, so its length falls below the step tolerance while x is still a tolerance
+    // away from the minimum. A strategy can either leave it at that (and the solver must carry on until the gradient
+    // vanishes) or finish the Newton step once the half step would pass the step-size criterion.
+    const bool finish_small_steps = GENERATE(false, true);
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("inexact-strategy-test");
+    logger->set_level(spdlog::level::off);
+
+    const double x_delta_tol = 1e-2;
+    json solver_params;
+    solver_params["x_delta_tol"] = x_delta_tol;
+    solver_params["max_iterations"] = 200;
+
+    const std::vector<std::shared_ptr<DescentStrategy>> strategies = {
+        std::make_shared<PartialNewton>(0.5, finish_small_steps, false, *logger)};
+    auto solver = Solver::create(solver_params, strategies, 1, *logger);
+
+    QuadraticProblem problem;
+    TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+    solver->minimize(problem, x);
+
+    CAPTURE(finish_small_steps);
+    CHECK(is_converged_status(solver->status()));
+    // Far closer than the step tolerance: the step that would have ended the solve early was applied instead of
+    // discarded.
+    CHECK((x - problem.solutions()[0]).norm() < 1e-6 * x_delta_tol);
+}

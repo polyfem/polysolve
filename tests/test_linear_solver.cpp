@@ -16,7 +16,9 @@
 #include <fstream>
 #include <vector>
 #include <ctime>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <string>
 #include <thread>
@@ -135,6 +137,56 @@ TEST_CASE("multi-solver", "[solver]")
     const double err = (A * x - b).norm();
     INFO("solver: " + solver->name());
     REQUIRE(err < 1e-8);
+}
+
+TEST_CASE("simplicial_llt", "[solver]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("test_logger_simplicial_llt");
+    logger->set_level(spdlog::level::warn);
+
+    // It is a selectable solver, by name and as one entry of a list.
+    const auto available = Solver::available_solvers();
+    REQUIRE(std::find(available.begin(), available.end(), "Eigen::SimplicialLLT") != available.end());
+    auto solver = Solver::create(json({{"solver", {"Eigen::SimplicialLLT"}}}), *logger);
+    REQUIRE(solver->name() == "Eigen::SimplicialLLT");
+
+    // A positive definite system: a 1D Laplacian plus a spread of diagonal
+    // weights. The Cholesky solve matches SimplicialLDLT's and is accurate.
+    const int n = 200;
+    std::vector<Eigen::Triplet<double>> triplets;
+    for (int i = 0; i < n; ++i)
+    {
+        triplets.emplace_back(i, i, 2.0 + std::pow(10.0, 6.0 * i / (n - 1)));
+        if (i + 1 < n)
+        {
+            triplets.emplace_back(i, i + 1, -1.0);
+            triplets.emplace_back(i + 1, i, -1.0);
+        }
+    }
+    StiffnessMatrix A(n, n);
+    A.setFromTriplets(triplets.begin(), triplets.end());
+
+    Eigen::VectorXd b = Eigen::VectorXd::Random(n);
+    Eigen::VectorXd x(n), x_ldlt(n);
+    solver->analyze_pattern(A, n);
+    solver->factorize(A);
+    solver->solve(b, x);
+    CHECK((A * x - b).norm() < 1e-8 * b.norm());
+
+    auto ldlt = Solver::create("Eigen::SimplicialLDLT", "");
+    ldlt->analyze_pattern(A, n);
+    ldlt->factorize(A);
+    ldlt->solve(b, x_ldlt);
+    CHECK((x - x_ldlt).norm() < 1e-8 * x_ldlt.norm());
+
+    // An indefinite system has no Cholesky factor. The factorization throws,
+    // which is what lets a caller with a list of fallback strategies move on
+    // (LDLT, by contrast, factors it without complaint).
+    triplets.emplace_back(0, 0, -1.0e7);
+    StiffnessMatrix indefinite(n, n);
+    indefinite.setFromTriplets(triplets.begin(), triplets.end());
+    solver->analyze_pattern(indefinite, n);
+    CHECK_THROWS(solver->factorize(indefinite));
 }
 
 TEST_CASE("all", "[solver]")

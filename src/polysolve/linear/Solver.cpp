@@ -14,6 +14,62 @@
 #include <Eigen/Sparse>
 #ifdef POLYSOLVE_WITH_ACCELERATE
 #include <Eigen/AccelerateSupport>
+namespace polysolve::linear
+{
+    namespace
+    {
+        // Eigen's Accelerate wrapper hands the matrix's raw column arrays to Accelerate. A matrix assembled with
+        // insert() or coeffRef() keeps unused slots between its columns, and Accelerate reads those slots as entries:
+        // it reports success and returns a wrong solution. Eigen's own solvers skip the slots, so only Accelerate needs
+        // this check.
+        //
+        // We throw instead of compressing a copy ourselves because the copy would cost as much memory as the matrix,
+        // while the caller, who owns the matrix, can call makeCompressed() in place for free.
+        void require_compressed(const StiffnessMatrix &A)
+        {
+            if (!A.isCompressed())
+            {
+                throw std::runtime_error("[EigenDirect] Apple Accelerate solvers need a compressed matrix; call makeCompressed() on it first.");
+            }
+        }
+    } // namespace
+
+    template <>
+    void EigenDirect<Eigen::AccelerateLLT<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
+    {
+        require_compressed(A);
+        m_Solver.analyzePattern(A);
+    }
+
+    template <>
+    void EigenDirect<Eigen::AccelerateLLT<StiffnessMatrix>>::factorize(const StiffnessMatrix &A)
+    {
+        require_compressed(A);
+        m_Solver.factorize(A);
+        if (m_Solver.info() == Eigen::NumericalIssue)
+        {
+            throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
+        }
+    }
+
+    template <>
+    void EigenDirect<Eigen::AccelerateLDLT<StiffnessMatrix>>::analyze_pattern(const StiffnessMatrix &A, const int precond_num)
+    {
+        require_compressed(A);
+        m_Solver.analyzePattern(A);
+    }
+
+    template <>
+    void EigenDirect<Eigen::AccelerateLDLT<StiffnessMatrix>>::factorize(const StiffnessMatrix &A)
+    {
+        require_compressed(A);
+        m_Solver.factorize(A);
+        if (m_Solver.info() == Eigen::NumericalIssue)
+        {
+            throw std::runtime_error("[EigenDirect] NumericalIssue encountered.");
+        }
+    }
+} // namespace polysolve::linear
 #endif
 #ifdef POLYSOLVE_WITH_CHOLMOD
 #include <Eigen/CholmodSupport>

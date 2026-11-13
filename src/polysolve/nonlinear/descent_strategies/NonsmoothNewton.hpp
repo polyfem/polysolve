@@ -20,7 +20,8 @@ namespace polysolve::nonlinear
     /// step by a segment guard, a linearized fraction-to-boundary and max_step_size on the segment, and accepts the end
     /// point of the resulting polyline (or a retraction along it) by its true decrease. Otherwise p_N is line searched.
     /// Once the true energy can no longer verify the path (Options::handoff), the rest of the solve is left to the Newton
-    /// chain. Without a split (has_nonsmooth_term() false) the direction is the plain Newton direction.
+    /// chain; after a handoff on a small gradient, a slow chain step hands the iterations back (Options::hand_back).
+    /// Without a split (has_nonsmooth_term() false) the direction is the plain Newton direction.
     class NonsmoothNewton : public DescentStrategy
     {
     public:
@@ -46,6 +47,14 @@ namespace polysolve::nonlinear
             /// resolution of the true energy E: the inner noise floor also counts 32 eps |E|, and a path whose model
             /// decrease does not exceed 32 eps |E| is not verified by the true energy
             bool resolution = true;
+            /// after a handoff on a small gradient, the first step of the Newton chain that ends above the gradient
+            /// tolerance, removes more than hand_back_energy times the energy resolution 32 eps |E| and is slow (cut by
+            /// its line search, taken by a strategy at index >= 2 of the solver, i.e. behind Newton, or reducing the
+            /// gradient norm less than hand_back_contraction times) hands the iterations back to this strategy; the
+            /// handoff on a small gradient is then off for the rest of the solve
+            bool hand_back = false;
+            double hand_back_energy = 100;
+            double hand_back_contraction = 10;
 
             // internal switches (debug block) used by the strategy
             bool dedupe = true;        ///< true energy at a trial point reuses the nonsmooth state rebuilt there
@@ -69,6 +78,9 @@ namespace polysolve::nonlinear
         bool take_step(Problem &objFunc, const TVector &x, const double energy, const TVector &grad,
                        const TVector &direction, TVector &step) override;
         bool handle_error() override;
+        /// @brief The hand-back rule (Options::hand_back)
+        void chain_step_result(const int strategy, const double rate, const double energy_before, const double energy_after,
+                               const double grad_norm_before, const double grad_norm_after, const double grad_tol) override;
 
         /// @brief Resets the counters (once per minimize)
         void reset_times() override;

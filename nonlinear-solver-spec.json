@@ -234,6 +234,7 @@
             "max_columns",
             "handoff",
             "resolution",
+            "hand_back",
             "guard",
             "debug"
         ],
@@ -285,13 +286,44 @@
             "first",
             "any"
         ],
-        "doc": "Hand the rest of the solve to the Newton chain once the true energy can no longer verify the path: any = after an outer iteration whose inner loop stopped at the noise floor of the energy or whose path is below the energy resolution; first = only if this happened before any inner step was accepted; off = never. Except for off, also when the gradient norm is below line_search/use_grad_norm_tol, measured as the line search measures it for its switch to comparing gradient norms instead of energies (norm_type and its rescaling)."
+        "doc": "Hand the rest of the solve to the Newton chain once the true energy can no longer verify the path: any = after an outer iteration whose inner loop stopped at the noise floor of the energy or whose path is below the energy resolution; first = only if this happened before any inner step was accepted; off = never. Except for off, also when the gradient norm is below line_search/use_grad_norm_tol, measured as the line search measures it for its switch to comparing gradient norms instead of energies (norm_type and its rescaling); see hand_back for the way back from this one."
     },
     {
         "pointer": "/NonsmoothNewton/resolution",
         "default": true,
         "type": "bool",
         "doc": "Take 32 eps |E| as the resolution of the true energy E: the inner noise floor includes it, and a path whose model decrease does not exceed it is not verified by the true energy (the Newton step is line searched instead)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/hand_back",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "enabled",
+            "energy",
+            "contraction"
+        ],
+        "doc": "Hand-back after a handoff on a small gradient (see handoff): the first step of the Newton chain that ends above the gradient tolerance, removes more than energy times the energy resolution 32 eps |E| (E before the step) and is slow hands the iterations back to NonsmoothNewton. Slow: cut by its line search (step size < 1), taken by a strategy at index >= 2 of the solver (behind Newton: projected Newton or later in the default chain), or reducing the gradient norm (the norm of the stopping test) less than contraction times. The handoff on a small gradient is then off for the rest of the solve, so it happens at most once per solve; the handoff after a noise-floor stop is unchanged. NonsmoothNewton resumes at the next iteration the solver gives to its first strategy."
+    },
+    {
+        "pointer": "/NonsmoothNewton/hand_back/enabled",
+        "default": false,
+        "type": "bool",
+        "doc": "Enable the hand-back."
+    },
+    {
+        "pointer": "/NonsmoothNewton/hand_back/energy",
+        "default": 100,
+        "type": "float",
+        "min": 0,
+        "doc": "Energy decrease of the chain step, in units of the energy resolution 32 eps |E|, above which a slow step hands back."
+    },
+    {
+        "pointer": "/NonsmoothNewton/hand_back/contraction",
+        "default": 10,
+        "type": "float",
+        "min": 1,
+        "doc": "Gradient norm reduction a chain step must reach not to count as slow."
     },
     {
         "pointer": "/NonsmoothNewton/guard",

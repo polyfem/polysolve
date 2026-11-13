@@ -152,12 +152,18 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK(d.dedupe);
     CHECK(d.handoff == "any");
     CHECK(d.resolution);
-    const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"handoff", "first"}, {"resolution", false}, {"guard", {{"c", 3.0}}}, {"debug", {{"dedupe", false}}}}}});
+    CHECK(!d.hand_back);
+    CHECK(d.hand_back_energy == 100);
+    CHECK(d.hand_back_contraction == 10);
+    const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"handoff", "first"}, {"resolution", false}, {"guard", {{"c", 3.0}}}, {"hand_back", {{"enabled", true}, {"energy", 50.0}}}, {"debug", {{"dedupe", false}}}}}});
     CHECK(o.max_inner == 20);
     CHECK(o.handoff == "first");
     CHECK(!o.resolution);
     CHECK(o.guard_c == 3.0);
     CHECK(o.guard_abs == 10.0);
+    CHECK(o.hand_back);
+    CHECK(o.hand_back_energy == 50);
+    CHECK(o.hand_back_contraction == 10);
     CHECK(!o.dedupe);
     auto bad = [](const json &p) { return json{{"NonsmoothNewton", p}}; };
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"max_inner", 0}})));
@@ -168,6 +174,8 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"max_columns", 0}})));
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"guard", {{"c", 0.0}}}})));
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"handoff", "last"}})));
+    CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"hand_back", {{"energy", -1.0}}}})));
+    CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"hand_back", {{"contraction", 0.5}}}})));
 }
 
 TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
@@ -280,6 +288,117 @@ TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
     q5.gradient(y5, g);
     CHECK(g.norm() < 1e-8);
     CHECK(solver6->info()["NonsmoothNewton"]["path_iterations"].get<long>() > 0);
+}
+
+TEST_CASE("nonsmooth-newton-hand-back", "[solver][nonsmooth]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonsmooth-newton-hand-back-logger");
+    logger->set_level(spdlog::level::warn);
+#ifdef POLYSOLVE_WITH_CHOLMOD
+    const json linear_solver_params = R"({"solver": "Eigen::CholmodSupernodalLLT"})"_json;
+#else
+    const json linear_solver_params = R"({"solver": "Eigen::SimplicialLLT"})"_json;
+#endif
+    // the parameters the strategy reads, as Solver::create passes them
+    const json params = {{"NonsmoothNewton", {{"hand_back", {{"enabled", true}}}}},
+                         {"Newton", {{"residual_tolerance", 1e-5}}},
+                         {"line_search", {{"use_grad_norm_tol", 1e-4}}}};
+
+    LogTermProblem p(4);
+    const Problem::TVector x = Problem::TVector::LinSpaced(4, 0.02, 0.08); // every term active
+    p.solution_changed(x);
+    const Problem::TVector small_g = Problem::TVector::Constant(4, 1e-6); // below use_grad_norm_tol
+    Problem::TVector d;
+
+    const auto counter = [](NonsmoothNewton &s, const char *name) {
+        json info;
+        s.update_solver_info(info, 1);
+        return info["NonsmoothNewton"][name].get<long>();
+    };
+    // a strategy that has just handed off on a small gradient
+    const auto handed_off = [&](const json &prm) {
+        auto s = std::make_unique<NonsmoothNewton>(prm, linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        s->reset_times();
+        REQUIRE(!s->compute_update_direction(p, x, small_g, d));
+        REQUIRE(!s->handle_error());
+        REQUIRE(counter(*s, "handoff_grad_norm") == 1);
+        return s;
+    };
+
+    // chain step: unconverged, energy decrease far above the resolution 32 eps |E|
+    const double E0 = 1, E1 = 0.5, g0 = 1, tol = 1e-8;
+    {
+        // cut by its line search: the iterations come back, and the gradient handoff stays off for the solve
+        auto s = handed_off(params);
+        s->chain_step_result(1, 0.5, E0, E1, g0, g0 / 2, tol);
+        CHECK(counter(*s, "hand_backs") == 1);
+        CHECK(s->compute_update_direction(p, x, small_g, d));
+        CHECK(counter(*s, "handoff_grad_norm") == 1);
+        CHECK(counter(*s, "handoff_iterations") == 1);
+        s->chain_step_result(1, 0.5, E0, E1, g0, g0 / 2, tol);
+        CHECK(counter(*s, "hand_backs") == 1);
+    }
+
+    struct Step
+    {
+        int strategy;
+        double rate, energy_after, grad_norm_after;
+    };
+    // each of the three signs of a slow step hands back on its own
+    for (const Step &c : {Step{1, 0.5, E1, g0 / 16}, Step{2, 1.0, E1, g0 / 16}, Step{1, 1.0, E1, g0 / 4}})
+    {
+        auto s = handed_off(params);
+        s->chain_step_result(c.strategy, c.rate, E0, c.energy_after, g0, c.grad_norm_after, tol);
+        CHECK(counter(*s, "hand_backs") == 1);
+    }
+    // converged; energy decrease below 100 times the resolution; a full Newton step that contracts the gradient 16 times
+    const double eps = std::numeric_limits<double>::epsilon();
+    for (const Step &c : {Step{1, 0.5, E1, tol / 2}, Step{1, 0.5, E0 - 50 * 32 * eps * E0, g0 / 2}, Step{1, 1.0, E1, g0 / 16}})
+    {
+        auto s = handed_off(params);
+        s->chain_step_result(c.strategy, c.rate, E0, c.energy_after, g0, c.grad_norm_after, tol);
+        CHECK(counter(*s, "hand_backs") == 0);
+    }
+
+    // off, or no handoff in this solve: nothing to hand back
+    {
+        json off = params;
+        off["NonsmoothNewton"]["hand_back"]["enabled"] = false;
+        auto s = handed_off(off);
+        s->chain_step_result(1, 0.5, E0, E1, g0, g0 / 2, tol);
+        CHECK(counter(*s, "hand_backs") == 0);
+        NonsmoothNewton fresh(params, linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        fresh.reset_times();
+        fresh.chain_step_result(1, 0.5, E0, E1, g0, g0 / 2, tol);
+        CHECK(counter(fresh, "hand_backs") == 0);
+    }
+
+    // after the handoff at the noise floor the true energy cannot verify the path any more: no hand-back
+    {
+        struct Offset : LogTermProblem
+        {
+            using LogTermProblem::LogTermProblem;
+            double value(const TVector &x) override { return 1e8 + LogTermProblem::value(x); }
+        } po(4);
+        // a point next to the minimizer: the decrease of the path is far below 32 eps |E| = 7e-7
+        LogTermProblem q(4);
+        Problem::TVector xs = Problem::TVector::LinSpaced(4, 0.5, 2.0);
+        auto newton = Solver::create(R"({"solver": "Newton", "max_iterations": 100, "grad_norm_tol": 1e-10})"_json, linear_solver_params, 1, *logger);
+        newton->minimize(q, xs);
+        xs.array() += 1e-6;
+        po.solution_changed(xs);
+        Problem::TVector gs, step;
+        po.gradient(xs, gs);
+        json no_grad_handoff = params;
+        no_grad_handoff.erase("line_search");
+        NonsmoothNewton s(no_grad_handoff, linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        s.reset_times();
+        REQUIRE(s.compute_update_direction(po, xs, gs, d));
+        CHECK(!s.take_step(po, xs, po.value(xs), gs, d, step));
+        REQUIRE(counter(s, "handoff_noise_floor") == 1);
+        s.chain_step_result(1, 0.5, E0, E1, g0, g0 / 2, tol);
+        CHECK(counter(s, "hand_backs") == 0);
+    }
 }
 
 TEST_CASE("nonlinear-chain-step-result", "[solver][nonsmooth]")

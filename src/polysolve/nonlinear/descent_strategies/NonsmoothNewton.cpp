@@ -76,6 +76,13 @@ namespace polysolve::nonlinear
             o.guard_abs = value_or(g, "abs", o.guard_abs);
             o.guard_check = value_or(g, "check", o.guard_check);
         }
+        if (p.is_object() && p.contains("hand_back"))
+        {
+            const json &h = p["hand_back"];
+            o.hand_back = value_or(h, "enabled", o.hand_back);
+            o.hand_back_energy = value_or(h, "energy", o.hand_back_energy);
+            o.hand_back_contraction = value_or(h, "contraction", o.hand_back_contraction);
+        }
         if (p.is_object() && p.contains("debug"))
         {
             const json &d = p["debug"];
@@ -98,6 +105,9 @@ namespace polysolve::nonlinear
         if (!(o.guard_c > 0) || !(o.guard_abs > 0) || !(o.guard_check >= 0)
             || !std::isfinite(o.guard_c) || !std::isfinite(o.guard_abs) || !std::isfinite(o.guard_check))
             throw std::runtime_error("NonsmoothNewton: guard/c and guard/abs must be finite and > 0, guard/check finite and >= 0");
+        if (!(o.hand_back_energy >= 0) || !(o.hand_back_contraction >= 1)
+            || !std::isfinite(o.hand_back_energy) || !std::isfinite(o.hand_back_contraction))
+            throw std::runtime_error("NonsmoothNewton: hand_back/energy must be finite and >= 0, hand_back/contraction finite and >= 1");
         return o;
     }
 
@@ -111,6 +121,7 @@ namespace polysolve::nonlinear
             long projected = 0, rebuilds = 0;
             long handoff_noise = 0, handoff_grad = 0; ///< handoffs after a noise-floor / resolution stop, on a small gradient
             long handoff_iters = 0;                   ///< direction requests declined after the handoff (each goes to the Newton chain)
+            long hand_backs = 0;                      ///< iterations handed back by Options::hand_back
         };
 
         /// outcome of the last take_step that went to the line search (undone if the line search fails)
@@ -180,6 +191,13 @@ namespace polysolve::nonlinear
         double h_edge = NaN;
         bool handed_off = false;  ///< the rest of this solve is left to the Newton chain
         bool handing_off = false; ///< the last direction request was declined by the handoff (not a failure)
+        enum class Handoff
+        {
+            none,
+            noise,   ///< after a noise-floor / resolution stop
+            gradient ///< on a small gradient
+        } handoff_kind = Handoff::none; ///< the last handoff of this solve
+        bool no_grad_handoff = false;   ///< after a hand-back: no handoff on a small gradient for the rest of this solve
 
         // per direction
         bool use_B = false;
@@ -735,10 +753,11 @@ namespace polysolve::nonlinear
         if (!objFunc.has_nonsmooth_term())
             return false;
         // handoff on a small gradient, where the line search compares gradient norms (checked before any factorization)
-        if (opts_.handoff != "off" && !m.handed_off
+        if (opts_.handoff != "off" && !m.handed_off && !m.no_grad_handoff
             && objFunc.grad_norm(grad, m.norm_type) < m.use_grad_norm_tol * objFunc.grad_norm_rescaling(m.norm_type))
         {
             m.handed_off = true;
+            m.handoff_kind = Impl::Handoff::gradient;
             ++m.st.handoff_grad;
         }
         if (m.handed_off)
@@ -785,6 +804,7 @@ namespace polysolve::nonlinear
         if (opts_.handoff != "off" && !m.handed_off && m.noise_stop && (opts_.handoff == "any" || n_inner == 0))
         {
             m.handed_off = true;
+            m.handoff_kind = Impl::Handoff::noise;
             ++m.st.handoff_noise;
         }
         if (took_path)
@@ -812,6 +832,27 @@ namespace polysolve::nonlinear
         return false;
     }
 
+    void NonsmoothNewton::chain_step_result(const int strategy, const double rate, const double energy_before, const double energy_after,
+                                            const double grad_norm_before, const double grad_norm_after, const double grad_tol)
+    {
+        // only after a handoff on a small gradient (after a noise-floor stop the true energy no longer resolves the path)
+        Impl &m = *impl_;
+        if (!opts_.hand_back || !m.handed_off || m.handoff_kind != Impl::Handoff::gradient)
+            return;
+        // the step left the solve unconverged and removed energy the acceptance test of the path can resolve
+        const double resolution = 32 * EPS * std::abs(energy_before);
+        if (!(grad_norm_after > grad_tol) || !(energy_before - energy_after > opts_.hand_back_energy * resolution))
+            return;
+        // and Newton is not in its fast local regime: a full step taken by Newton itself that contracts the gradient norm
+        const bool slow = rate < 1 || strategy >= 2 || !(grad_norm_before >= opts_.hand_back_contraction * grad_norm_after);
+        if (!slow)
+            return;
+        // the method takes the next iteration the solver gives to it; a gradient handoff would decline it again at once
+        m.handed_off = false;
+        m.no_grad_handoff = true;
+        ++m.st.hand_backs;
+    }
+
     void NonsmoothNewton::reset_times()
     {
         impl_->st = Impl::Stats();
@@ -819,6 +860,8 @@ namespace polysolve::nonlinear
         impl_->fresh = true;
         impl_->handed_off = false;
         impl_->handing_off = false;
+        impl_->handoff_kind = Impl::Handoff::none;
+        impl_->no_grad_handoff = false;
     }
 
     void NonsmoothNewton::update_solver_info(json &solver_info, const double per_iteration)
@@ -843,6 +886,7 @@ namespace polysolve::nonlinear
             {"nonsmooth_updates", s.rebuilds},
             {"handoff_noise_floor", s.handoff_noise},
             {"handoff_grad_norm", s.handoff_grad},
-            {"handoff_iterations", s.handoff_iters}};
+            {"handoff_iterations", s.handoff_iters},
+            {"hand_backs", s.hand_backs}};
     }
 } // namespace polysolve::nonlinear

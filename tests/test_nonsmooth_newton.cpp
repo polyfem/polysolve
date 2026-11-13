@@ -1,9 +1,14 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/nonlinear/Solver.hpp>
 #include <polysolve/nonlinear/Problem.hpp>
+#include <polysolve/nonlinear/descent_strategies/Newton.hpp>
 #include <polysolve/nonlinear/descent_strategies/NonsmoothNewton.hpp>
 #include <polysolve/Utils.hpp>
 #include <polysolve/Types.hpp>
+
+#include <nonlinear-solver-spec.hpp>
+
+#include <jse/jse.h>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #if __has_include(<catch2/catch_test_macros.hpp>)
@@ -48,6 +53,8 @@ namespace
         {
             return d >= dhat ? 0 : -2 * std::log(d / dhat) - 4 * (d - dhat) / d + (d - dhat) * (d - dhat) / (d * d);
         }
+
+        using Problem::hessian;
 
         double value(const TVector &x) override { return 0.5 * (x - a_).squaredNorm() + nonsmooth_value(x); }
         void gradient(const TVector &x, TVector &g) override
@@ -273,4 +280,79 @@ TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
     q5.gradient(y5, g);
     CHECK(g.norm() < 1e-8);
     CHECK(solver6->info()["NonsmoothNewton"]["path_iterations"].get<long>() > 0);
+}
+
+TEST_CASE("nonlinear-chain-step-result", "[solver][nonsmooth]")
+{
+    // a first strategy that declines every direction: the Newton chain behind it takes all steps, and the first strategy
+    // sees each of them at the start of the next iteration
+    struct Recorder : DescentStrategy
+    {
+        struct Call
+        {
+            int strategy;
+            double rate, energy_before, energy_after, grad_norm_before, grad_norm_after, grad_tol;
+        };
+        std::vector<Call> calls;
+
+        using DescentStrategy::DescentStrategy;
+        std::string name() const override { return "Recorder"; }
+        bool compute_update_direction(Problem &, const TVector &, const TVector &, TVector &) override { return false; }
+        void chain_step_result(const int strategy, const double rate, const double energy_before, const double energy_after,
+                               const double grad_norm_before, const double grad_norm_after, const double grad_tol) override
+        {
+            calls.push_back({strategy, rate, energy_before, energy_after, grad_norm_before, grad_norm_after, grad_tol});
+        }
+    };
+    struct NoSplit : LogTermProblem
+    {
+        using LogTermProblem::LogTermProblem;
+        bool has_nonsmooth_term() const override { return false; }
+    };
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("chain-step-test-logger");
+    logger->set_level(spdlog::level::warn);
+    json params = R"({"solver": "Newton", "max_iterations": 100, "grad_norm_tol": 1e-10})"_json;
+    jse::JSE jse;
+    const json rules = jse::embed::non_linear_spec::solver_spec::spec();
+    REQUIRE(jse.verify_json(params, rules));
+    params = jse.inject_defaults(params, rules);
+#ifdef POLYSOLVE_WITH_CHOLMOD
+    const json linear_solver_params = R"({"solver": "Eigen::CholmodSupernodalLLT"})"_json;
+#else
+    const json linear_solver_params = R"({"solver": "Eigen::SimplicialLLT"})"_json;
+#endif
+
+    Solver solver(params, 1, *logger);
+    auto recorder = std::make_shared<Recorder>(params, 1, *logger);
+    solver.add_strategy(recorder);
+    for (const auto &s : Newton::create_solver(true, params, linear_solver_params, 1, *logger, NormType::EUCLIDEAN, 1))
+        solver.add_strategy(s);
+    solver.set_strategies_iterations(params);
+
+    NoSplit p(4);
+    Problem::TVector x = Problem::TVector::LinSpaced(4, 0.5, 2.0);
+    const double e0 = p.value(x);
+    solver.minimize(p, x);
+
+    // every step is reported, the last one at the start of the iteration that converges
+    const auto &c = recorder->calls;
+    REQUIRE(!c.empty());
+    CHECK(long(c.size()) == solver.info()["iterations"].get<long>());
+    CHECK(c.front().energy_before == e0);
+    for (size_t i = 0; i < c.size(); ++i)
+    {
+        CHECK(c[i].strategy >= 1);
+        CHECK(c[i].rate > 0);
+        CHECK(c[i].rate <= 1);
+        CHECK(c[i].energy_after <= c[i].energy_before);
+        CHECK(c[i].grad_tol == 1e-10);
+        if (i + 1 < c.size())
+        {
+            CHECK(c[i + 1].energy_before == c[i].energy_after);
+            CHECK(c[i + 1].grad_norm_before == c[i].grad_norm_after);
+        }
+    }
+    CHECK(c.back().grad_norm_after <= c.back().grad_tol);
+    CHECK(c.back().energy_after == p.value(x));
 }

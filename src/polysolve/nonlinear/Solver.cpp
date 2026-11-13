@@ -288,6 +288,13 @@ namespace polysolve::nonlinear
 
         // Set these to nan to indicate they have not been computed yet
         double old_energy = NaN;
+        // last step taken with the line search by a strategy other than the first, reported to the first strategy at
+        // the start of the next iteration (strategy -1: none)
+        struct
+        {
+            int strategy = -1;
+            double rate = 0, energy = 0, grad_norm = 0;
+        } chain_step;
         {
             POLYSOLVE_SCOPED_STOPWATCH("constraint set update", constraint_set_update_time, m_logger);
             objFunc.solution_changed(x);
@@ -355,6 +362,13 @@ namespace polysolve::nonlinear
             {
                 m_status = Status::NanEncountered;
                 log_and_throw_error(m_logger, "[{}][{}] Gradient is nan; stopping", descent_strategy_name(), m_line_search->name());
+            }
+
+            if (chain_step.strategy > 0)
+            {
+                m_strategies[0]->chain_step_result(chain_step.strategy, chain_step.rate, chain_step.energy, energy,
+                                                   chain_step.grad_norm, m_current.gradNorm, m_stop_rescaled.gradNorm);
+                chain_step.strategy = -1;
             }
 
             // Check convergence without these values to avoid impossible linear solves.
@@ -526,6 +540,9 @@ namespace polysolve::nonlinear
             }
 
             old_energy = energy;
+
+            if (m_descent_strategy != 0 && !use_own_step)
+                chain_step = {m_descent_strategy, rate, energy, m_current.gradNorm};
 
             // Reset this for the next iterations
             // if the strategy got changed, we start counting

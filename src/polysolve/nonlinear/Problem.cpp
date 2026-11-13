@@ -1,7 +1,15 @@
 #include "Problem.hpp"
 
+#include <stdexcept>
+#include <string>
+
 namespace polysolve::nonlinear
 {
+    void Problem::not_supported(const char *what)
+    {
+        throw std::runtime_error(std::string("Problem::") + what + ": the problem has no nonsmooth term split");
+    }
+
     void Problem::sample_along_direction(
         const Problem::TVector &x,
         const Problem::TVector &direction,

@@ -32,7 +32,7 @@ namespace polysolve::nonlinear
         /// @brief Parameters (JSON: NonsmoothNewton)
         struct Options
         {
-            int max_inner = 10;          ///< inner budget K_max
+            int max_inner = 40;          ///< inner budget K_max
             double relative_stop = 1e-3; ///< inner stop when a step's model decrease < relative_stop * accumulated decrease (0 = off)
             double ftb_tau = 0.2;        ///< linearized fraction-to-boundary on the active terms: d >= tau d(a) (0 = off)
             bool guard = true;           ///< long-segment guard: validity shortening and scale-not-reject segment cap
@@ -54,7 +54,7 @@ namespace polysolve::nonlinear
             /// its line search, taken by a strategy at index >= 2 of the solver, i.e. behind Newton, or reducing the
             /// gradient norm less than hand_back_contraction times) hands the iterations back to this strategy; the
             /// handoff on a small gradient is then off for the rest of the solve
-            bool hand_back = false;
+            bool hand_back = true;
             double hand_back_energy = 100;
             double hand_back_contraction = 10;
             /// Jacobian limits at the end point y of every inner step, from Problem::smooth_min_jacobian(s) (not applied
@@ -63,8 +63,8 @@ namespace polysolve::nonlinear
             /// min_e J_e at the first iterate of the solve whose direction request this strategy does not decline by the
             /// handoff (and where the problem gives a finite value). A later step that violates one ends the path at the
             /// previous point; a violating first step is halved until it holds and then ends the path. 0 = off.
-            double jacobian_bound = 0;
-            double jacobian_floor = 0;
+            double jacobian_bound = 0.6;
+            double jacobian_floor = 0.1;
 
             // internal switches (debug block) used by the strategy
             bool dedupe = true;        ///< true energy at a trial point reuses the nonsmooth state rebuilt there

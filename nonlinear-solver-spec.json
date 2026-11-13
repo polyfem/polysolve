@@ -243,7 +243,7 @@
     },
     {
         "pointer": "/NonsmoothNewton/max_inner",
-        "default": 10,
+        "default": 40,
         "type": "int",
         "min": 1,
         "doc": "Inner step budget per outer iteration."
@@ -308,7 +308,7 @@
     },
     {
         "pointer": "/NonsmoothNewton/hand_back/enabled",
-        "default": false,
+        "default": true,
         "type": "bool",
         "doc": "Enable the hand-back."
     },
@@ -338,7 +338,7 @@
     },
     {
         "pointer": "/NonsmoothNewton/jacobian/bound",
-        "default": 0,
+        "default": 0.6,
         "type": "float",
         "min": 0,
         "max": 0.99,
@@ -346,7 +346,7 @@
     },
     {
         "pointer": "/NonsmoothNewton/jacobian/floor",
-        "default": 0,
+        "default": 0.1,
         "type": "float",
         "min": 0,
         "doc": "The smallest J over the elements stays >= floor * J_ref, or >= its value at the outer iterate where that is already lower (0 = off). J_ref is the smallest J at the first iterate of the solve whose direction request NonsmoothNewton does not decline by the handoff (and where the problem gives a finite value); if the solve starts below the gradient threshold of the handoff, that is the first iterate after a hand-back, not the start of the solve."

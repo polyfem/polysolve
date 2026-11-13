@@ -147,16 +147,43 @@ namespace
 TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
 {
     const auto d = NonsmoothNewton::Options::from_json(json::object());
-    CHECK(d.max_inner == 10);
+    CHECK(d.max_inner == 40);
     CHECK(d.guard);
     CHECK(d.dedupe);
     CHECK(d.handoff == "any");
     CHECK(d.resolution);
-    CHECK(!d.hand_back);
+    CHECK(d.hand_back);
     CHECK(d.hand_back_energy == 100);
     CHECK(d.hand_back_contraction == 10);
-    CHECK(d.jacobian_bound == 0);
-    CHECK(d.jacobian_floor == 0);
+    CHECK(d.jacobian_bound == 0.6);
+    CHECK(d.jacobian_floor == 0.1);
+    // Solver::create fills in the defaults of the spec: the same values
+    {
+        jse::JSE jse;
+        const json rules = jse::embed::non_linear_spec::solver_spec::spec();
+        json sp = R"({"solver": "NonsmoothNewton"})"_json;
+        REQUIRE(jse.verify_json(sp, rules));
+        sp = jse.inject_defaults(sp, rules);
+        const auto ds = NonsmoothNewton::Options::from_json(sp);
+        CHECK(ds.max_inner == d.max_inner);
+        CHECK(ds.relative_stop == d.relative_stop);
+        CHECK(ds.ftb_tau == d.ftb_tau);
+        CHECK(ds.rho_min == d.rho_min);
+        CHECK(ds.max_columns == d.max_columns);
+        CHECK(ds.handoff == d.handoff);
+        CHECK(ds.resolution == d.resolution);
+        CHECK(ds.hand_back == d.hand_back);
+        CHECK(ds.hand_back_energy == d.hand_back_energy);
+        CHECK(ds.hand_back_contraction == d.hand_back_contraction);
+        CHECK(ds.jacobian_bound == d.jacobian_bound);
+        CHECK(ds.jacobian_floor == d.jacobian_floor);
+        CHECK(ds.guard == d.guard);
+        CHECK(ds.guard_c == d.guard_c);
+        CHECK(ds.guard_abs == d.guard_abs);
+        CHECK(ds.guard_check == d.guard_check);
+        CHECK(ds.dedupe == d.dedupe);
+        CHECK(ds.fast_validity == d.fast_validity);
+    }
     const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"handoff", "first"}, {"resolution", false}, {"guard", {{"c", 3.0}}}, {"hand_back", {{"enabled", true}, {"energy", 50.0}}}, {"jacobian", {{"bound", 0.5}}}, {"debug", {{"dedupe", false}}}}}});
     CHECK(o.max_inner == 20);
     CHECK(o.handoff == "first");
@@ -167,7 +194,7 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK(o.hand_back_energy == 50);
     CHECK(o.hand_back_contraction == 10);
     CHECK(o.jacobian_bound == 0.5);
-    CHECK(o.jacobian_floor == 0);
+    CHECK(o.jacobian_floor == 0.1);
     CHECK(!o.dedupe);
     auto bad = [](const json &p) { return json{{"NonsmoothNewton", p}}; };
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"max_inner", 0}})));

@@ -222,6 +222,7 @@ namespace polysolve::nonlinear
         bool projected = false;
         Vec last_built;          ///< point of the last nonsmooth_update done by eval (empty: unknown)
         bool noise_stop = false; ///< the last path stopped at the noise floor or below the resolution of the true energy
+        std::vector<HessianBlock> spare_blocks; ///< block buffer of a replaced state, reused by eval
 
         Impl(const Options &o, const json &solver_params, const json &linear_solver_params, spdlog::logger &l, const NormType nt)
             : opts(o), logger(l), norm_type(line_search_norm(solver_params, nt))
@@ -442,6 +443,8 @@ namespace polysolve::nonlinear
             }
             if (deriv)
             {
+                c.blocks.swap(spare_blocks); // the allocation of a replaced state
+                c.blocks.clear();
                 c.local = p.nonsmooth_hessian_blocks(c.y, c.g, c.blocks);
                 if (!c.local)
                 {
@@ -616,6 +619,10 @@ namespace polysolve::nonlinear
             Vec last_r;
             const double ell_inf = M.ell.head(M.k).cwiseAbs().maxCoeff();
             Vec dist, rate;
+            // A product with the basis is reused only where the expression it replaces has the same operands: Q v (Eigen:
+            // zero, then += Q v) and x + Q v (Eigen: x, then += Q v) round differently.
+            Vec p_last;      // Q z at the last accepted point
+            int k_last = -1; // its number of columns
 
             for (int it = 0; it < inner_max; ++it)
             {
@@ -626,23 +633,32 @@ namespace polysolve::nonlinear
                     break; // LM failure
                 int k = M.k;
                 Vec zk = z.head(k);
-                const Vec p_cur = M.Q.leftCols(k) * zk;
+                const Vec p_cur = k == k_last ? p_last : Vec(M.Q.leftCols(k) * zk);
+                Vec pe, xe; // Q (zk + dz) and x + Q (zk + dz), while dz is unchanged (pe_ok, xe_ok)
+                bool pe_ok = false, xe_ok = false;
                 if (opts.guard)
                 {
-                    const Vec pe = M.Q.leftCols(k) * (zk + dz);
+                    pe = M.Q.leftCols(k) * (zk + dz);
+                    pe_ok = true;
                     double len = p.nonsmooth_step_length(x + p_cur, x + pe);
                     if (len > seg_cap)
                     {
                         dz *= seg_cap / len; // scale, never reject
                         len = seg_cap;
+                        pe_ok = false;
                     }
                     // with fast_validity every segment end is checked for validity; otherwise only
                     // segments longer than guard_check * h
                     if (len > opts.guard_check * h_edge || opts.fast_validity)
                     {
-                        const double a = p.smooth_valid_fraction(x, x + p_cur, x + M.Q.leftCols(k) * (zk + dz));
+                        xe = x + M.Q.leftCols(k) * (zk + dz);
+                        xe_ok = true;
+                        const double a = p.smooth_valid_fraction(x, x + p_cur, xe);
                         if (a < 1)
+                        {
                             dz *= a;
+                            pe_ok = xe_ok = false;
+                        }
                     }
                     if (!(dz.cwiseAbs().maxCoeff() > 0))
                         break; // guard reduced the step to zero
@@ -650,7 +666,12 @@ namespace polysolve::nonlinear
                 if (opts.ftb_tau > 0)
                 {
                     // fraction-to-boundary on the terms active at the segment start (linearized distance)
-                    p.nonsmooth_active_distances(x + p_cur, x + M.Q.leftCols(k) * (zk + dz), dist, rate);
+                    if (!xe_ok)
+                    {
+                        xe = x + M.Q.leftCols(k) * (zk + dz);
+                        xe_ok = true;
+                    }
+                    p.nonsmooth_active_distances(x + p_cur, xe, dist, rate);
                     double sfac = 1;
                     for (int i = 0; i < dist.size(); ++i)
                     {
@@ -661,9 +682,12 @@ namespace polysolve::nonlinear
                         }
                     }
                     if (sfac < 1)
+                    {
                         dz *= sfac;
+                        pe_ok = xe_ok = false;
+                    }
                 }
-                const Vec p_end = M.Q.leftCols(k) * (zk + dz);
+                const Vec p_end = pe_ok ? pe : Vec(M.Q.leftCols(k) * (zk + dz));
                 double beta;
                 SegmentScope seg(p);
                 // one candidate set for the whole segment
@@ -681,7 +705,8 @@ namespace polysolve::nonlinear
                 {
                     ztrial = z;
                     ztrial.head(k) = zk + alpha * dz;
-                    const Vec y = x + M.Q.leftCols(k) * ztrial.head(k);
+                    // zk + 1 dz is zk + dz exactly
+                    const Vec y = alpha == 1.0 && xe_ok ? xe : Vec(x + M.Q.leftCols(k) * ztrial.head(k));
                     ctrial = eval(p, y, false);
                     if (!std::isfinite(ctrial.E))
                         continue;
@@ -732,7 +757,10 @@ namespace polysolve::nonlinear
                 }
                 z = ztrial;
                 m_cur = mtrial.m;
-                const Vec p_new = M.Q.leftCols(k) * z.head(k);
+                // a full step (alpha 1: not halved by the line search or a Jacobian limit) ends at p_end
+                const Vec p_new = alpha == 1.0 ? p_end : Vec(M.Q.leftCols(k) * z.head(k));
+                p_last = p_new;
+                k_last = k;
                 pts.push_back(p_new);
                 mvals.push_back(m_cur);
                 zs.push_back(z);
@@ -740,7 +768,9 @@ namespace polysolve::nonlinear
                 const double prev_total = pred_total;
                 pred_total = -m_cur;
 
-                // derivatives at the accepted point (reuses the state of the last trial)
+                // derivatives at the accepted point (reuses the state of the last trial); the blocks of the replaced
+                // state are reused
+                spare_blocks.swap(cstate.blocks);
                 cstate = eval(p, ctrial.y, true, &ctrial);
                 seg.end();
                 if (j_end)

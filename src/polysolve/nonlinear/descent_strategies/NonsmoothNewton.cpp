@@ -190,7 +190,7 @@ namespace polysolve::nonlinear
         double res_tol = 1e-5;
         double use_grad_norm_tol = -1; ///< line_search/use_grad_norm_tol of the solver (handoff on a small gradient)
         std::unique_ptr<polysolve::linear::Solver> linear;
-        std::vector<SpMat::StorageIndex> pattern_outer, pattern_inner; ///< pattern of the last successful factorization
+        std::vector<SpMat::StorageIndex> pattern_outer, pattern_inner; ///< pattern of the last symbolic analysis
         Eigen::Index pattern_rows = -1;
         bool pattern_ok = false;
         Stats st;
@@ -244,14 +244,22 @@ namespace polysolve::nonlinear
             h_edge = p.nonsmooth_length_scale();
         }
 
-        /// Symbolic analysis only when the sparsity pattern differs from the last successful factorization (the
-        /// numeric factorization of an unchanged pattern does not depend on redoing it).
+        /// Symbolic analysis only when the sparsity pattern differs from the last analysis (the numeric factorization of
+        /// an unchanged pattern does not depend on redoing it). The analysis is symbolic, so it stays valid after a failed
+        /// numeric factorization: the projected retry of an outer iteration usually has the same pattern.
         void factorize(const SpMat &H)
         {
             if (!same_pattern(H))
             {
                 pattern_ok = false;
                 linear->analyze_pattern(H, H.rows());
+                if (H.isCompressed())
+                {
+                    pattern_outer.assign(H.outerIndexPtr(), H.outerIndexPtr() + H.outerSize() + 1);
+                    pattern_inner.assign(H.innerIndexPtr(), H.innerIndexPtr() + H.nonZeros());
+                    pattern_rows = H.rows();
+                    pattern_ok = true;
+                }
             }
             ++st.factorizations;
             try
@@ -261,15 +269,7 @@ namespace polysolve::nonlinear
             catch (...)
             {
                 ++st.factorization_failures;
-                pattern_ok = false;
                 throw;
-            }
-            if (!pattern_ok && H.isCompressed())
-            {
-                pattern_outer.assign(H.outerIndexPtr(), H.outerIndexPtr() + H.outerSize() + 1);
-                pattern_inner.assign(H.innerIndexPtr(), H.innerIndexPtr() + H.nonZeros());
-                pattern_rows = H.rows();
-                pattern_ok = true;
             }
         }
 

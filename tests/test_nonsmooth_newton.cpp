@@ -3,6 +3,7 @@
 #include <polysolve/nonlinear/Problem.hpp>
 #include <polysolve/nonlinear/descent_strategies/Newton.hpp>
 #include <polysolve/nonlinear/descent_strategies/NonsmoothNewton.hpp>
+#include <polysolve/nonlinear/descent_strategies/ParallelKernels.hpp>
 #include <polysolve/Utils.hpp>
 #include <polysolve/Types.hpp>
 
@@ -17,10 +18,16 @@
 #include <catch2/catch.hpp>
 #endif
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <random>
 #include <vector>
+
+#ifdef POLYSOLVE_WITH_TBB
+#include <tbb/global_control.h>
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -730,5 +737,91 @@ TEST_CASE("newton-analysis-reuse", "[solver][newton]")
             }
         }
         CHECK(n_ok >= 4);
+    }
+}
+
+TEST_CASE("nonsmooth-newton-parallel-kernels", "[solver][nonsmooth]")
+{
+    // matrices large enough to be split over the threads: the kernels give the results of the Eigen expressions they
+    // replace bit for bit, with any number of threads
+    const int n = 3 * 8192 + 17;
+    std::mt19937 gen(42);
+    std::uniform_real_distribution<double> u(-1, 1);
+    const auto random_sparse = [&](const int per_column) {
+        std::uniform_int_distribution<int> row(0, n - 1);
+        std::vector<Eigen::Triplet<double>> t;
+        for (int j = 0; j < n; ++j)
+            if (j % 97 != 0) // some empty columns
+                for (int k = 0; k < per_column; ++k)
+                    t.emplace_back(row(gen), j, u(gen));
+        StiffnessMatrix m(n, n);
+        m.setFromTriplets(t.begin(), t.end());
+        return m;
+    };
+    StiffnessMatrix A = random_sparse(5), B = random_sparse(3);
+    // signed zeros: Eigen's sum adds 0 to an entry that only one operand has (-0 + 0 = +0)
+    for (int i = 0; i < 200; ++i)
+    {
+        A.valuePtr()[37 * i] = -0.0;
+        B.valuePtr()[41 * i] = (i % 2) ? -0.0 : 0.0;
+    }
+    Eigen::VectorXd q(n), r0(n);
+    for (int i = 0; i < n; ++i)
+    {
+        q[i] = u(gen);
+        r0[i] = u(gen);
+    }
+
+    StiffnessMatrix sum = A + B;
+    sum.makeCompressed();
+    const Eigen::VectorXd prod = A * q;
+    const Eigen::VectorXd prod_sub = r0 - A * q; // Eigen: r0, then -= A q
+    StiffnessMatrix A_uncompressed = A;
+    A_uncompressed.uncompress();
+
+    const auto same_vector = [](const Eigen::VectorXd &a, const Eigen::VectorXd &b) {
+        return a.size() == b.size() && std::memcmp(a.data(), b.data(), sizeof(double) * a.size()) == 0;
+    };
+    const auto same_matrix = [](const StiffnessMatrix &a, const StiffnessMatrix &b) {
+        return a.isCompressed() && b.isCompressed() && a.rows() == b.rows() && a.cols() == b.cols() && a.nonZeros() == b.nonZeros()
+               && std::equal(a.outerIndexPtr(), a.outerIndexPtr() + a.outerSize() + 1, b.outerIndexPtr())
+               && std::equal(a.innerIndexPtr(), a.innerIndexPtr() + a.nonZeros(), b.innerIndexPtr())
+               && std::memcmp(a.valuePtr(), b.valuePtr(), sizeof(double) * a.nonZeros()) == 0;
+    };
+
+    for (const int threads : {1, 2, 3, 8})
+    {
+#ifdef POLYSOLVE_WITH_TBB
+        tbb::global_control limit(tbb::global_control::max_allowed_parallelism, threads);
+        CHECK(parallel::max_threads() <= threads); // at most the hardware threads
+#else
+        CHECK(parallel::max_threads() == 1);
+#endif
+        StiffnessMatrix C;
+        parallel::spadd(A, B, C);
+        CHECK(same_matrix(C, sum));
+        parallel::spadd(A_uncompressed, B, C); // not compressed: Eigen's sum
+        CHECK(same_matrix(C, sum));
+
+        Eigen::VectorXd y = Eigen::VectorXd::Constant(n, 3.0);
+        parallel::spmv(A, q, y);
+        CHECK(same_vector(y, prod));
+        Eigen::VectorXd r = r0;
+        parallel::spmv_add(A, q, -1.0, r);
+        CHECK(same_vector(r, prod_sub));
+        Eigen::MatrixXd columns = Eigen::MatrixXd::Zero(n, 3);
+        parallel::spmv(A, q, columns.col(1));
+        CHECK(same_vector(columns.col(1), prod));
+        parallel::spmv(A_uncompressed, q, y);
+        CHECK(same_vector(y, prod));
+
+        // every chunk exactly once
+        std::vector<int> seen(n, 0);
+        const int c = parallel::chunks(n, 1000);
+        parallel::for_chunks(n, c, [&](int, const Eigen::Index b, const Eigen::Index e) noexcept {
+            for (Eigen::Index i = b; i < e; ++i)
+                ++seen[i];
+        });
+        CHECK(std::all_of(seen.begin(), seen.end(), [](const int v) { return v == 1; }));
     }
 }

@@ -1,4 +1,5 @@
 #include "NonsmoothNewton.hpp"
+#include "ParallelKernels.hpp"
 
 #include <Eigen/Cholesky>
 #include <Eigen/Dense>
@@ -348,8 +349,7 @@ namespace polysolve::nonlinear
             p.smooth_hessian(x, false, Hnc);
             p.smooth_gradient(x, gnc);
             p.nonsmooth_hessian(x, true, Hcp);
-            B = Hnc + Hcp;
-            B.makeCompressed();
+            parallel::spadd(Hnc, Hcp, B);
             p.nonsmooth_gradient(x, gc0);
             Ec0 = p.nonsmooth_value(x);
         }
@@ -365,7 +365,9 @@ namespace polysolve::nonlinear
                 return false;
             }
             d = backsolve(-g);
-            const double res = p.grad_norm(H * d + g, nt);
+            Vec Hd(H.rows());
+            parallel::spmv(H, d, Hd);
+            const double res = p.grad_norm(Vec(Hd + g), nt);
             return !(std::isnan(res) || res > res_tol);
         }
 
@@ -386,8 +388,7 @@ namespace polysolve::nonlinear
             {
                 SpMat h;
                 p.smooth_hessian(x, true, h);
-                B = h + Hcp;
-                B.makeCompressed();
+                parallel::spadd(h, Hcp, B);
                 Hnc = std::move(h); // projected smooth quadratic in the model (bounded below)
             }
             projected = true;
@@ -400,13 +401,16 @@ namespace polysolve::nonlinear
         {
             const int j = M.k;
             M.Q.col(j) = q;
-            M.HQ.col(j) = Hnc * q;
-            for (int i = 0; i <= j; ++i)
-            {
-                const double v = M.Q.col(i).dot(M.HQ.col(j));
-                M.G(i, j) = v;
-                M.G(j, i) = v;
-            }
+            parallel::spmv(Hnc, q, M.HQ.col(j));
+            // one dot product per column, the columns split over the threads
+            parallel::for_chunks(j + 1, parallel::chunks(j + 1, 2), [&](int, const Eigen::Index i0, const Eigen::Index i1) {
+                for (Eigen::Index i = i0; i < i1; ++i)
+                {
+                    const double v = M.Q.col(i).dot(M.HQ.col(j));
+                    M.G(i, j) = v;
+                    M.G(j, i) = v;
+                }
+            });
             M.ell[j] = q.dot(gnc);
             ++M.k;
         }
@@ -714,7 +718,20 @@ namespace polysolve::nonlinear
                 // ---- new column from the model residual r = grad m(p) - g - B p ----
                 if (M.k < col_cap)
                 {
-                    const Vec r = projected ? Vec(Hnc * p_new - B * p_new + cstate.g - gc0) : Vec(cstate.g - gc0 - Hcp * p_new);
+                    Vec r;
+                    if (projected)
+                    {
+                        Vec hp(n), bp(n);
+                        parallel::spmv(Hnc, p_new, hp);
+                        parallel::spmv(B, p_new, bp);
+                        r = hp - bp + cstate.g - gc0;
+                    }
+                    else
+                    {
+                        // as Eigen evaluates r = (g - g0) - H p: r = g - g0, then r -= H p
+                        r = cstate.g - gc0;
+                        parallel::spmv_add(Hcp, p_new, -1.0, r);
+                    }
                     if (r.allFinite() && r.cwiseAbs().maxCoeff() > 0 && !(last_r.size() == r.size() && r == last_r))
                     {
                         last_r = r;

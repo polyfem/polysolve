@@ -31,6 +31,11 @@ if(POLYSOLVE_WITH_AMGCL)
     target_compile_definitions(unit_tests PRIVATE -DPOLYSOLVE_WITH_AMGCL)
 endif()
 
+if(POLYSOLVE_WITH_TBB)
+    target_link_libraries(unit_tests PRIVATE TBB::tbb)
+    target_compile_definitions(unit_tests PRIVATE POLYSOLVE_WITH_TBB)
+endif()
+
 include(polyfem-data)
 target_link_libraries(unit_tests PRIVATE polyfem::data)
 

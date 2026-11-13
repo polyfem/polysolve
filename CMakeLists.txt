@@ -96,6 +96,7 @@ option(POLYSOLVE_WITH_PARDISO       "Enable Pardiso library"                    
 option(POLYSOLVE_WITH_HYPRE         "Enable hypre"                                       ON)
 option(POLYSOLVE_WITH_AMGCL         "Use AMGCL"                                          ON)
 option(POLYSOLVE_WITH_SPECTRA       "Enable Spectra library"                             ON)
+option(POLYSOLVE_WITH_TBB           "Parallel NonsmoothNewton kernels with TBB"          ON)
 
 # Sanitizer options
 option(POLYSOLVE_SANITIZE_ADDRESS   "Sanitize Address"                                  OFF)
@@ -491,6 +492,13 @@ target_link_libraries(polysolve PRIVATE LBFGSpp::LBFGSpp)
 # finite-diff (include this after eigen)
 include(finite-diff)
 target_link_libraries(polysolve PRIVATE finitediff::finitediff)
+
+# TBB: thread-parallel kernels of NonsmoothNewton (serial without it)
+if(POLYSOLVE_WITH_TBB)
+    include(onetbb)
+    target_link_libraries(polysolve PRIVATE TBB::tbb)
+    target_compile_definitions(polysolve PRIVATE POLYSOLVE_WITH_TBB)
+endif()
 
 # Sanitizers
 if(POLYSOLVE_WITH_SANITIZERS)

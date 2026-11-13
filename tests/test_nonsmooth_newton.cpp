@@ -155,7 +155,9 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK(!d.hand_back);
     CHECK(d.hand_back_energy == 100);
     CHECK(d.hand_back_contraction == 10);
-    const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"handoff", "first"}, {"resolution", false}, {"guard", {{"c", 3.0}}}, {"hand_back", {{"enabled", true}, {"energy", 50.0}}}, {"debug", {{"dedupe", false}}}}}});
+    CHECK(d.jacobian_bound == 0);
+    CHECK(d.jacobian_floor == 0);
+    const auto o = NonsmoothNewton::Options::from_json(json{{"NonsmoothNewton", {{"max_inner", 20}, {"handoff", "first"}, {"resolution", false}, {"guard", {{"c", 3.0}}}, {"hand_back", {{"enabled", true}, {"energy", 50.0}}}, {"jacobian", {{"bound", 0.5}}}, {"debug", {{"dedupe", false}}}}}});
     CHECK(o.max_inner == 20);
     CHECK(o.handoff == "first");
     CHECK(!o.resolution);
@@ -164,6 +166,8 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK(o.hand_back);
     CHECK(o.hand_back_energy == 50);
     CHECK(o.hand_back_contraction == 10);
+    CHECK(o.jacobian_bound == 0.5);
+    CHECK(o.jacobian_floor == 0);
     CHECK(!o.dedupe);
     auto bad = [](const json &p) { return json{{"NonsmoothNewton", p}}; };
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"max_inner", 0}})));
@@ -176,6 +180,9 @@ TEST_CASE("nonsmooth-newton-options", "[solver][nonsmooth]")
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"handoff", "last"}})));
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"hand_back", {{"energy", -1.0}}}})));
     CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"hand_back", {{"contraction", 0.5}}}})));
+    CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"jacobian", {{"bound", 1.0}}}})));
+    CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"jacobian", {{"bound", -0.1}}}})));
+    CHECK_THROWS(NonsmoothNewton::Options::from_json(bad({{"jacobian", {{"floor", -1.0}}}})));
 }
 
 TEST_CASE("nonsmooth-newton-log-term", "[solver][nonsmooth]")
@@ -398,6 +405,138 @@ TEST_CASE("nonsmooth-newton-hand-back", "[solver][nonsmooth]")
         REQUIRE(counter(s, "handoff_noise_floor") == 1);
         s.chain_step_result(1, 0.5, E0, E1, g0, g0 / 2, tol);
         CHECK(counter(s, "hand_backs") == 0);
+    }
+}
+
+TEST_CASE("nonsmooth-newton-jacobian-limits", "[solver][nonsmooth]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("nonsmooth-newton-jacobian-logger");
+    logger->set_level(spdlog::level::warn);
+#ifdef POLYSOLVE_WITH_CHOLMOD
+    const json linear_solver_params = R"({"solver": "Eigen::CholmodSupernodalLLT"})"_json;
+#else
+    const json linear_solver_params = R"({"solver": "Eigen::SimplicialLLT"})"_json;
+#endif
+    // the coordinates of the log-term problem as elements with volume ratio J_i(y) = y_i
+    struct JacobianProblem : LogTermProblem
+    {
+        using LogTermProblem::LogTermProblem;
+        long calls = 0;
+        double smooth_min_jacobian(const TVector &x) override
+        {
+            ++calls;
+            return x.minCoeff();
+        }
+        void smooth_min_jacobians(const TVector &x, const TVector &y, const bool want_min, const bool want_ratio, double &min_j, double &min_ratio) override
+        {
+            ++calls;
+            min_j = want_min ? y.minCoeff() : std::numeric_limits<double>::quiet_NaN();
+            min_ratio = want_ratio ? (y.array() / x.array()).minCoeff() : std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+    const auto params = [](const json &jacobian) {
+        return json{{"NonsmoothNewton", {{"jacobian", jacobian}}}, {"Newton", {{"residual_tolerance", 1e-5}}}};
+    };
+    const auto counter = [](NonsmoothNewton &s, const char *name) {
+        json info;
+        s.update_solver_info(info, 1);
+        return info["NonsmoothNewton"][name].get<long>();
+    };
+    // one outer iteration at x: the accepted point of the path (x itself if the path failed)
+    const auto try_outer = [](Problem &p, NonsmoothNewton &s, const Problem::TVector &x, bool &took) {
+        p.solution_changed(x);
+        Problem::TVector g, d, step;
+        p.gradient(x, g);
+        REQUIRE(s.compute_update_direction(p, x, g, d));
+        took = s.take_step(p, x, p.value(x), g, d, step);
+        return took ? Problem::TVector(x + step) : x;
+    };
+    const auto outer = [&](Problem &p, NonsmoothNewton &s, const Problem::TVector &x) {
+        bool took = false;
+        const Problem::TVector y = try_outer(p, s, x, took);
+        REQUIRE(took);
+        return y;
+    };
+
+    // every term active; the minimizer is near 0.012 in every coordinate, so the paths compress strongly
+    const Problem::TVector x0 = Problem::TVector::LinSpaced(4, 0.05, 0.08);
+    JacobianProblem p0(4);
+    NonsmoothNewton free_(params({{"bound", 0.0}, {"floor", 0.0}}), linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+    free_.reset_times();
+    const Problem::TVector y_free = outer(p0, free_, x0);
+    CHECK(p0.calls == 0); // limits off: no callbacks
+    CHECK((y_free.array() / x0.array()).minCoeff() < 0.6);
+    CHECK(counter(free_, "inner_steps") > 2);
+
+    {
+        // bound: the first step would cross it, so it is halved until it holds and the path ends after it
+        JacobianProblem p(4);
+        NonsmoothNewton s(params({{"bound", 0.6}, {"floor", 0.0}}), linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        s.reset_times();
+        const Problem::TVector y = outer(p, s, x0);
+        CHECK((y.array() / x0.array()).minCoeff() >= 0.6);
+        CHECK(counter(s, "jacobian_bound_hits") == 1);
+        CHECK(counter(s, "jacobian_floor_hits") == 0);
+        CHECK(counter(s, "inner_steps") == 1);
+    }
+    {
+        // a lower bound lets the first step through and stops the path at a later step: it ends at the previous point
+        JacobianProblem p(4);
+        NonsmoothNewton s(params({{"bound", 0.15}, {"floor", 0.0}}), linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        s.reset_times();
+        const Problem::TVector y = outer(p, s, x0);
+        CHECK((y.array() / x0.array()).minCoeff() >= 0.15);
+        CHECK(counter(s, "jacobian_bound_hits") == 1);
+        CHECK(counter(s, "inner_steps") >= 1);
+        CHECK(counter(s, "inner_steps") < counter(free_, "inner_steps"));
+    }
+    {
+        // floor: J_ref = min J at the first direction of the solve (0.05), so min J stays >= 0.9 * 0.05
+        JacobianProblem p(4);
+        NonsmoothNewton s(params({{"bound", 0.0}, {"floor", 0.9}}), linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        s.reset_times();
+        const Problem::TVector y = outer(p, s, x0);
+        CHECK(y.minCoeff() >= 0.9 * x0.minCoeff());
+        CHECK(y.minCoeff() < x0.minCoeff());
+        CHECK(counter(s, "jacobian_floor_hits") == 1);
+        CHECK(counter(s, "jacobian_bound_hits") == 0);
+        // an outer iterate already below the floor: no inner point may lower min J further; here every step along
+        // the path does, so the path fails and the Newton step is line searched
+        const Problem::TVector x1 = Problem::TVector::LinSpaced(4, 0.03, 0.05);
+        bool took = true;
+        try_outer(p, s, x1, took);
+        CHECK(!took);
+        CHECK(counter(s, "path_failures") == 1);
+        CHECK(counter(s, "jacobian_floor_hits") == 2);
+        // the reference belongs to the solve: from x1 as the first iterate, the floor is 0.9 * 0.03
+        s.reset_times();
+        const Problem::TVector y2 = outer(p, s, x1);
+        CHECK(y2.minCoeff() >= 0.9 * x1.minCoeff());
+        CHECK(y2.minCoeff() < x1.minCoeff());
+        CHECK(counter(s, "jacobian_floor_hits") == 1);
+    }
+    {
+        // a problem without the callbacks (NaN): no limits, the same path as with the limits off
+        LogTermProblem p(4);
+        NonsmoothNewton s(params({{"bound", 0.6}, {"floor", 0.1}}), linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        s.reset_times();
+        const Problem::TVector y = outer(p, s, x0);
+        CHECK(y == y_free);
+        CHECK(counter(s, "inner_steps") == counter(free_, "inner_steps"));
+        CHECK(counter(s, "jacobian_bound_hits") + counter(s, "jacobian_floor_hits") == 0);
+    }
+    {
+        // a whole solve with both limits converges
+        const json solver_params = {{"solver", "NonsmoothNewton"}, {"max_iterations", 100}, {"grad_norm_tol", 1e-10},
+                                    {"NonsmoothNewton", {{"jacobian", {{"bound", 0.6}, {"floor", 0.1}}}}}};
+        auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+        JacobianProblem p(4);
+        Problem::TVector x = x0;
+        solver->minimize(p, x);
+        Problem::TVector g;
+        p.gradient(x, g);
+        CHECK(g.norm() < 1e-8);
+        CHECK(solver->info()["NonsmoothNewton"]["jacobian_bound_hits"].get<long>() > 0);
     }
 }
 

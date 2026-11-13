@@ -19,6 +19,8 @@ namespace polysolve::nonlinear
     /// subspace that starts with p_N and grows with B^-1 (model residual) columns (one factorization of B), limits each
     /// step by a segment guard, a linearized fraction-to-boundary and max_step_size on the segment, and accepts the end
     /// point of the resulting polyline (or a retraction along it) by its true decrease. Otherwise p_N is line searched.
+    /// Optional limits on the element volume ratios of the inner points (Options::jacobian_bound, jacobian_floor) keep
+    /// the path where the frozen quadratic of s is trusted.
     /// Once the true energy can no longer verify the path (Options::handoff), the rest of the solve is left to the Newton
     /// chain; after a handoff on a small gradient, a slow chain step hands the iterations back (Options::hand_back).
     /// Without a split (has_nonsmooth_term() false) the direction is the plain Newton direction.
@@ -55,6 +57,14 @@ namespace polysolve::nonlinear
             bool hand_back = false;
             double hand_back_energy = 100;
             double hand_back_contraction = 10;
+            /// Jacobian limits at the end point y of every inner step, from Problem::smooth_min_jacobian(s) (not applied
+            /// where they give NaN). Bound: every element keeps J_e(y) >= jacobian_bound * J_e(x), x the outer iterate.
+            /// Floor: min_e J_e(y) >= jacobian_floor * J_ref, or >= min_e J_e(x) where x is already below that; J_ref is
+            /// min_e J_e at the first iterate of the solve whose direction request this strategy does not decline by the
+            /// handoff (and where the problem gives a finite value). A later step that violates one ends the path at the
+            /// previous point; a violating first step is halved until it holds and then ends the path. 0 = off.
+            double jacobian_bound = 0;
+            double jacobian_floor = 0;
 
             // internal switches (debug block) used by the strategy
             bool dedupe = true;        ///< true energy at a trial point reuses the nonsmooth state rebuilt there

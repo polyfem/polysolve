@@ -83,6 +83,12 @@ namespace polysolve::nonlinear
             o.hand_back_energy = value_or(h, "energy", o.hand_back_energy);
             o.hand_back_contraction = value_or(h, "contraction", o.hand_back_contraction);
         }
+        if (p.is_object() && p.contains("jacobian"))
+        {
+            const json &j = p["jacobian"];
+            o.jacobian_bound = value_or(j, "bound", o.jacobian_bound);
+            o.jacobian_floor = value_or(j, "floor", o.jacobian_floor);
+        }
         if (p.is_object() && p.contains("debug"))
         {
             const json &d = p["debug"];
@@ -108,6 +114,10 @@ namespace polysolve::nonlinear
         if (!(o.hand_back_energy >= 0) || !(o.hand_back_contraction >= 1)
             || !std::isfinite(o.hand_back_energy) || !std::isfinite(o.hand_back_contraction))
             throw std::runtime_error("NonsmoothNewton: hand_back/energy must be finite and >= 0, hand_back/contraction finite and >= 1");
+        if (!(o.jacobian_bound >= 0 && o.jacobian_bound < 1))
+            throw std::runtime_error("NonsmoothNewton: jacobian/bound must be in [0, 1), got " + std::to_string(o.jacobian_bound));
+        if (!(o.jacobian_floor >= 0) || !std::isfinite(o.jacobian_floor))
+            throw std::runtime_error("NonsmoothNewton: jacobian/floor must be finite and >= 0");
         return o;
     }
 
@@ -122,6 +132,7 @@ namespace polysolve::nonlinear
             long handoff_noise = 0, handoff_grad = 0; ///< handoffs after a noise-floor / resolution stop, on a small gradient
             long handoff_iters = 0;                   ///< direction requests declined after the handoff (each goes to the Newton chain)
             long hand_backs = 0;                      ///< iterations handed back by Options::hand_back
+            long jacobian_floor_hits = 0, jacobian_bound_hits = 0; ///< paths ended or first steps shortened by the Jacobian floor / bound
         };
 
         /// outcome of the last take_step that went to the line search (undone if the line search fails)
@@ -198,6 +209,9 @@ namespace polysolve::nonlinear
             gradient ///< on a small gradient
         } handoff_kind = Handoff::none; ///< the last handoff of this solve
         bool no_grad_handoff = false;   ///< after a hand-back: no handoff on a small gradient for the rest of this solve
+        double j_ref = NaN;             ///< Jacobian floor: min J at the first iterate of this solve with a computed direction
+        double min_j_x = NaN;           ///< Jacobian floor: min J at the current outer iterate
+        bool j_floor_missing = false, j_bound_missing = false; ///< the missing Jacobians were reported in this solve
 
         // per direction
         bool use_B = false;
@@ -298,6 +312,33 @@ namespace polysolve::nonlinear
                 --st.active_iters;
             st.inner -= pending.inner;
             pending = Pending();
+        }
+
+        /// A Jacobian limit is on but the problem gives NaN for it: reported once per solve.
+        void jacobian_missing(bool &reported, const char *limit, const char *callback)
+        {
+            if (reported)
+                return;
+            reported = true;
+            logger.debug("[NonsmoothNewton] the Jacobian {} is not applied where Problem::{} gives NaN (reported once per solve)", limit, callback);
+        }
+
+        /// The Jacobian limits at the end point y of an inner step from the outer iterate x: 0 if both hold, 1 if y is
+        /// below the floor jfloor (-inf: off), 2 if an element's volume ratio to x is below the bound.
+        int jacobian_violation(Problem &p, const Vec &x, const Vec &y, const double jfloor)
+        {
+            double min_j = NaN, min_ratio = NaN; // both from one sweep over the elements
+            p.smooth_min_jacobians(x, y, jfloor > -INFINITY, opts.jacobian_bound > 0, min_j, min_ratio);
+            if (jfloor > -INFINITY && !(min_j >= jfloor))
+                return 1;
+            if (opts.jacobian_bound > 0)
+            {
+                if (!std::isfinite(min_ratio))
+                    jacobian_missing(j_bound_missing, "bound", "smooth_min_jacobians");
+                else if (min_ratio < opts.jacobian_bound)
+                    return 2;
+            }
+            return 0;
         }
 
         // ------------------------------------------------------------------------------------------------------ direction
@@ -501,6 +542,11 @@ namespace polysolve::nonlinear
             const int col_cap = opts.max_columns;
             Model M;
             M.init(n, cap);
+            // Jacobian floor of this outer iteration (-inf: off): jacobian_floor * J_ref, or min J at x where x is below it
+            double jfloor = -INFINITY;
+            if (opts.jacobian_floor > 0 && j_ref > 0 && std::isfinite(min_j_x))
+                jfloor = min_j_x >= opts.jacobian_floor * j_ref ? opts.jacobian_floor * j_ref : min_j_x;
+            bool j_end = false; // a Jacobian limit shortened the first step: the path ends with it
 
             const double npn = mnorm2(pN);
             double seg_cap = INFINITY;
@@ -613,6 +659,36 @@ namespace polysolve::nonlinear
                 }
                 if (!found)
                     break; // Armijo failure
+                // Jacobian limits at the end point: a later step that violates one is not taken (the path ends at the
+                // previous point); a first step is halved further until the limits and the Armijo condition hold, and
+                // the path ends after it
+                const int jv = jfloor > -INFINITY || opts.jacobian_bound > 0 ? jacobian_violation(p, x, ctrial.y, jfloor) : 0;
+                if (jv != 0)
+                {
+                    ++(jv == 1 ? st.jacobian_floor_hits : st.jacobian_bound_hits);
+                    if (pts.size() > 1)
+                        break;
+                    bool held = false;
+                    for (int h = 0; h < 40; ++h)
+                    {
+                        alpha *= 0.5;
+                        ztrial = z;
+                        ztrial.head(k) = zk + alpha * dz;
+                        const Vec y = x + M.Q.leftCols(k) * ztrial.head(k);
+                        ctrial = eval(p, y, false);
+                        if (!std::isfinite(ctrial.E) || jacobian_violation(p, x, y, jfloor) != 0)
+                            continue;
+                        mtrial = model(M, ztrial, ctrial, false);
+                        if (mtrial.m <= m_cur + 1e-4 * alpha * slope + 32 * EPS * (mtrial.sumabs + me.sumabs))
+                        {
+                            held = true;
+                            break;
+                        }
+                    }
+                    if (!held)
+                        break;
+                    j_end = true;
+                }
                 const double dec = m_cur - mtrial.m;
                 if (dec <= 32 * EPS * (mtrial.sumabs + me.sumabs) + e_res)
                 {
@@ -632,6 +708,8 @@ namespace polysolve::nonlinear
                 // derivatives at the accepted point (reuses the state of the last trial)
                 cstate = eval(p, ctrial.y, true, &ctrial);
                 seg.end();
+                if (j_end)
+                    break; // the first step shortened by a Jacobian limit ends the path
 
                 // ---- new column from the model residual r = grad m(p) - g - B p ----
                 if (M.k < col_cap)
@@ -767,6 +845,15 @@ namespace polysolve::nonlinear
             return false;
         }
         m.init_minimize(objFunc);
+        // Jacobian floor: min J at x; its first value in the solve is the reference J_ref
+        if (opts_.jacobian_floor > 0)
+        {
+            m.min_j_x = objFunc.smooth_min_jacobian(x);
+            if (!std::isfinite(m.j_ref))
+                m.j_ref = m.min_j_x;
+            if (!std::isfinite(m.min_j_x))
+                m.jacobian_missing(m.j_floor_missing, "floor", "smooth_min_jacobian");
+        }
         bool ok = false;
         try
         {
@@ -862,6 +949,9 @@ namespace polysolve::nonlinear
         impl_->handing_off = false;
         impl_->handoff_kind = Impl::Handoff::none;
         impl_->no_grad_handoff = false;
+        impl_->j_ref = NaN;
+        impl_->min_j_x = NaN;
+        impl_->j_floor_missing = impl_->j_bound_missing = false;
     }
 
     void NonsmoothNewton::update_solver_info(json &solver_info, const double per_iteration)
@@ -887,6 +977,8 @@ namespace polysolve::nonlinear
             {"handoff_noise_floor", s.handoff_noise},
             {"handoff_grad_norm", s.handoff_grad},
             {"handoff_iterations", s.handoff_iters},
-            {"hand_backs", s.hand_backs}};
+            {"hand_backs", s.hand_backs},
+            {"jacobian_floor_hits", s.jacobian_floor_hits},
+            {"jacobian_bound_hits", s.jacobian_bound_hits}};
     }
 } // namespace polysolve::nonlinear

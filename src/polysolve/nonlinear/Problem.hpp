@@ -6,6 +6,7 @@
 #include "PostStepData.hpp"
 
 #include <array>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -164,6 +165,23 @@ namespace polysolve::nonlinear
         {
             not_supported("smooth_valid_fraction");
             return 0;
+        }
+
+        /// @brief Optional: smallest volume ratio J = det F (deformation gradient relative to the rest configuration) over
+        /// the elements of the smooth part at x; NaN if not available (the default). Must not change the state of the
+        /// nonsmooth term.
+        virtual double smooth_min_jacobian(const TVector &x) { return std::numeric_limits<double>::quiet_NaN(); }
+
+        /// @brief Optional: in one sweep over the elements of the smooth part, the smallest J at y (if want_min; as
+        /// smooth_min_jacobian(y)) and the smallest ratio J_e(y) / J_e(x) of an element's volume ratio at y to its value
+        /// at x (if want_ratio); NaN where not requested or not available. The default gives smooth_min_jacobian(y) and
+        /// no ratio. Must not change the state of the nonsmooth term.
+        /// @param x Current iterate of the solver (the problem may cache data anchored there).
+        virtual void smooth_min_jacobians(const TVector &x, const TVector &y, const bool want_min, const bool want_ratio,
+                                          double &min_j, double &min_ratio)
+        {
+            min_j = want_min ? smooth_min_jacobian(y) : std::numeric_limits<double>::quiet_NaN();
+            min_ratio = std::numeric_limits<double>::quiet_NaN();
         }
 
         /// @brief Diagonal of the metric used to measure steps (e.g. a lumped mass).

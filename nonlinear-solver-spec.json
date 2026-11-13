@@ -235,6 +235,7 @@
             "handoff",
             "resolution",
             "hand_back",
+            "jacobian",
             "guard",
             "debug"
         ],
@@ -324,6 +325,31 @@
         "type": "float",
         "min": 1,
         "doc": "Gradient norm reduction a chain step must reach not to count as slow."
+    },
+    {
+        "pointer": "/NonsmoothNewton/jacobian",
+        "default": null,
+        "type": "object",
+        "optional": [
+            "bound",
+            "floor"
+        ],
+        "doc": "Limits on the element volume ratios J = det F of the smooth part at the end point y of every inner step (after its Armijo test), checked in one sweep over the elements through Problem::smooth_min_jacobians. They keep the path where the frozen quadratic of the smooth part is trusted: for an energy term -log J, once an outer iteration needs an element compressed below half its volume, the minimizer of the element's quadratic model is an inverted configuration. If a step after the first violates a limit, the path ends at the previous point; if the first step does, it is halved further (at most 40 times) until the limits and the Armijo test hold, and the path ends after it (no such point: no inner step, the Newton step is line searched). A limit is not applied where the problem gives NaN (the defaults of Problem::smooth_min_jacobian(s)); that is reported once per solve at debug level."
+    },
+    {
+        "pointer": "/NonsmoothNewton/jacobian/bound",
+        "default": 0,
+        "type": "float",
+        "min": 0,
+        "max": 0.99,
+        "doc": "Every element keeps J_e(y) >= bound * J_e(x), x the outer iterate (0 = off)."
+    },
+    {
+        "pointer": "/NonsmoothNewton/jacobian/floor",
+        "default": 0,
+        "type": "float",
+        "min": 0,
+        "doc": "The smallest J over the elements stays >= floor * J_ref, or >= its value at the outer iterate where that is already lower (0 = off). J_ref is the smallest J at the first iterate of the solve whose direction request NonsmoothNewton does not decline by the handoff (and where the problem gives a finite value); if the solve starts below the gradient threshold of the handoff, that is the first iterate after a hand-back, not the start of the solve."
     },
     {
         "pointer": "/NonsmoothNewton/guard",

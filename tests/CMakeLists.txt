@@ -6,6 +6,7 @@ set(test_sources
 	main.cpp
 	test_linear_solver.cpp
 	test_nonlinear_solver.cpp
+	test_nonsmooth_newton.cpp
 	test_json.cpp
 )
 add_executable(unit_tests ${test_sources})
@@ -28,6 +29,11 @@ endif()
 
 if(POLYSOLVE_WITH_AMGCL)
     target_compile_definitions(unit_tests PRIVATE -DPOLYSOLVE_WITH_AMGCL)
+endif()
+
+if(POLYSOLVE_WITH_TBB)
+    target_link_libraries(unit_tests PRIVATE TBB::tbb)
+    target_compile_definitions(unit_tests PRIVATE POLYSOLVE_WITH_TBB)
 endif()
 
 include(polyfem-data)

@@ -8,6 +8,7 @@
 #include <spdlog/fmt/bundled/color.h>
 #endif
 
+#include <algorithm>
 #include <cmath>
 
 namespace polysolve::nonlinear
@@ -196,8 +197,7 @@ namespace polysolve::nonlinear
             if (block_mapping.size() > 0)
                 linear_solver->set_block_mapping(block_mapping);
 
-            // TODO: get the correct size
-            linear_solver->analyze_pattern(hessian, hessian.rows());
+            analyze_pattern(hessian);
 
             try
             {
@@ -222,6 +222,33 @@ namespace polysolve::nonlinear
         internal_solver_info.push_back(info);
 
         return residual;
+    }
+
+    void Newton::analyze_pattern(const StiffnessMatrix &hessian)
+    {
+        // The analysis of CHOLMOD and of Eigen's simplicial factorizations (fill-reducing ordering, symbolic
+        // factorization) depends on the sparsity pattern alone. It stays valid while the Hessian keeps its pattern, also
+        // after a failed numeric factorization, so the numeric factorization alone gives the same factor. Other solvers
+        // may prepare more in analyze_pattern and always redo it.
+        const std::string ls = linear_solver->name();
+        const bool pattern_only = ls == "Eigen::CholmodSupernodalLLT" || ls == "Eigen::SimplicialLLT" || ls == "Eigen::SimplicialLDLT";
+        if (pattern_only && pattern_ok && hessian.isCompressed()
+            && hessian.rows() == pattern_rows && hessian.cols() == pattern_rows
+            && size_t(hessian.nonZeros()) == pattern_inner.size()
+            && std::equal(pattern_outer.begin(), pattern_outer.end(), hessian.outerIndexPtr())
+            && std::equal(pattern_inner.begin(), pattern_inner.end(), hessian.innerIndexPtr()))
+            return;
+
+        pattern_ok = false;
+        // TODO: get the correct size
+        linear_solver->analyze_pattern(hessian, hessian.rows());
+        if (pattern_only && hessian.isCompressed())
+        {
+            pattern_outer.assign(hessian.outerIndexPtr(), hessian.outerIndexPtr() + hessian.outerSize() + 1);
+            pattern_inner.assign(hessian.innerIndexPtr(), hessian.innerIndexPtr() + hessian.nonZeros());
+            pattern_rows = hessian.rows();
+            pattern_ok = true;
+        }
     }
 
     double Newton::solve_dense_linear_system(Problem &objFunc,

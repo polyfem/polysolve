@@ -18,6 +18,7 @@
 #endif
 
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <vector>
 
@@ -640,4 +641,94 @@ TEST_CASE("nonlinear-chain-step-result", "[solver][nonsmooth]")
     }
     CHECK(c.back().grad_norm_after <= c.back().grad_tol);
     CHECK(c.back().energy_after == p.value(x));
+}
+
+TEST_CASE("newton-analysis-reuse", "[solver][newton]")
+{
+    // E(x) = 1/2 x^T K x - w sum_i cos(x_i) with K tridiagonal (2, -0.5): the Hessian K + w diag(cos x_i) has the same
+    // pattern everywhere and is indefinite where some cos x_i is close to -1
+    class WavyProblem : public Problem
+    {
+    public:
+        explicit WavyProblem(const double w) : w_(w) {}
+        using Problem::hessian;
+        double value(const TVector &x) override
+        {
+            return 0.5 * x.dot(K(x.size()) * x) - w_ * x.array().cos().sum();
+        }
+        void gradient(const TVector &x, TVector &g) override
+        {
+            g = K(x.size()) * x;
+            g.array() += w_ * x.array().sin();
+        }
+        void hessian(const TVector &x, THessian &h) override
+        {
+            h = K(x.size());
+            for (int i = 0; i < x.size(); ++i)
+                h.coeffRef(i, i) += w_ * std::cos(x[i]);
+            h.makeCompressed();
+        }
+
+    private:
+        static THessian K(const Eigen::Index n)
+        {
+            std::vector<Eigen::Triplet<double>> t;
+            for (int i = 0; i < n; ++i)
+            {
+                t.emplace_back(i, i, 2.0);
+                if (i + 1 < n)
+                {
+                    t.emplace_back(i, i + 1, -0.5);
+                    t.emplace_back(i + 1, i, -0.5);
+                }
+            }
+            THessian k(n, n);
+            k.setFromTriplets(t.begin(), t.end());
+            return k;
+        }
+        const double w_;
+    };
+
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("newton-analysis-reuse-logger");
+    logger->set_level(spdlog::level::warn);
+    const json params = {{"Newton", {{"residual_tolerance", 1e-5}}}};
+#ifdef POLYSOLVE_WITH_CHOLMOD
+    const std::vector<std::string> solvers = {"Eigen::CholmodSupernodalLLT", "Eigen::SimplicialLLT", "Eigen::SimplicialLDLT"};
+#else
+    const std::vector<std::string> solvers = {"Eigen::SimplicialLLT", "Eigen::SimplicialLDLT"};
+#endif
+
+    const int n = 50;
+    WavyProblem p(3.0);
+    const Problem::TVector xa = Problem::TVector::Constant(n, 0.3), xb = Problem::TVector::LinSpaced(n, -0.5, 0.5);
+    Problem::TVector bad = xa; // w cos(pi) = -3 makes the Hessian indefinite
+    bad[n / 2] = std::acos(-1.0);
+    const std::vector<const Problem::TVector *> points = {&xa, &bad, &xb, &bad, &xa, &xb};
+    for (const std::string &ls : solvers)
+    {
+        const json linear_solver_params = {{"solver", ls}};
+        // one strategy that keeps its analysis over all points (after a failed factorization too) against a new strategy
+        // at every point: the same directions bit for bit
+        Newton reused(true, params, linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+        int n_ok = 0;
+        for (const Problem::TVector *x : points)
+        {
+            // the strategy writes the direction into a vector of the problem's size (as Solver::minimize passes it)
+            Problem::TVector g, d = Problem::TVector::Zero(n), d_new = Problem::TVector::Zero(n);
+            p.gradient(*x, g);
+            const bool ok = reused.compute_update_direction(p, *x, g, d);
+            Newton fresh(true, params, linear_solver_params, 1, *logger, NormType::EUCLIDEAN);
+            const bool ok_new = fresh.compute_update_direction(p, *x, g, d_new);
+            CHECK(ok == ok_new);
+            if (ls != "Eigen::SimplicialLDLT") // LDLT factors an indefinite matrix
+                CHECK(ok == (x != &bad));
+            if (ok && ok_new)
+            {
+                ++n_ok;
+                REQUIRE(d.size() == d_new.size());
+                CHECK(std::memcmp(d.data(), d_new.data(), sizeof(double) * d.size()) == 0);
+            }
+        }
+        CHECK(n_ok >= 4);
+    }
 }

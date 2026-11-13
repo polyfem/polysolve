@@ -5,6 +5,8 @@
 
 #include <polysolve/linear/Solver.hpp>
 
+#include <vector>
+
 namespace polysolve::nonlinear
 {
     class Newton : public DescentStrategy
@@ -50,6 +52,10 @@ namespace polysolve::nonlinear
                                          const TVector &x, const TVector &grad,
                                          TVector &direction);
 
+        /// @brief Symbolic analysis of the sparse Hessian, skipped when the analysis of the linear solver depends on the
+        /// sparsity pattern alone and the Hessian has the pattern of the last analysis
+        void analyze_pattern(const StiffnessMatrix &hessian);
+
         json internal_solver_info = json::array();
 
         const bool is_sparse;
@@ -58,6 +64,10 @@ namespace polysolve::nonlinear
         const NormType norm_type;
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
+        /// pattern of the last symbolic analysis (pattern_ok: reusable for a Hessian with this pattern)
+        std::vector<StiffnessMatrix::StorageIndex> pattern_outer, pattern_inner;
+        Eigen::Index pattern_rows = -1;
+        bool pattern_ok = false;
 
         double assembly_time;
         double inverting_time;

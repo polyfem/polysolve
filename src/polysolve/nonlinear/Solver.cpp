@@ -262,6 +262,8 @@ namespace polysolve::nonlinear
 
         m_stop.fDeltaCount = solver_params["advanced"]["f_delta_step_tol"];
 
+        m_track_info = solver_params["advanced"]["track_info"];
+
         m_descent_strategy = 0;
 
         m_norm_type = solver_params["norm_type"];
@@ -293,6 +295,7 @@ namespace polysolve::nonlinear
         solver_info["line_search"] = params["line_search"]["method"];
         m_line_search->use_grad_norm_tol = params["line_search"]["use_grad_norm_tol"];
         m_line_search->norm_type = params["norm_type"];
+        m_line_search->track_info = m_track_info;
     }
 
     void Solver::minimize(Problem &objFunc, TVector &x)
@@ -314,18 +317,22 @@ namespace polysolve::nonlinear
         // Set these to nan to indicate they have not been computed yet
         double old_energy = NaN;
         {
-            POLYSOLVE_SCOPED_STOPWATCH("constraint set update", constraint_set_update_time, m_logger);
+            POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "constraint set update", constraint_set_update_time, m_logger);
             objFunc.solution_changed(x);
         }
 
         StopWatch stop_watch("nonlinear solver", total_time, m_logger);
         stop_watch.start();
 
-        m_logger.debug(
-            "Starting {} with {} solve {}={:g} (stopping criteria: {})",
-            descent_strategy_name(), m_line_search->name(), log::f0(), objFunc(x), m_stop_rescaled.print_message());
+        // The arguments of a log call are evaluated even when the level is off, and these ones
+        // evaluate the energy and format the criteria.
+        if (m_logger.should_log(spdlog::level::debug))
+            m_logger.debug(
+                "Starting {} with {} solve {}={:g} (stopping criteria: {})",
+                descent_strategy_name(), m_line_search->name(), log::f0(), objFunc(x), m_stop_rescaled.print_message());
 
-        update_solver_info(objFunc(x));
+        if (m_track_info)
+            update_solver_info(objFunc(x));
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
         double initial_grad_norm;
@@ -357,7 +364,7 @@ namespace polysolve::nonlinear
 
             double energy;
             {
-                POLYSOLVE_SCOPED_STOPWATCH("compute objective function", obj_fun_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "compute objective function", obj_fun_time, m_logger);
                 energy = objFunc(x);
             }
             m_current.energy = energy;
@@ -373,12 +380,12 @@ namespace polysolve::nonlinear
 
             // --- Gradient ----------------------------------------------------
             {
-                POLYSOLVE_SCOPED_STOPWATCH("compute gradient", grad_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "compute gradient", grad_time, m_logger);
                 objFunc.gradient(x, grad);
             }
 
             {
-                POLYSOLVE_SCOPED_STOPWATCH("verify gradient", grad_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "verify gradient", grad_time, m_logger);
                 verify_gradient(objFunc, x, grad);
             }
 
@@ -412,7 +419,7 @@ namespace polysolve::nonlinear
 
             bool update_direction_successful;
             {
-                POLYSOLVE_SCOPED_STOPWATCH("compute update direction", update_direction_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "compute update direction", update_direction_time, m_logger);
                 update_direction_successful = compute_update_direction(objFunc, x, grad, delta_x);
             }
 
@@ -554,15 +561,16 @@ namespace polysolve::nonlinear
 
             // --- Variable update ---------------------------------------------
 
-            m_logger.trace(
-                "[{}][{}] pre LS iter={:d} f={:g} {}={:g}",
-                descent_strategy_name(), m_line_search->name(),
-                m_current.iterations, energy, log::norm(log::grad("f")), m_current.gradNorm);
+            if (m_logger.should_log(spdlog::level::trace))
+                m_logger.trace(
+                    "[{}][{}] pre LS iter={:d} f={:g} {}={:g}",
+                    descent_strategy_name(), m_line_search->name(),
+                    m_current.iterations, energy, log::norm(log::grad("f")), m_current.gradNorm);
 
             // Perform a line_search to compute step scale
             double rate;
             {
-                POLYSOLVE_SCOPED_STOPWATCH("line search", line_search_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "line search", line_search_time, m_logger);
                 rate = m_line_search->line_search(x, delta_x, objFunc);
             }
             m_current.alpha = rate;
@@ -636,7 +644,8 @@ namespace polysolve::nonlinear
             // m_logger.debug("[{}][{}] rate={:g} ‖step‖={:g}",
             //                descent_strategy_name(), m_line_search->name(), rate, step);
 
-            update_solver_info(energy);
+            if (m_track_info)
+                update_solver_info(energy);
             objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
             if (objFunc.stop(x))
@@ -653,9 +662,10 @@ namespace polysolve::nonlinear
                 m_logger.debug("[{}][{}] Iteration callback decided to stop", descent_strategy_name(), m_line_search->name());
             }
 
-            m_logger.debug(
-                "[{}][{}] {} (stopping criteria: {})",
-                descent_strategy_name(), m_line_search->name(), m_current.print_message(), m_stop_rescaled.print_message());
+            if (m_logger.should_log(spdlog::level::debug))
+                m_logger.debug(
+                    "[{}][{}] {} (stopping criteria: {})",
+                    descent_strategy_name(), m_line_search->name(), m_current.print_message(), m_stop_rescaled.print_message());
 
             if (++m_current.iterations >= m_stop_rescaled.iterations)
                 m_status = Status::IterationLimit;
@@ -688,14 +698,18 @@ namespace polysolve::nonlinear
         double tot_time = stop_watch.getElapsedTimeInSec();
         const bool succeeded = m_status == Status::GradNormTolerance || m_status == Status::RelGradNormTolerance
                                || (allow_non_grad_convergence && is_converged_status(m_status));
-        m_logger.log(
-            succeeded ? spdlog::level::info : spdlog::level::err,
-            "[{}][{}] Finished: {} took {:g}s ({}) (stopping criteria: {})",
-            descent_strategy_name(), m_line_search->name(), status_message(m_status), tot_time,
-            m_current.print_message(), m_stop_rescaled.print_message());
+        const auto finished_level = succeeded ? spdlog::level::info : spdlog::level::err;
+        if (m_logger.should_log(finished_level))
+            m_logger.log(
+                finished_level,
+                "[{}][{}] Finished: {} took {:g}s ({}) (stopping criteria: {})",
+                descent_strategy_name(), m_line_search->name(), status_message(m_status), tot_time,
+                m_current.print_message(), m_stop_rescaled.print_message());
 
-        log_times();
-        update_solver_info(objFunc(x));
+        if (m_logger.should_log(spdlog::level::debug))
+            log_times();
+        if (m_track_info)
+            update_solver_info(objFunc(x));
     }
 
     void Solver::reset(const int ndof)
@@ -704,10 +718,13 @@ namespace polysolve::nonlinear
         m_descent_strategy = 0;
         m_status = Status::NotStarted;
 
-        const std::string line_search_name = solver_info["line_search"];
-        solver_info = json();
-        solver_info["line_search"] = line_search_name;
-        solver_info["iterations"] = 0;
+        if (m_track_info)
+        {
+            const std::string line_search_name = solver_info["line_search"];
+            solver_info = json();
+            solver_info["line_search"] = line_search_name;
+            solver_info["iterations"] = 0;
+        }
 
         for (auto &s : m_strategies)
             s->reset(ndof);
@@ -769,6 +786,9 @@ namespace polysolve::nonlinear
 
     void Solver::verify_gradient(Problem &objFunc, const TVector &x, const TVector &grad)
     {
+        if (gradient_fd_strategy == FiniteDiffStrategy::NONE)
+            return; // before evaluating the energy below, which nothing else would use
+
         bool match = false;
         double J = objFunc(x);
 

@@ -80,6 +80,10 @@ namespace polysolve::nonlinear
             const TVector &grad,
             TVector &direction) = 0;
 
+        /// Keep timings and per-iteration info for update_solver_info (set by the Solver from
+        /// /advanced/track_info).
+        bool track_info = true;
+
     protected:
         /// @brief Whether the solver's step-size stopping criteria would accept this direction.
         ///

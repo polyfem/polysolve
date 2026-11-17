@@ -31,7 +31,7 @@ namespace polysolve::nonlinear::line_search
 
             try
             {
-                POLYSOLVE_SCOPED_STOPWATCH("solution changed - constraint set update in LS", constraint_set_update_time, m_logger);
+                POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "solution changed - constraint set update in LS", constraint_set_update_time, m_logger);
                 objFunc.solution_changed(new_x);
             }
             catch (const std::runtime_error &e)
@@ -52,7 +52,8 @@ namespace polysolve::nonlinear::line_search
                 continue;
             }
 
-            m_logger.trace("ls it: {} {}: {}, {}: {}", cur_iter, log::delta("E"), new_energy - old_energy, log::delta("x"), objFunc.step_norm(delta_x, norm_type));
+            if (m_logger.should_log(spdlog::level::trace))
+                m_logger.trace("ls it: {} {}: {}, {}: {}", cur_iter, log::delta("E"), new_energy - old_energy, log::delta("x"), objFunc.step_norm(delta_x, norm_type));
 
             if (criteria(delta_x, objFunc, use_grad_norm, old_energy, old_grad, new_x, new_energy, step_size))
             {

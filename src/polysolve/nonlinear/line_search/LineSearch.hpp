@@ -77,6 +77,8 @@ namespace polysolve::nonlinear::line_search
         /// In gradient-norm mode, also accept a step that decreases the energy.
         bool accept_energy_decrease_in_grad_mode = false;
         NormType norm_type = NormType::EUCLIDEAN;
+        /// Keep timings for update_solver_info (set by the Solver from /advanced/track_info).
+        bool track_info = true;
 
     protected:
         /// @brief Compute step size to use during line search 

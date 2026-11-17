@@ -53,6 +53,15 @@ namespace polysolve::nonlinear::line_search
 
         virtual std::string name() const = 0;
 
+        /// @brief Whether this line search evaluates the energy
+        ///
+        /// Solver::minimize() evaluates the energy at every iterate only when something reads it: this line search,
+        /// the energy-based stopping criterion (f_delta_tol), or the solver info (track_info). Every built-in search
+        /// does, since line_search() starts from the energy at x. A user-defined search that overrides line_search()
+        /// and never calls the energy (one that compares gradients, say) returns false, so that a problem whose energy
+        /// is expensive, or does not exist, is never asked for it.
+        virtual bool uses_energy() const { return true; }
+
         void update_solver_info(json &solver_info, const double per_iteration);
         void reset_times();
         void log_times() const;

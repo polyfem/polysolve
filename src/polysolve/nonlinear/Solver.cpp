@@ -302,12 +302,16 @@ namespace polysolve::nonlinear
         StopWatch stop_watch("nonlinear solver", total_time, m_logger);
         stop_watch.start();
 
+        // We evaluate the energy at every iterate only when something reads it (see LineSearch::uses_energy).
+        const bool needs_energy = m_line_search->uses_energy() || m_stop_rescaled.fDelta > 0 || m_track_info;
+
         // The arguments of a log call are evaluated even when the level is off, and these ones
         // evaluate the energy and format the criteria.
         if (m_logger.should_log(spdlog::level::debug))
             m_logger.debug(
                 "Starting {} with {} solve {}={:g} (stopping criteria: {})",
-                descent_strategy_name(), m_line_search->name(), log::f0(), objFunc(x), m_stop_rescaled.print_message());
+                descent_strategy_name(), m_line_search->name(), log::f0(), needs_energy ? objFunc(x) : NaN,
+                m_stop_rescaled.print_message());
 
         if (m_track_info)
             update_solver_info(objFunc(x));
@@ -322,14 +326,15 @@ namespace polysolve::nonlinear
 
             // --- Energy ------------------------------------------------------
 
-            double energy;
+            double energy = NaN;
+            if (needs_energy)
             {
                 POLYSOLVE_SCOPED_STOPWATCH_IF(m_track_info, "compute objective function", obj_fun_time, m_logger);
                 energy = objFunc(x);
             }
             m_current.energy = energy;
 
-            if (!std::isfinite(energy))
+            if (needs_energy && !std::isfinite(energy))
             {
                 m_status = Status::NanEncountered;
                 log_and_throw_error(m_logger, "[{}][{}] f(x) is nan or inf; stopping", descent_strategy_name(), m_line_search->name());

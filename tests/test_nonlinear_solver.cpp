@@ -932,3 +932,67 @@ TEST_CASE("a null line search is refused", "[solver][line_search]")
     CHECK_THROWS(solver->set_line_search(std::shared_ptr<line_search::LineSearch>()));
     CHECK(solver->line_search() == built_in);
 }
+
+namespace
+{
+    /// QuadraticProblem that counts how often its energy is evaluated.
+    class CountingQuadratic : public QuadraticProblem
+    {
+    public:
+        double value(const TVector &x) override
+        {
+            ++n_values;
+            return QuadraticProblem::value(x);
+        }
+
+        int n_values = 0;
+    };
+
+    /// GradientOnlyArmijo, declaring that it never evaluates the energy.
+    class EnergyFreeArmijo : public GradientOnlyArmijo
+    {
+    public:
+        using GradientOnlyArmijo::GradientOnlyArmijo;
+
+        bool uses_energy() const override { return false; }
+    };
+} // namespace
+
+TEST_CASE("the energy is not evaluated when nothing reads it", "[solver][line_search]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("energy-free-test");
+    logger->set_level(spdlog::level::warn);
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "L-BFGS";
+    solver_params["grad_norm_tol"] = 1e-9;
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    // The solver info reads the energy, so it is off unless a section turns it on.
+    const bool track_info = GENERATE(false, true);
+    solver_params["advanced"]["track_info"] = track_info;
+
+    auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+    const json params = Solver::validate_params(solver_params, *logger);
+
+    CountingQuadratic problem;
+    TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+
+    SECTION("a line search that does not use it")
+    {
+        solver->set_line_search(std::make_shared<EnergyFreeArmijo>(params, *logger));
+        solver->minimize(problem, x);
+        CAPTURE(track_info);
+        if (track_info)
+            CHECK(problem.n_values > 0);
+        else
+            CHECK(problem.n_values == 0);
+    }
+    SECTION("a line search that does")
+    {
+        solver->set_line_search(std::make_shared<GradientOnlyArmijo>(params, *logger));
+        solver->minimize(problem, x);
+        CHECK(problem.n_values > 0);
+    }
+    CHECK((x - problem.solutions()[0]).norm() < 1e-7);
+}

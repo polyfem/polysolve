@@ -163,12 +163,13 @@ namespace polysolve::nonlinear
 
         if (std::isnan(residual) || residual > current_residual_tolerance)
         {
-            m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (‖∇f‖={})",
-                           name(), residual, current_residual_tolerance, objFunc.grad_norm(grad, norm_type));
+            if (m_logger.should_log(spdlog::level::debug))
+                m_logger.debug("[{}] large (or nan) linear solve residual {}>{} (‖∇f‖={})",
+                               name(), residual, current_residual_tolerance, objFunc.grad_norm(grad, norm_type));
 
             return false;
         }
-        else
+        else if (m_logger.should_log(spdlog::level::trace))
         {
             m_logger.trace("linear solve residual {}", residual);
         }
@@ -251,7 +252,8 @@ namespace polysolve::nonlinear
             {
                 linear_solver->analyze_pattern_dense(hessian, hessian.rows());
                 linear_solver->factorize_dense(hessian);
-                linear_solver->solve(-grad, direction);
+                m_neg_grad = -grad;
+                linear_solver->solve(m_neg_grad, direction);
             }
             catch (const std::runtime_error &err)
             {
@@ -263,7 +265,8 @@ namespace polysolve::nonlinear
             }
         }
 
-        const double residual = (hessian * direction + grad).norm(); // H Δx + g = 0
+        m_hessian_direction.noalias() = hessian * direction;
+        const double residual = (m_hessian_direction + grad).norm(); // H Δx + g = 0
 
         if (track_info)
         {

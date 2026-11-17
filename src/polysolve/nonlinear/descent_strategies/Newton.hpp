@@ -59,6 +59,10 @@ namespace polysolve::nonlinear
 
         std::unique_ptr<polysolve::linear::Solver> linear_solver; ///< Linear solver used to solve the linear system
 
+        /// -grad and H * direction in the dense solve, kept so that they are not allocated again
+        /// in every iteration.
+        TVector m_neg_grad, m_hessian_direction;
+
         double assembly_time;
         double inverting_time;
 

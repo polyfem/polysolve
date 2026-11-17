@@ -131,18 +131,9 @@ namespace polysolve::nonlinear
         const NormType norm_type,
         const int dimension)
     {
-        json solver_params = solver_params_in; // mutable copy
-
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        json rules = jse::embed::non_linear_spec::solver_spec::spec();
-        const bool valid_input = jse.verify_json(solver_params, rules);
-
-        if (!valid_input)
-            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
-
-        solver_params = jse.inject_defaults(solver_params, rules);
+        json solver_params = validate_and_inject_defaults(
+            solver_params_in, "nonlinear solver", strict_validation,
+            [] { return jse::embed::non_linear_spec::solver_spec::spec(); }, logger);
 
         auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
 
@@ -270,8 +261,10 @@ namespace polysolve::nonlinear
         // ---------------------------
         reset(x.size()); // place for children to initialize their fields
 
-        TVector grad = TVector::Zero(x.rows());
-        TVector delta_x = TVector::Zero(x.rows());
+        TVector &grad = m_grad;
+        TVector &delta_x = m_delta_x;
+        grad.setZero(x.rows());
+        delta_x.setZero(x.rows());
 
         // Set these to nan to indicate they have not been computed yet
         double old_energy = NaN;
@@ -280,8 +273,12 @@ namespace polysolve::nonlinear
             objFunc.solution_changed(x);
         }
 
-        StopWatch stop_watch("nonlinear solver", total_time, m_logger);
-        stop_watch.start();
+        // The solve's time is read by solver_info, and by the messages at the end (from err down
+        // to trace, the level of the stopwatch's own). Reading the clock is not free when the
+        // solve has a few unknowns.
+        std::optional<StopWatch> stop_watch;
+        if (m_track_info || m_logger.should_log(spdlog::level::err))
+            stop_watch.emplace("nonlinear solver", total_time, m_logger);
 
         // The arguments of a log call are evaluated even when the level is off, and these ones
         // evaluate the energy and format the criteria.
@@ -503,7 +500,8 @@ namespace polysolve::nonlinear
             }
 
             {
-                TVector x1 = x + rate * delta_x;
+                TVector &x1 = m_next_x;
+                x1 = x + rate * delta_x;
                 if (objFunc.after_line_search_custom_operation(x, x1))
                     objFunc.solution_changed(x1);
                 x = x1;
@@ -569,7 +567,8 @@ namespace polysolve::nonlinear
                 m_status = Status::IterationLimit;
         } while (objFunc.callback(m_current, x) && (m_status == Status::Continue));
 
-        stop_watch.stop();
+        if (stop_watch)
+            stop_watch->stop();
 
         // -----------
         // Log results
@@ -580,7 +579,7 @@ namespace polysolve::nonlinear
         if (m_status == Status::NanEncountered)
             log_and_throw_error(m_logger, "[{}][{}] Failed to find minimizer", descent_strategy_name(), m_line_search->name());
 
-        double tot_time = stop_watch.getElapsedTimeInSec();
+        const double tot_time = stop_watch ? stop_watch->getElapsedTimeInSec() : 0;
         const bool succeeded = m_status == Status::GradNormTolerance || m_status == Status::RelGradNormTolerance
                                || (allow_non_grad_convergence && is_converged_status(m_status));
         const auto finished_level = succeeded ? spdlog::level::info : spdlog::level::err;

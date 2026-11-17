@@ -150,19 +150,18 @@ namespace polysolve::linear
     {
         json params = params_in; // mutable copy
 
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        json rules = jse::embed::linear_spec::solver_spec::spec();
-        apply_default_solver(rules);
+        // Picks the solver of an array, or falls back to the default one (with its messages),
+        // before validation.
         select_valid_solver(params, logger);
 
-        const bool valid_input = jse.verify_json(params, rules);
-
-        if (!valid_input)
-            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
-
-        params = jse.inject_defaults(params, rules);
+        params = validate_and_inject_defaults(
+            params, "linear solver", strict_validation,
+            [] {
+                json rules = jse::embed::linear_spec::solver_spec::spec();
+                apply_default_solver(rules);
+                return rules;
+            },
+            logger);
 
         auto res = create(params["solver"], params["precond"]);
         res->set_block_size(dimension);

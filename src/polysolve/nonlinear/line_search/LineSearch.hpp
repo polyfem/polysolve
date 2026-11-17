@@ -103,6 +103,11 @@ namespace polysolve::nonlinear::line_search
         double step_ratio;
         int cur_iter;
 
+        /// The trial point x + step * delta_x, kept from one evaluation to the next so that its
+        /// storage is not allocated again for every trial (a solve of a few unknowns allocates
+        /// little else).
+        TVector m_trial_x;
+
     private:
         /// @brief Compute step size that avoids nan/infinite energy
         /// @param x Current input (n x 1)

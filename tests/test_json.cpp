@@ -1,5 +1,8 @@
 //////////////////////////////////////////////////////////////////////////
 #include <polysolve/JSONUtils.hpp>
+#include <polysolve/Utils.hpp>
+
+#include <jse/jse.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <catch2/catch.hpp>
@@ -96,4 +99,38 @@ TEST_CASE("eigen_to_json", "[json]")
 
     args = C;
     REQUIRE(args.size() == 5);
+}
+
+TEST_CASE("validate_and_inject_defaults", "[json]")
+{
+    const json rules = R"([
+        {"pointer": "/", "type": "object", "optional": ["a", "b"]},
+        {"pointer": "/a", "type": "float", "default": 1.5},
+        {"pointer": "/b", "type": "int", "min": 0, "default": 3}
+    ])"_json;
+    int built = 0;
+    const auto make_rules = [&] { ++built; return rules; };
+    auto logger = spdlog::stdout_color_mt("validate_and_inject_defaults");
+    logger->set_level(spdlog::level::off);
+
+    // The same result as jse, which runs once for the same input and again for another one.
+    const json in = R"({"b": 2})"_json;
+    jse::JSE jse;
+    jse.strict = true;
+    REQUIRE(jse.verify_json(in, rules));
+    const json expected = jse.inject_defaults(in, rules);
+    for (int i = 0; i < 3; ++i)
+        CHECK(validate_and_inject_defaults(in, "test spec", true, make_rules, *logger) == expected);
+    CHECK(built == 1);
+    validate_and_inject_defaults(in, "test spec", false, make_rules, *logger);
+    CHECK(built == 2);
+    // Equal numbers of different types are different inputs, and keep their types.
+    CHECK(validate_and_inject_defaults(R"({"a": 1})"_json, "test spec", true, make_rules, *logger)["a"].is_number_integer());
+    CHECK(validate_and_inject_defaults(R"({"a": 1.0})"_json, "test spec", true, make_rules, *logger)["a"].is_number_float());
+    CHECK(built == 4);
+
+    // An invalid input throws every time: failures are not remembered.
+    for (int i = 0; i < 2; ++i)
+        CHECK_THROWS(validate_and_inject_defaults(R"({"b": -1})"_json, "test spec", true, make_rules, *logger));
+    CHECK(built == 6);
 }

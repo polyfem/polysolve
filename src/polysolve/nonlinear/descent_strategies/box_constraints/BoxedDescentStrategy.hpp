@@ -32,6 +32,6 @@ namespace polysolve::nonlinear
         {
             assert(false);
             return false;
-        };
+        }
     };
 } // namespace polysolve::nonlinear

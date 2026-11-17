@@ -53,12 +53,13 @@ namespace polysolve
 
     void StopWatch::log_msg()
     {
-        const static auto log_fmt_text =
-            fmt::format("[{}] {{}} {{:.3g}}s", fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing"));
+        // The format string is a literal so that fmt can check it at compile time: fmt >= 11 with C++20 rejects a
+        // format string that is not a constant expression.
+        const static std::string tag = fmt::format(fmt::fg(fmt::terminal_color::magenta), "timing");
 
         if (!m_name.empty())
         {
-            m_logger.trace(log_fmt_text, m_name, getElapsedTimeInSec());
+            m_logger.trace("[{}] {} {:.3g}s", tag, m_name, getElapsedTimeInSec());
         }
     }
 

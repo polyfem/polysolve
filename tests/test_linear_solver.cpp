@@ -11,6 +11,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <catch2/catch.hpp>
+#include <algorithm>
 #include <iostream>
 #include <unsupported/Eigen/SparseExtra>
 #include <fstream>
@@ -480,6 +481,59 @@ TEST_CASE("pre_factor", "[solver]")
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         std::cout << s << ": " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "[ms]" << std::endl;
     }
+}
+
+TEST_CASE("uncompressed matrices never give a silently wrong solution", "[solver]")
+{
+    const std::string s = GENERATE("Eigen::SimplicialLDLT", "Eigen::SparseLU", "Eigen::AccelerateLLT", "Eigen::AccelerateLDLT");
+    const auto available = Solver::available_solvers();
+    if (std::find(available.begin(), available.end(), s) == available.end())
+        return; // e.g. the Accelerate solvers only exist on Apple platforms
+
+    // We reserve more room per column than we fill, which is what assembling with insert() or coeffRef() does. Eigen
+    // then leaves unused slots between the columns, i.e. the matrix is not in compressed storage.
+    const int n = 20;
+    StiffnessMatrix A(n, n);
+    A.reserve(Eigen::VectorXi::Constant(n, 8));
+    for (int i = 0; i < n; ++i)
+    {
+        A.insert(i, i) = 4;
+        if (i + 1 < n)
+        {
+            A.insert(i + 1, i) = -1;
+            A.insert(i, i + 1) = -1;
+        }
+    }
+    REQUIRE(!A.isCompressed());
+
+    const Eigen::VectorXd b = Eigen::VectorXd::LinSpaced(n, 1, 2);
+    Eigen::VectorXd x = Eigen::VectorXd::Zero(n);
+
+    auto solver = Solver::create(s, "");
+    INFO("solver: " + s);
+
+    // A solver either handles the matrix as it is or refuses it. The Accelerate solvers refuse, because they cannot
+    // read this storage.
+    bool refused = false;
+    try
+    {
+        solver->analyze_pattern(A, A.rows());
+        solver->factorize(A);
+        solver->solve(b, x);
+    }
+    catch (const std::runtime_error &)
+    {
+        refused = true;
+    }
+    if (!refused)
+        CHECK((A * x - b).norm() < 1e-10);
+
+    // Once compressed, every solver has to solve it.
+    A.makeCompressed();
+    solver->analyze_pattern(A, A.rows());
+    solver->factorize(A);
+    solver->solve(b, x);
+    CHECK((A * x - b).norm() < 1e-10);
 }
 
 TEST_CASE("hypre", "[solver]")

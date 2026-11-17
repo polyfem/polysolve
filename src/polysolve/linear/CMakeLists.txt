@@ -21,10 +21,16 @@ set(SOURCES
 
 if(POLYSOLVE_WITH_CUDA)
     list(APPEND SOURCES
-        GPUHybridSolver.cu
-        GPUHybridSolver.hpp
         cuDSS.hpp
         cuDSS.cpp
+    )
+endif()
+
+# The hybrid solvers precondition with hypre, so they need it to compile.
+if(POLYSOLVE_WITH_CUDA AND POLYSOLVE_WITH_HYPRE)
+    list(APPEND SOURCES
+        GPUHybridSolver.cu
+        GPUHybridSolver.hpp
     )
 endif()
 
@@ -35,7 +41,7 @@ if(POLYSOLVE_WITH_MPI)
     )
 endif()
 
-if(POLYSOLVE_WITH_MPI AND NOT POLYSOLVE_LARGE_INDEX)
+if(POLYSOLVE_WITH_MPI AND POLYSOLVE_WITH_HYPRE AND NOT POLYSOLVE_LARGE_INDEX)
     list(APPEND SOURCES
         CPUHybridSolver.cpp
         CPUHybridSolver.hpp

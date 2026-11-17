@@ -271,12 +271,15 @@ if(POLYSOLVE_WITH_CUDA AND NOT POLYSOLVE_LARGE_INDEX)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CUDSS)
 endif()
 
-if(POLYSOLVE_WITH_CUDA AND NOT POLYSOLVE_LARGE_INDEX)
+# Both hybrid solvers use hypre's BoomerAMG as part of their preconditioner, so we only build them when hypre is
+# enabled. Without this check, turning hypre off while MPI (on by default) or CUDA stays on fails to compile because the
+# hybrid solvers cannot find hypre's headers.
+if(POLYSOLVE_WITH_CUDA AND POLYSOLVE_WITH_HYPRE AND NOT POLYSOLVE_LARGE_INDEX)
   target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_GPU_HYBRID)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_GPU_HYBRID)
 endif()
 
-if(POLYSOLVE_WITH_MPI AND NOT POLYSOLVE_LARGE_INDEX)
+if(POLYSOLVE_WITH_MPI AND POLYSOLVE_WITH_HYPRE AND NOT POLYSOLVE_LARGE_INDEX)
   target_compile_definitions(polysolve PUBLIC POLYSOLVE_WITH_CPU_HYBRID)
   target_compile_definitions(polysolve_linear PUBLIC POLYSOLVE_WITH_CPU_HYBRID)
 endif()

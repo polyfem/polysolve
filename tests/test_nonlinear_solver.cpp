@@ -805,3 +805,130 @@ TEST_CASE("track-info-off", "[solver]")
         }
     }
 }
+
+namespace
+{
+    /// Halves the step until the energy decreases, counting how often the solver asks.
+    class CountingBacktracking : public line_search::LineSearch
+    {
+    public:
+        using line_search::LineSearch::LineSearch;
+
+        std::string name() const override { return "CountingBacktracking"; }
+
+        int n_searches = 0;
+
+    protected:
+        double compute_descent_step_size(
+            const TVector &x, const TVector &delta_x, Problem &objFunc,
+            const bool, const double old_energy, const TVector &, const double starting_step_size) override
+        {
+            ++n_searches;
+            double step_size = starting_step_size;
+            for (; cur_iter < current_max_step_size_iter(); step_size *= step_ratio, ++cur_iter)
+            {
+                if (objFunc(x + step_size * delta_x) < old_energy)
+                    break;
+            }
+            return step_size;
+        }
+    };
+
+    /// Replaces the whole search and never evaluates the energy: a step is accepted when the decrease estimated from
+    /// the gradients at both of its ends, α/2 (g₀ + g₁)⋅Δx, is at least c α g₀⋅Δx.
+    class GradientOnlyArmijo : public line_search::LineSearch
+    {
+    public:
+        using line_search::LineSearch::LineSearch;
+
+        std::string name() const override { return "GradientOnlyArmijo"; }
+
+        double line_search(const TVector &x, const TVector &delta_x, Problem &objFunc) override
+        {
+            ++n_searches;
+            const double c = 0.3;
+
+            TVector grad;
+            objFunc.gradient(x, grad);
+            const double slope = grad.dot(delta_x);
+
+            double step_size = default_init_step_size;
+            for (cur_iter = 0; cur_iter < current_max_step_size_iter(); step_size *= step_ratio, ++cur_iter)
+            {
+                objFunc.gradient(x + step_size * delta_x, grad);
+                if (grad.dot(delta_x) <= (2 * c - 1) * slope)
+                    return step_size;
+            }
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+
+        int n_searches = 0;
+
+    protected:
+        double compute_descent_step_size(
+            const TVector &, const TVector &, Problem &, const bool, const double, const TVector &, const double) override
+        {
+            FAIL("The solver must only call line_search()");
+            return 0;
+        }
+    };
+} // namespace
+
+TEST_CASE("a user-defined line search can be passed to the solver", "[solver][line_search]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("custom-line-search-test");
+    logger->set_level(spdlog::level::warn);
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "L-BFGS";
+    solver_params["grad_norm_tol"] = 1e-9;
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+
+    auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+
+    // A line search reads its settings from the complete parameters, which validate_params() gives us.
+    const json params = Solver::validate_params(solver_params, *logger);
+    CHECK(params["line_search"].contains("step_ratio"));
+
+    QuadraticProblem problem;
+    TestProblem::TVector x = TestProblem::TVector::Zero(problem.size());
+
+    SECTION("implementing compute_descent_step_size")
+    {
+        const auto custom = std::make_shared<CountingBacktracking>(params, *logger);
+        solver->set_line_search(custom);
+        CHECK(solver->line_search() == custom);
+        CHECK(solver->info()["line_search"] == "CountingBacktracking");
+
+        solver->minimize(problem, x);
+
+        CHECK(custom->n_searches > 0);
+        // minimize() resets the solver info, which must keep naming our line search.
+        CHECK(solver->info()["line_search"] == "CountingBacktracking");
+    }
+    SECTION("replacing the whole search")
+    {
+        const auto custom = std::make_shared<GradientOnlyArmijo>(params, *logger);
+        solver->set_line_search(custom);
+
+        solver->minimize(problem, x);
+
+        CHECK(custom->n_searches > 0);
+    }
+    CHECK((x - problem.solutions()[0]).norm() < 1e-7);
+}
+
+TEST_CASE("a null line search is refused", "[solver][line_search]")
+{
+    static std::shared_ptr<spdlog::logger> logger = spdlog::stdout_color_mt("null-line-search-test");
+    logger->set_level(spdlog::level::off);
+
+    json solver_params, linear_solver_params;
+    solver_params["solver"] = "L-BFGS";
+    linear_solver_params["solver"] = "Eigen::SimplicialLDLT";
+    auto solver = Solver::create(solver_params, linear_solver_params, 1, *logger);
+
+    const auto built_in = solver->line_search();
+    CHECK_THROWS(solver->set_line_search(std::shared_ptr<line_search::LineSearch>()));
+    CHECK(solver->line_search() == built_in);
+}

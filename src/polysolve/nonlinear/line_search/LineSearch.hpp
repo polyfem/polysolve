@@ -22,12 +22,19 @@ namespace polysolve::nonlinear::line_search
         LineSearch(const json &params, spdlog::logger &m_logger);
         virtual ~LineSearch() = default;
 
-        /// @brief 
+        /// @brief Find the step size to take along a descent direction
+        ///
+        /// The default shortens the step until the energy is finite and the step is valid for the problem (see
+        /// Problem::max_step_size), and then calls compute_descent_step_size(), which is all most line searches need
+        /// to implement. It evaluates the energy several times along the way. A user-defined line search that should
+        /// not (one that only compares gradients, say) overrides this instead, and can still call
+        /// compute_nan_free_step_size() and compute_max_step_size().
+        ///
         /// @param x Current input vector (n x 1)
         /// @param x_delta Current descent direction (n x 1)
         /// @param objFunc Objective function
-        /// @return 
-        double line_search(
+        /// @return Step size to take, or NaN if no acceptable step size was found
+        virtual double line_search(
             const TVector &x,
             const TVector &x_delta,
             Problem &objFunc);
@@ -103,7 +110,9 @@ namespace polysolve::nonlinear::line_search
         double step_ratio;
         int cur_iter;
 
-    private:
+        /// @brief Step size the search starts from
+        double default_init_step_size;
+
         /// @brief Compute step size that avoids nan/infinite energy
         /// @param x Current input (n x 1)
         /// @param delta_x Current step direction (n x 1)
@@ -129,13 +138,12 @@ namespace polysolve::nonlinear::line_search
             Problem &objFunc,
             const double starting_step_size);
 
+    private:
         double min_step_size;
         int max_step_size_iter;
         double min_step_size_final;
         int max_step_size_iter_final;
 
         bool is_final_strategy;
-
-        double default_init_step_size;
     };
 } // namespace polysolve::nonlinear::line_search

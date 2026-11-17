@@ -131,18 +131,7 @@ namespace polysolve::nonlinear
         const NormType norm_type,
         const int dimension)
     {
-        json solver_params = solver_params_in; // mutable copy
-
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        json rules = jse::embed::non_linear_spec::solver_spec::spec();
-        const bool valid_input = jse.verify_json(solver_params, rules);
-
-        if (!valid_input)
-            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
-
-        solver_params = jse.inject_defaults(solver_params, rules);
+        const json solver_params = validate_params(solver_params_in, logger, strict_validation);
 
         auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
 
@@ -231,6 +220,36 @@ namespace polysolve::nonlinear
 
         gradient_fd_strategy = solver_params["advanced"]["apply_gradient_fd"];
         gradient_fd_eps = solver_params["advanced"]["gradient_fd_eps"];
+    }
+
+    json Solver::validate_params(
+        const json &solver_params,
+        spdlog::logger &logger,
+        const bool strict_validation)
+    {
+        jse::JSE jse;
+
+        jse.strict = strict_validation;
+        const json rules = jse::embed::non_linear_spec::solver_spec::spec();
+        const bool valid_input = jse.verify_json(solver_params, rules);
+
+        if (!valid_input)
+            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
+
+        return jse.inject_defaults(solver_params, rules);
+    }
+
+    void Solver::set_line_search(const std::shared_ptr<line_search::LineSearch> &line_search)
+    {
+        if (line_search == nullptr)
+        {
+            log_and_throw_error(m_logger, "Solver::set_line_search: the line search is null");
+        }
+
+        m_line_search = line_search;
+        solver_info["line_search"] = m_line_search->name();
+        m_line_search->norm_type = m_norm_type;
+        m_line_search->track_info = m_track_info;
     }
 
     void Solver::set_strategies_iterations(const json &solver_params)

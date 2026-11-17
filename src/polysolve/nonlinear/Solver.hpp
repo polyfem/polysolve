@@ -43,6 +43,21 @@ namespace polysolve::nonlinear
             const NormType norm_type = NormType::EUCLIDEAN,
             const int dimension = 1);
 
+        /// @brief Check the parameters against the solver spec and fill in the defaults
+        ///
+        /// create() does this for the solver it builds. A user-defined LineSearch reads its settings (step ratio,
+        /// iteration limits, ...) from the complete parameters in its constructor, so this is how we get them for a
+        /// line search we build ourselves and pass to set_line_search().
+        ///
+        /// @param solver_params JSON of solver parameters
+        /// @param logger
+        /// @param strict_validation If true, reject parameters that are not in the spec
+        /// @return The parameters with every default filled in
+        static json validate_params(
+            const json &solver_params,
+            spdlog::logger &logger,
+            const bool strict_validation = true);
+
         /// @brief List available solvers
         static std::vector<std::string> available_solvers();
 
@@ -81,6 +96,17 @@ namespace polysolve::nonlinear
 
         void set_strategies_iterations(const json &solver_params);
         void set_line_search(const json &params);
+
+        /// @brief Use the given line search in place of the one named in the parameters
+        ///
+        /// The parameters can only name the line searches PolySolve implements, so this is how we get a user-defined
+        /// LineSearch into a solver. Build it from validate_params(), which has the settings its constructor reads.
+        ///
+        /// The solver sets the line search's norm_type to its own, so both measure with the same norm. The caller
+        /// sets use_grad_norm_tol, which only the built-in searches read.
+        ///
+        /// @param line_search Line search to use (not null)
+        void set_line_search(const std::shared_ptr<line_search::LineSearch> &line_search);
         const json &info() const { return solver_info; }
 
         void set_iteration_callback(std::function<bool(const Criteria &)> callback) { m_iteration_callback = callback; }

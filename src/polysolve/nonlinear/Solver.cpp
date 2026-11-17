@@ -294,8 +294,9 @@ namespace polysolve::nonlinear
             update_solver_info(objFunc(x));
         objFunc.post_step(PostStepData(m_current.iterations, solver_info, x, grad));
 
-        double initial_grad_norm;
-        double initial_delta_x_norm;
+        // Both are set in the first iteration, before anything reads them.
+        double initial_grad_norm = NaN;
+        double initial_delta_x_norm = NaN;
 
         do
         {

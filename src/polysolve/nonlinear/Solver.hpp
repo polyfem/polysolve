@@ -205,6 +205,10 @@ namespace polysolve::nonlinear
         /// @brief Log time taken in different phases of the solve
         void log_times() const;
 
+        /// The gradient, the update direction and the next iterate of minimize(), kept so that a
+        /// solve of a few unknowns does not allocate them again every time.
+        TVector m_grad, m_delta_x, m_next_x;
+
         json solver_info;
         /// /advanced/track_info: keep solver_info and the timings up to date. Off, info() and the
         /// PostStepData's info are not updated, and nothing is timed.

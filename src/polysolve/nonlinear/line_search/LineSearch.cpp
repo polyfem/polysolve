@@ -124,13 +124,14 @@ namespace polysolve::nonlinear::line_search
         // -----------------------------
         {
             POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "Line Search Begin - CCD broad-phase", broad_phase_ccd_time, m_logger);
-            TVector new_x = x + step_size * delta_x;
-            objFunc.line_search_begin(x, new_x);
+            m_trial_x = x + step_size * delta_x;
+            objFunc.line_search_begin(x, m_trial_x);
         }
 
         {
             POLYSOLVE_SCOPED_STOPWATCH_IF(track_info, "CCD narrow-phase", narrow_phase_ccd_time, m_logger);
-            m_logger.trace("Performing narrow-phase CCD");
+            if (m_logger.should_log(spdlog::level::trace))
+                m_logger.trace("Performing narrow-phase CCD");
             step_size = compute_max_step_size(x, delta_x, objFunc, step_size);
             if (std::isnan(step_size))
                 return NaN;
@@ -158,7 +159,8 @@ namespace polysolve::nonlinear::line_search
             }
         }
 
-        const double cur_energy = objFunc(x + step_size * delta_x);
+        m_trial_x = x + step_size * delta_x;
+        const double cur_energy = objFunc(m_trial_x);
 
         const double descent_step_size = step_size;
 
@@ -182,9 +184,10 @@ namespace polysolve::nonlinear::line_search
             objFunc.line_search_end();
         }
 
-        m_logger.debug(
-            "Line search finished (nan_free_step_size={} collision_free_step_size={} descent_step_size={} final_step_size={})",
-            nan_free_step_size, collision_free_step_size, descent_step_size, step_size);
+        if (m_logger.should_log(spdlog::level::debug))
+            m_logger.debug(
+                "Line search finished (nan_free_step_size={} collision_free_step_size={} descent_step_size={} final_step_size={})",
+                nan_free_step_size, collision_free_step_size, descent_step_size, step_size);
 
         return step_size;
     }
@@ -197,7 +200,8 @@ namespace polysolve::nonlinear::line_search
         const double rate)
     {
         double step_size = starting_step_size;
-        TVector new_x = x + step_size * delta_x;
+        TVector &new_x = m_trial_x;
+        new_x = x + step_size * delta_x;
 
         // Find step that does not result in nan or infinite energy
         while (step_size > current_min_step_size() && cur_iter < current_max_step_size_iter())
@@ -233,10 +237,10 @@ namespace polysolve::nonlinear::line_search
         const double starting_step_size)
     {
         double step_size = starting_step_size;
-        TVector new_x = x + step_size * delta_x;
+        m_trial_x = x + step_size * delta_x;
 
         // Find step that is collision free
-        double max_step_size = objFunc.max_step_size(x, new_x);
+        double max_step_size = objFunc.max_step_size(x, m_trial_x);
         if (max_step_size == 0)
         {
             m_logger.log(is_final_strategy ? spdlog::level::err : spdlog::level::debug,
@@ -245,6 +249,9 @@ namespace polysolve::nonlinear::line_search
             return NaN;
         }
 
+        // Scaling by 1 is exact in every rounding mode: switching it (slow on some CPUs) is only
+        // needed for another factor.
+        if (max_step_size != 1)
         {
             // #pragma STDC FENV_ACCESS ON
             const int current_round = std::fegetround();

@@ -4,6 +4,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <functional>
 #include <optional>
 
 #define POLYSOLVE_SCOPED_STOPWATCH(...) polysolve::StopWatch __polysolve_stopwatch(__VA_ARGS__)
@@ -70,6 +71,25 @@ namespace polysolve
     Eigen::SparseMatrix<double> sparse_identity(int rows, int cols);
 
     double extract_param(const std::string &key, const std::string &name, const json &json);
+
+    /// Validates `params` against jse rules, as jse::JSE::verify_json with `strict`, and returns
+    /// them with the rules' defaults injected (jse::JSE::inject_defaults). An invalid input is
+    /// logged and thrown, with jse's report, as std::runtime_error.
+    ///
+    /// The result of every successful validation is remembered, keyed by `spec`, `strict` and the
+    /// exact input (types and values, bit for bit), and returned again without running jse: a
+    /// validation against the solver specifications takes milliseconds, and applications create
+    /// solvers with the same parameters over and over (one per mesh, per thread, ...), each
+    /// nonlinear Newton solver creating three linear solvers. Validation has no effect but its
+    /// result, so a remembered result is the one a new validation would give. `make_rules` builds
+    /// the rules, only when they are needed; `spec` names them, and must always name the same
+    /// rules. Failures are not remembered. Thread-safe.
+    json validate_and_inject_defaults(
+        const json &params,
+        const std::string &spec,
+        const bool strict,
+        const std::function<json()> &make_rules,
+        spdlog::logger &logger);
 
     namespace log
     {

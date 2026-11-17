@@ -131,18 +131,9 @@ namespace polysolve::nonlinear
         const NormType norm_type,
         const int dimension)
     {
-        json solver_params = solver_params_in; // mutable copy
-
-        jse::JSE jse;
-
-        jse.strict = strict_validation;
-        json rules = jse::embed::non_linear_spec::solver_spec::spec();
-        const bool valid_input = jse.verify_json(solver_params, rules);
-
-        if (!valid_input)
-            log_and_throw_error(logger, "invalid input json:\n{}", jse.log2str());
-
-        solver_params = jse.inject_defaults(solver_params, rules);
+        json solver_params = validate_and_inject_defaults(
+            solver_params_in, "nonlinear solver", strict_validation,
+            [] { return jse::embed::non_linear_spec::solver_spec::spec(); }, logger);
 
         auto solver = std::make_unique<Solver>(solver_params, characteristic_length, logger);
 

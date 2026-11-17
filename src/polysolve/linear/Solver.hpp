@@ -92,7 +92,7 @@ namespace polysolve::linear
         virtual void set_parameters(const json &params) {}
 
         /// Get info on the last solve step
-        virtual void get_info(json &params) const {};
+        virtual void get_info(json &params) const {}
 
         /// Analyze sparsity pattern
         virtual void analyze_pattern(const StiffnessMatrix &A, const int precond_num) {}

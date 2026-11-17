@@ -97,7 +97,7 @@ namespace polysolve::nonlinear
         bool allow_non_grad_convergence = false;
 
         /// @brief Get the line search object
-        const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; };
+        const std::shared_ptr<line_search::LineSearch> &line_search() const { return m_line_search; }
 
         virtual double compute_grad_norm(const Problem &objFunc, const TVector &x, const TVector &grad) const
         {
@@ -180,7 +180,7 @@ namespace polysolve::nonlinear
         /// @param ndof number of degrees of freedom
         void reset(const int ndof);
 
-        std::string descent_strategy_name() const { return m_strategies[m_descent_strategy]->name(); };
+        std::string descent_strategy_name() const { return m_strategies[m_descent_strategy]->name(); }
 
         std::shared_ptr<line_search::LineSearch> m_line_search;
         std::vector<std::shared_ptr<DescentStrategy>> m_strategies;

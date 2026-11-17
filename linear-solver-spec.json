@@ -35,6 +35,7 @@
         "doc": "Linear solver type.",
         "options": [
             "Eigen::SimplicialLDLT",
+            "Eigen::SimplicialLLT",
             "Eigen::SparseLU",
             "Eigen::CholmodSupernodalLLT",
             "Eigen::UmfPackLU",

@@ -4,7 +4,16 @@
 
 #include <spdlog/spdlog.h>
 
+#include <optional>
+
 #define POLYSOLVE_SCOPED_STOPWATCH(...) polysolve::StopWatch __polysolve_stopwatch(__VA_ARGS__)
+
+/// As POLYSOLVE_SCOPED_STOPWATCH, but only when `enabled`: a stopwatch costs a string and two clock
+/// reads, which matter in a solve of a few unknowns that runs millions of times.
+#define POLYSOLVE_SCOPED_STOPWATCH_IF(enabled, ...)            \
+    std::optional<polysolve::StopWatch> __polysolve_stopwatch; \
+    if (enabled)                                               \
+    __polysolve_stopwatch.emplace(__VA_ARGS__)
 
 namespace polysolve
 {

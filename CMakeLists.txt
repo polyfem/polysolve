@@ -118,6 +118,10 @@ if(POLYSOLVE_CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(polysolve_coverage_config INTERFACE
     -g         # generate debug info
     --coverage # sets all required flags
+    # Count with atomic increments: the solvers run on several threads, and
+    # plain increments lose updates, which gcov can report as negative counts
+    # (an error from lcov 2).
+    -fprofile-update=atomic
   )
   target_link_options(polysolve_coverage_config INTERFACE --coverage)
 endif()
